@@ -10,7 +10,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     internal class RenderText : RenderObject
     {
-        private static TextMeshProUGUI? s_textMeshProMeasurer;
+        private static Dictionary<WidgetViewReference, TextMeshProUGUI?> s_textMeshProMeasurers = new();
         private static TMP_StyleSheet? s_styleSheet;
 
         private static readonly Dictionary<PreferredSizeCacheKey, Vector2> s_sizeCache = new();
@@ -21,28 +21,37 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             _state = state;
 
-            // Ensure static sizer is initialized
-            if (s_textMeshProMeasurer == null)
+            var viewRefence = _state.View;
+            
+            // Ensure static sizer is initialized for the given view reference.
+            if (!s_textMeshProMeasurers.TryGetValue(viewRefence, out var sizer) || sizer == null)
             {
-                var prefab = UniMobViewContext.Loader.LoadViewPrefab(_state.View);
+                var prefab = UniMobViewContext.Loader.LoadViewPrefab(viewRefence);
                 var go = Object.Instantiate(prefab.gameObject);
-                go.name = "TextMeshPro Measurer";
+                go.name = "TextMeshPro Measurer -- " + viewRefence;
                 Object.DontDestroyOnLoad(go);
                 go.hideFlags = HideFlags.HideAndDontSave;
-                s_textMeshProMeasurer = go.GetComponent<UniMobTextMeshProBehaviour>();
+                s_textMeshProMeasurers.Add(viewRefence, go.GetComponent<UniMobTextMeshProBehaviour>());
                 s_styleSheet = TMP_Settings.defaultStyleSheet;
             }
         }
-
-        private Text Widget => (Text) _state.RawWidget;
 
 #if UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void EditorInitialize()
         {
-            if (s_textMeshProMeasurer != null) Object.Destroy(s_textMeshProMeasurer.gameObject);
+            if (s_textMeshProMeasurers != null)
+            {
+                foreach (var pair in s_textMeshProMeasurers)
+                {
+                    if (pair.Value != null)
+                    {
+                        Object.Destroy(pair.Value.gameObject);
+                    }
+                }
+            }
 
-            s_textMeshProMeasurer = null;
+            s_textMeshProMeasurers.Clear();
             s_styleSheet = null;
             s_sizeCache.Clear();
         }
@@ -50,7 +59,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private Vector2 GetPreferredSize(float maxWidth, float maxHeight)
         {
-            if (s_textMeshProMeasurer == null || s_styleSheet == null) return Vector2.zero;
+            if (s_textMeshProMeasurers == null || s_styleSheet == null) return Vector2.zero;
 
 
             var key = new PreferredSizeCacheKey
@@ -61,20 +70,28 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 FontSize = _state.FontSize,
                 FontWeight = _state.FontWeight,
                 Style = _state.Style,
-                MaxLines = _state.MaxLines
+                MaxLines = _state.MaxLines,
+                ViewReference = _state.View
             };
 
             if (s_sizeCache.TryGetValue(key, out var cachedSize)) return cachedSize;
 
+            var measurer = s_textMeshProMeasurers[_state.View];
+            if (measurer == null)
+            {
+                Debug.LogWarning("The TextMeshPro measurer is null. This should not happen.");
+                return Vector2.zero;
+            }
+
             // Configure the static sizer with all properties
-            s_textMeshProMeasurer.fontSize = _state.FontSize;
-            s_textMeshProMeasurer.fontWeight = _state.FontWeight;
-            s_textMeshProMeasurer.textStyle = _state.Style;
-            s_textMeshProMeasurer.enableWordWrapping = _state.WrappingEnabled;
-            s_textMeshProMeasurer.overflowMode = _state.OverflowMode;
+            measurer.fontSize = _state.FontSize;
+            measurer.fontWeight = _state.FontWeight;
+            measurer.textStyle = _state.Style;
+            measurer.enableWordWrapping = _state.WrappingEnabled;
+            measurer.overflowMode = _state.OverflowMode;
 
 
-            var fullSize = s_textMeshProMeasurer.GetPreferredValues(_state.Value, maxWidth, maxHeight);
+            var fullSize = measurer.GetPreferredValues(_state.Value, maxWidth, maxHeight);
 
             // The above full size is computed ignoring the max lines property. This is a limitation of TMP_Pro.
             // We recover here by manually computing the line height from the font face info and altering our
@@ -82,11 +99,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var maxLines = _state.MaxLines;
             if (maxLines is < int.MaxValue and > 0)
             {
-                var font = s_textMeshProMeasurer.font;
-                var fontScale = s_textMeshProMeasurer.fontSize / font.faceInfo.pointSize;
+                var font = measurer.font;
+                var fontScale = measurer.fontSize / font.faceInfo.pointSize;
                 var fontLineHeight = font.faceInfo.lineHeight * fontScale;
 
-                var additionalLineSpacing = s_textMeshProMeasurer.lineSpacing;
+                var additionalLineSpacing = measurer.lineSpacing;
 
                 // The total height of N lines is (N * font_line_height) + ((N-1) * additional_spacing).
                 var maxLinesHeight = maxLines * fontLineHeight + Mathf.Max(0, maxLines - 1) * additionalLineSpacing;
@@ -131,13 +148,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             public int FontSize { get; set; }
             public FontWeight FontWeight { get; set; }
             public TMP_Style? Style { get; set; }
+            public WidgetViewReference ViewReference { get; set; }
             public int MaxLines { get; set; }
 
             public bool Equals(PreferredSizeCacheKey other)
             {
                 return Text == other.Text && MaxWidth.Equals(other.MaxWidth) && MaxHeight.Equals(other.MaxHeight) &&
                        FontSize == other.FontSize && FontWeight == other.FontWeight
-                       && Style?.hashCode == other.Style?.hashCode && MaxLines == other.MaxLines;
+                       && Style?.hashCode == other.Style?.hashCode && MaxLines == other.MaxLines &&
+                       ViewReference.Equals(other.ViewReference);
             }
 
             public override bool Equals(object? obj)
@@ -148,7 +167,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             public override int GetHashCode()
             {
                 return HashCode.Combine(Text, MaxWidth, MaxHeight, FontSize, (int) FontWeight, Style?.hashCode,
-                    MaxLines);
+                    MaxLines, ViewReference);
             }
         }
     }
