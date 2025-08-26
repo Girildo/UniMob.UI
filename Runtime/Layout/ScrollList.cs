@@ -14,6 +14,8 @@ namespace UniMob.UI.Layout
         public Axis Axis { get; set; } = Axis.Vertical;
         public ScrollController ScrollController { get; set; }
 
+        public float Spacing { get; set; } = 0;
+        
         public bool UseMask { get; set; } = true;
         public ScrollRect.MovementType? MovementType { get; set; }
 
@@ -42,12 +44,14 @@ namespace UniMob.UI.Layout
     // compute the layout, while the View only needs the visible children to render the UI.
     public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState
     {
+        
         private readonly StateCollectionHolder _allChildren;
         private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
         private readonly Atom<IState[]> _visibleChildren;
 
         // A reactive atom holding the INDICES of the visible children.
         private readonly MutableAtom<List<int>> _visibleIndices = Atom.Value(new List<int>());
+        public float Spacing => this.Widget.Spacing;
 
 
         [CanBeNull] private ScrollListView _view;

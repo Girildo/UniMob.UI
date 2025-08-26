@@ -19,6 +19,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         Vector2 ViewportSize { get; }
         float ScrollOffset { get; }
         float VirtualizationCacheExtent { get; }
+        float Spacing { get; }
 
         internal void SetVisibleChildren(List<IndexedLayoutData> visibleChildren);
     }
@@ -91,6 +92,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var scrollOffset = _state.ScrollOffset;
+            var spacing = _state.Spacing;
             var viewportMainAxisSize = isHorizontal ? _state.ViewportSize.x : _state.ViewportSize.y;
 
             var viewportStart = scrollOffset - cacheExtent;
@@ -124,7 +126,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     });
                 }
 
-                mainAxisPos += childMainAxisSize;
+                mainAxisPos += childMainAxisSize + spacing;
             }
 
             _visibleChildrenLayout.Clear();
@@ -140,7 +142,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (_state.Axis == Axis.Horizontal) return 0; // Not meaningful for a horizontal list
 
             float totalHeight = 0;
-            foreach (var child in _state.AllChildren) totalHeight += GetChildIntrinsicHeight(child, width);
+            foreach (var child in _state.AllChildren)
+            {
+                totalHeight += GetChildIntrinsicHeight(child, width);
+            }
+
+            if (_state.AllChildren.Length > 0)
+                totalHeight += _state.Spacing * (_state.AllChildren.Length - 1);
+
 
             return totalHeight;
         }
@@ -150,7 +159,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (_state.Axis == Axis.Vertical) return 0; // Not meaningful for a vertical list
 
             float totalWidth = 0;
-            foreach (var child in _state.AllChildren) totalWidth += GetChildIntrinsicWidth(child, height);
+            foreach (var child in _state.AllChildren)
+            {
+                totalWidth += GetChildIntrinsicWidth(child, height);
+            }
+
+            if (_state.AllChildren.Length > 0)
+                totalWidth += _state.Spacing * (_state.AllChildren.Length - 1);
 
             return totalWidth;
         }
@@ -184,7 +199,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // Get the pixel offset of the target child.
             float childOffset = 0;
             for (var i = 0; i < index; i++)
-                childOffset += isHorizontal ? _allChildrenSizes[i].x : _allChildrenSizes[i].y;
+            {
+                childOffset += (isHorizontal ? _allChildrenSizes[i].x : _allChildrenSizes[i].y) + _state.Spacing;
+            }
 
             var childSize = isHorizontal ? _allChildrenSizes[index].x : _allChildrenSizes[index].y;
 
