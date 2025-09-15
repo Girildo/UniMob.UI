@@ -1,15 +1,18 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal class RenderConstrainedBox : RenderObject, ISingleChildRenderObject
+    internal interface IConstrainedBoxState : ISingleChildLayoutState
+    {
+        LayoutConstraints BoxConstraints { get; }
+    }
+
+    internal class RenderConstrainedBox : RenderProxy
     {
         private readonly IConstrainedBoxState _state;
-        public Vector2 ChildSize { get; private set; }
-        public Vector2 ChildPosition { get; private set; }
 
-        public RenderConstrainedBox(IConstrainedBoxState state)
+        public RenderConstrainedBox(IConstrainedBoxState state) : base(state)
         {
             _state = state;
         }
@@ -17,46 +20,38 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
             var selfConstraints = _state.BoxConstraints;
-
-            // 2. Combine the parent's constraints with the widget's own constraints,
-            //    taking the most restrictive rules for both min and max.
             var childConstraints = constraints.Enforce(selfConstraints);
 
-            // 3. Lay out the child with these final, combined constraints.
-            ChildSize = LayoutChild(_state.Child, childConstraints);
+            if (_state.Child == null)
+                return childConstraints.Constrain(Vector2.zero);
 
-            // A ConstrainedBox sizes itself to its child.
+            ChildSize = LayoutChild(_state.Child, childConstraints);
             return ChildSize;
         }
 
-        protected override void PerformPositioning()
-        {
-            ChildPosition = Vector2.zero;
-        }
 
         // Intrinsic sizing is also delegated directly to the child, but constrained
         // by the BoxConstraints.
         public override float GetIntrinsicWidth(float height)
         {
-            var childIntrinsic = GetChildIntrinsicWidth(_state.Child, height);
-            return Mathf.Clamp(childIntrinsic,_state.BoxConstraints.MinWidth, _state.BoxConstraints.MaxWidth);
+            var selfConstraints = _state.BoxConstraints;
+            if (selfConstraints.HasTightWidth)
+                return selfConstraints.MinWidth;
+            
+            var childIntrinsicWidth = base.GetIntrinsicWidth(height);
+            return selfConstraints.ConstrainWidth(childIntrinsicWidth);
         }
 
         public override float GetIntrinsicHeight(float width)
         {
-            
-            var childIntrinsic = GetChildIntrinsicHeight(_state.Child, width);
-            return Mathf.Clamp(childIntrinsic, _state.BoxConstraints.MinHeight, _state.BoxConstraints.MaxHeight);
-        }
-        
-        private float GetChildIntrinsicWidth(IState child, float height)
-        {
-            return child.RenderObject.GetIntrinsicWidth(height);
+            var selfConstraints = _state.BoxConstraints;
+            if (selfConstraints.HasTightWidth)
+                return selfConstraints.MinWidth;
+
+            var childIntrinsicHeight = base.GetIntrinsicHeight(width);
+            return selfConstraints.ConstrainHeight(childIntrinsicHeight);
         }
 
-        private float GetChildIntrinsicHeight(IState child, float width)
-        {
-            return child.RenderObject.GetIntrinsicHeight(width);
-        }
+        
     }
 }
