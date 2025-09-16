@@ -1,15 +1,14 @@
-﻿using UniMob.UI.Internal;
-using UniMob.UI.Layout.Internal.Views;
+using UniMob.UI.Internal;
 using UnityEngine;
 using UnityEngine.UI;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.ContainerView",
-    typeof(LayoutContainerView))]
+[assembly: RegisterComponentViewFactory("$$_Layout.ColoredImageBoxView",
+    typeof(UniMob.UI.Layout.Internal.Views.ColoredImageBoxView))]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
     [RequireComponent(typeof(RectTransform), typeof(CanvasRenderer), typeof(Image))]
-    internal class LayoutContainerView : SingleChildLayoutView<IContainerState>
+    internal class ColoredImageBoxView : SingleChildLayoutView<IColoredImageBoxState>
     {
         private Image _backgroundImage;
 
@@ -24,9 +23,11 @@ namespace UniMob.UI.Layout.Internal.Views
             base.Render();
 
             if (_backgroundImage == null) return;
-
+            
             _backgroundImage.sprite = State.BackgroundImage;
             _backgroundImage.color = State.BackgroundColor;
         }
     }
+
+    
 }
