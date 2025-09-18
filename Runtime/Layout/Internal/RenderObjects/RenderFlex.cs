@@ -127,8 +127,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
 
             // --- Final Size Calculation ---
-            _unconstrainedMainAxisSize = mainAxisTotalSize + (totalFlexFactor > 0 ? freeSpace : 0);
-                        
+            //_unconstrainedMainAxisSize = mainAxisTotalSize + (totalFlexFactor > 0 ? freeSpace : 0);
+            var totalUsedMainAxisSize = 0f;
+            foreach (var layoutData in _childrenLayout)
+            {
+                totalUsedMainAxisSize += isHorizontal ? layoutData.Size.x : layoutData.Size.y;
+            }
+            _unconstrainedMainAxisSize = totalUsedMainAxisSize;
+
             var finalMainAxisSize = widget.MainAxisSize == AxisSize.Max ? maxMainAxis : _unconstrainedMainAxisSize;
 
             var finalSize = isHorizontal
