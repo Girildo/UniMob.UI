@@ -1,4 +1,4 @@
-﻿// In a new file: Runtime/Layout/Internal/RenderObjects/RenderPadding.cs
+// In a new file: Runtime/Layout/Internal/RenderObjects/RenderPadding.cs
 
 using UnityEngine;
 
@@ -10,6 +10,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         public Vector2 ChildPosition { get; private set; }
         public Vector2 ChildSize { get; private set; }
+
 
         public RenderPadding(IPaddingState state)
         {
