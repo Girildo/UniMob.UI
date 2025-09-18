@@ -12,10 +12,8 @@ namespace UniMob.UI.Layout
 
         public AxisSize MainAxisSize { get; set; } = AxisSize.Min;
 
-        public override State CreateState()
-        {
-            return new ColumnState();
-        }
+
+        public override State CreateState() => new ColumnState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
@@ -32,11 +30,7 @@ namespace UniMob.UI.Layout
             _children = CreateChildren(context => Widget.Children);
         }
 
-
         public IState[] Children => _children.Value;
-        public CrossAxisAlignment CrossAxisAlignment => Widget.CrossAxisAlignment;
-        public MainAxisAlignment MainAxisAlignment => Widget.MainAxisAlignment;
-        public WidgetSize InnerSize => default; // Not used by the new system.
 
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
     }

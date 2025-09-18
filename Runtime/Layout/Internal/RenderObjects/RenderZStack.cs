@@ -6,12 +6,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     internal class RenderZStack : RenderObject, IMultiChildRenderObject
     {
-        private readonly IZStackState _state;
+        private readonly ZStackState _state;
 
         private readonly List<LayoutData> _childrenLayout = new();
         public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
 
-        public RenderZStack(IZStackState state)
+        public ZStack Widget => (ZStack) _state.RawWidget;
+
+        public RenderZStack(ZStackState state)
         {
             _state = state;
         }
@@ -55,6 +57,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override void PerformPositioning()
         {
+            var widget = this.Widget;
+
             for (var i = 0; i < _childrenLayout.Count; i++)
             {
                 var child = _state.Children[i];
@@ -73,7 +77,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private void LayoutNonPositionedChild(int index)
         {
-            var alignment = _state.Alignment;
+            var alignment = Widget.Alignment;
             
             // Now this correctly retrieves the size calculated in *this* frame's sizing pass.
             var childSize = _childrenLayout[index].Size;
@@ -144,5 +148,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
             return maxHeight;
         }
+
+
+        
     }
 }
