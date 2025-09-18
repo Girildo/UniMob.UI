@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UniMob.UI.Layout.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
@@ -61,7 +61,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     flexFactor = expanded.Flex;
                 }
 
-                // This is the key: if it's NOT a new layout widget, check if it's stretched.
+                // Legacy widgets are considered flexible if they have infinite constraints in the main axis
                 if (childState.RenderObject is RenderLegacy)
                 {
                     var legacySize = childState.Size;
@@ -86,11 +86,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var nonFlexConstraints = isHorizontal
                 ? new LayoutConstraints(0, 0, float.PositiveInfinity, maxCrossAxis)
                 : new LayoutConstraints(0, 0, maxCrossAxis, float.PositiveInfinity);
+            var shouldStretchCrossAxis = widget.CrossAxisAlignment == CrossAxisAlignment.Stretch;
 
             foreach (var i in nonFlexChildrenIndices)
             {
-                var childSize = LayoutChild(_state.Children[i], nonFlexConstraints);
-                _childrenLayout[i] = new LayoutData {Size = childSize};
+                var childConstraints = nonFlexConstraints;
+                if (shouldStretchCrossAxis)
+                {
+                    childConstraints = isHorizontal
+                        ? childConstraints.Tighten(height: maxCrossAxis)
+                        : childConstraints.Tighten(width: maxCrossAxis);
+                }
+
+                var childSize = LayoutChild(_state.Children[i], childConstraints);
+                _childrenLayout[i] = new LayoutData { Size = childSize };
                 mainAxisTotalSize += isHorizontal ? childSize.x : childSize.y;
                 crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
             }
@@ -104,23 +113,22 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 foreach (var (i, flex) in flexChildrenData)
                 {
                     var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
+
+                    var childCrossAxisConstraint = shouldStretchCrossAxis ? maxCrossAxis : float.PositiveInfinity;
+
                     var flexConstraints = isHorizontal
-                        ? LayoutConstraints.Tight(flexSpace, maxCrossAxis)
-                        : LayoutConstraints.Tight(maxCrossAxis, flexSpace);
+                        ? LayoutConstraints.Tight(flexSpace, childCrossAxisConstraint)
+                        : LayoutConstraints.Tight(childCrossAxisConstraint, flexSpace);
 
                     var childSize = LayoutChild(_state.Children[i], flexConstraints);
-                    _childrenLayout[i] = new LayoutData {Size = childSize};
+                    _childrenLayout[i] = new LayoutData { Size = childSize };
                     crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
                 }
             }
 
+            // --- Final Size Calculation ---
             _unconstrainedMainAxisSize = mainAxisTotalSize + (totalFlexFactor > 0 ? freeSpace : 0);
-
-            if (widget.CrossAxisAlignment == CrossAxisAlignment.Stretch)
-            {
-                crossAxisMaxSize = maxCrossAxis;
-            }
-
+                        
             var finalMainAxisSize = widget.MainAxisSize == AxisSize.Max ? maxMainAxis : _unconstrainedMainAxisSize;
 
             var finalSize = isHorizontal
@@ -178,17 +186,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var crossAxisSize = _axis == Axis.Horizontal ? this.Size.y : this.Size.x;
                 var childCrossAxisSize = _axis == Axis.Horizontal ? layout.Size.y : layout.Size.x;
 
-                // Handle Stretch for this specific child
-                if (widget.CrossAxisAlignment == CrossAxisAlignment.Stretch)
-                {
-                    var newSize = _axis == Axis.Horizontal
-                        ? new Vector2(layout.Size.x, crossAxisSize)
-                        : new Vector2(crossAxisSize, layout.Size.y);
-                    var newLayout = _childrenLayout[i];
-                    newLayout.Size = newSize;
-                    _childrenLayout[i] = newLayout;
-                    childCrossAxisSize = crossAxisSize;
-                }
 
                 var crossAxisPos = widget.CrossAxisAlignment switch
                 {
