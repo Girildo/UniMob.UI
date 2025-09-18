@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UniMob.UI.Layout.Internal.RenderObjects;
-using UniMob.UI.Layout.Views;
+using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 
 namespace UniMob.UI.Layout
@@ -23,9 +23,15 @@ namespace UniMob.UI.Layout
         }
     }
 
-    public class ZStackState : ViewState<ZStack>, IMultiChildLayoutState
+    public interface IZStackState : IMultiChildLayoutState
+    {
+        Alignment Alignment { get; }
+    }
+
+    public class ZStackState : ViewState<ZStack>, IZStackState
     {
         private readonly StateCollectionHolder _children;
+        public Alignment Alignment => this.Widget.Alignment;
 
         public ZStackState()
         {
@@ -34,5 +40,6 @@ namespace UniMob.UI.Layout
 
         public IState[] Children => _children.Value;
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+
     }
 }

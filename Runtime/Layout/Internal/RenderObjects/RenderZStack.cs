@@ -6,14 +6,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     internal class RenderZStack : RenderObject, IMultiChildRenderObject
     {
-        private readonly ZStackState _state;
+        private readonly IZStackState _state;
 
         private readonly List<LayoutData> _childrenLayout = new();
         public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
 
-        public ZStack Widget => (ZStack) _state.RawWidget;
-
-        public RenderZStack(ZStackState state)
+        public RenderZStack(IZStackState state)
         {
             _state = state;
         }
@@ -75,7 +73,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private void LayoutNonPositionedChild(int index)
         {
-            var alignment = Widget.Alignment;
+            var alignment = _state.Alignment;
             
             // Now this correctly retrieves the size calculated in *this* frame's sizing pass.
             var childSize = _childrenLayout[index].Size;
