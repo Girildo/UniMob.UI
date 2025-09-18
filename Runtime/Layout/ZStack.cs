@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Views;
 using UniMob.UI.Widgets;
 
 namespace UniMob.UI.Layout
 {
-    public class ZStack : StatefulWidget, IMultiChildLayoutWidget // Reuse IFlexWidget for convenience
+    public class ZStack : StatefulWidget, IMultiChildLayoutWidget 
     {
         public List<Widget> Children { get; set; } = new List<Widget>();
         public Alignment Alignment { get; set; } = Alignment.Center;
