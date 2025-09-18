@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
 {
-    public class ConstrainedBox : StatefulWidget
+    public class ConstrainedBox : SingleChildLayoutWidget
     {
-        public Widget Child { get; set; }
         public LayoutConstraints BoxConstraints { get; set; }
 
         public override State CreateState()
@@ -19,25 +18,9 @@ namespace UniMob.UI.Layout
         }
     }
 
-    public interface IConstrainedBoxState : ISingleChildLayoutState
-    {
-        IState Child { get; }
-        LayoutConstraints BoxConstraints { get; }
-    }
 
-    public class ConstrainedBoxState : ViewState<ConstrainedBox>, IConstrainedBoxState
+    public class ConstrainedBoxState : SingleChildLayoutState<ConstrainedBox>, IConstrainedBoxState
     {
-        private readonly StateHolder _child;
-        public IState Child => _child.Value;
         public LayoutConstraints BoxConstraints => Widget.BoxConstraints;
-
-
-        public ConstrainedBoxState()
-        {
-            _child = CreateChild(c => Widget.Child);
-        }
-
-
-        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.ConstrainedBoxView");
     }
 }
