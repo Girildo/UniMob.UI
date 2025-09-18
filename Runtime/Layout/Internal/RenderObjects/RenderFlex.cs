@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
-using UniMob.UI.Layout.Internal.Views;
+using System.Collections.Generic;
+using UniMob.UI.Layout.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal interface IFlexWidget : IMultiChildLayoutWidget
+    // The shared interface for Row/Column widgets.
+    public interface IFlexWidget : IMultiChildLayoutWidget
     {
         CrossAxisAlignment CrossAxisAlignment { get; }
         MainAxisAlignment MainAxisAlignment { get; }
@@ -14,10 +15,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
     internal class RenderFlex : RenderObject, IMultiChildRenderObject
     {
-        private readonly Axis _axis;
-        private readonly List<LayoutData> _childrenLayout = new();
         private readonly IMultiChildLayoutState _state;
+        private readonly Axis _axis;
         private float _unconstrainedMainAxisSize;
+        private readonly List<LayoutData> _childrenLayout = new();
+
+        private IFlexWidget Widget => (IFlexWidget) _state.RawWidget;
+        public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
 
         public RenderFlex(IMultiChildLayoutState state, Axis axis)
         {
@@ -25,12 +29,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _axis = axis;
         }
 
-        private IFlexWidget Widget => (IFlexWidget) _state.RawWidget;
-        public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
-
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            var widget = Widget;
+            var widget = this.Widget;
 
             _childrenLayout.Clear();
             var mainAxisTotalSize = 0f;
@@ -59,19 +60,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     isFlexible = true;
                     flexFactor = expanded.Flex;
                 }
-                else // check for layout widgets, e.g another row 
-                {
-                    var intrinsicSize = isHorizontal
-                        ? childState.RenderObject.GetIntrinsicWidth(maxCrossAxis)
-                        : childState.RenderObject.GetIntrinsicHeight(maxCrossAxis);
 
-                    if (float.IsInfinity(intrinsicSize))
+                // Legacy widgets are considered flexible if they have infinite constraints in the main axis
+                if (childState.RenderObject is RenderLegacy)
+                {
+                    var legacySize = childState.Size;
+                    if (isHorizontal ? float.IsInfinity(legacySize.MaxWidth) : float.IsInfinity(legacySize.MaxHeight))
                     {
                         isFlexible = true;
-                        flexFactor = 1; // Default flex factor for layout widgets
                     }
                 }
-
 
                 if (isFlexible)
                 {
@@ -86,13 +84,22 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // --- Second Pass: Measure non-flexible children ---
             var nonFlexConstraints = isHorizontal
-                ? LayoutConstraints.Loose(float.PositiveInfinity, maxCrossAxis)
-                : LayoutConstraints.Loose(maxCrossAxis, float.PositiveInfinity);
+                ? new LayoutConstraints(0, 0, float.PositiveInfinity, maxCrossAxis)
+                : new LayoutConstraints(0, 0, maxCrossAxis, float.PositiveInfinity);
+            var shouldStretchCrossAxis = widget.CrossAxisAlignment == CrossAxisAlignment.Stretch;
 
             foreach (var i in nonFlexChildrenIndices)
             {
-                var childSize = LayoutChild(_state.Children[i], nonFlexConstraints);
-                _childrenLayout[i] = new LayoutData {Size = childSize};
+                var childConstraints = nonFlexConstraints;
+                if (shouldStretchCrossAxis)
+                {
+                    childConstraints = isHorizontal
+                        ? childConstraints.Tighten(height: maxCrossAxis)
+                        : childConstraints.Tighten(width: maxCrossAxis);
+                }
+
+                var childSize = LayoutChild(_state.Children[i], childConstraints);
+                _childrenLayout[i] = new LayoutData { Size = childSize };
                 mainAxisTotalSize += isHorizontal ? childSize.x : childSize.y;
                 crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
             }
@@ -102,45 +109,49 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (freeSpace < 0) freeSpace = 0;
 
             if (totalFlexFactor > 0)
+            {
                 foreach (var (i, flex) in flexChildrenData)
                 {
                     var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
+
+                    var childCrossAxisConstraint = shouldStretchCrossAxis ? maxCrossAxis : float.PositiveInfinity;
+
                     var flexConstraints = isHorizontal
-                        ? LayoutConstraints.Tight(flexSpace, maxCrossAxis)
-                        : LayoutConstraints.Tight(maxCrossAxis, flexSpace);
+                        ? LayoutConstraints.Tight(flexSpace, childCrossAxisConstraint)
+                        : LayoutConstraints.Tight(childCrossAxisConstraint, flexSpace);
 
-                    var stateToLayout = _state.Children[i];
-                    if ((stateToLayout as State)?.RawWidget is Expanded)
-                        stateToLayout = ((ExpandedState) stateToLayout).Child;
-
-                    var childSize = LayoutChild(stateToLayout, flexConstraints);
-                    _childrenLayout[i] = new LayoutData {Size = childSize};
+                    var childSize = LayoutChild(_state.Children[i], flexConstraints);
+                    _childrenLayout[i] = new LayoutData { Size = childSize };
                     crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
                 }
+            }
 
+            // --- Final Size Calculation ---
             _unconstrainedMainAxisSize = mainAxisTotalSize + (totalFlexFactor > 0 ? freeSpace : 0);
-
-            if (widget.CrossAxisAlignment == CrossAxisAlignment.Stretch) crossAxisMaxSize = maxCrossAxis;
-
+                        
             var finalMainAxisSize = widget.MainAxisSize == AxisSize.Max ? maxMainAxis : _unconstrainedMainAxisSize;
 
             var finalSize = isHorizontal
                 ? new Vector2(finalMainAxisSize, crossAxisMaxSize)
                 : new Vector2(crossAxisMaxSize, finalMainAxisSize);
 
-            return constraints.Constrain(finalSize);
+            return new Vector2(
+                Mathf.Clamp(finalSize.x, constraints.MinWidth, constraints.MaxWidth),
+                Mathf.Clamp(finalSize.y, constraints.MinHeight, constraints.MaxHeight)
+            );
         }
 
         protected override void PerformPositioning()
         {
-            var widget = Widget;
+            var widget = this.Widget;
 
-            var mainAxisSize = _axis == Axis.Horizontal ? Size.x : Size.y;
-            var freeSpace = (_axis == Axis.Horizontal ? Size.x : Size.y) - _unconstrainedMainAxisSize;
+            var mainAxisSize = _axis == Axis.Horizontal ? this.Size.x : this.Size.y;
+            var freeSpace = (_axis == Axis.Horizontal ? this.Size.x : this.Size.y) - _unconstrainedMainAxisSize;
             float mainAxisPos = 0;
             float spacing = 0;
             var childCount = _childrenLayout.Count;
             if (freeSpace > 0 && !float.IsInfinity(mainAxisSize))
+            {
                 // --- MAIN AXIS ALIGNMENT ---
                 switch (widget.MainAxisAlignment)
                 {
@@ -165,32 +176,22 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                         mainAxisPos = spacing;
                         break;
                 }
+            }
 
             for (var i = 0; i < _childrenLayout.Count; i++)
             {
                 var layout = _childrenLayout[i];
 
                 // --- CROSS AXIS ALIGNMENT ---
-                var crossAxisSize = _axis == Axis.Horizontal ? Size.y : Size.x;
+                var crossAxisSize = _axis == Axis.Horizontal ? this.Size.y : this.Size.x;
                 var childCrossAxisSize = _axis == Axis.Horizontal ? layout.Size.y : layout.Size.x;
 
-                // Handle Stretch for this specific child
-                if (widget.CrossAxisAlignment == CrossAxisAlignment.Stretch)
-                {
-                    var newSize = _axis == Axis.Horizontal
-                        ? new Vector2(layout.Size.x, crossAxisSize)
-                        : new Vector2(crossAxisSize, layout.Size.y);
-                    var newLayout = _childrenLayout[i];
-                    newLayout.Size = newSize;
-                    _childrenLayout[i] = newLayout;
-                    childCrossAxisSize = crossAxisSize;
-                }
 
                 var crossAxisPos = widget.CrossAxisAlignment switch
                 {
                     CrossAxisAlignment.Center => (crossAxisSize - childCrossAxisSize) / 2f,
                     CrossAxisAlignment.End => crossAxisSize - childCrossAxisSize,
-                    _ => 0 // Start and Stretch align to 0
+                    _ => 0, // Start and Stretch align to 0
                 };
                 var newLayoutData = _childrenLayout[i];
                 newLayoutData.CornerPosition = _axis == Axis.Horizontal
@@ -207,18 +208,24 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (_axis == Axis.Vertical) // Sum of heights (for a Column)
             {
                 float totalHeight = 0;
-                foreach (var child in _state.Children) totalHeight += GetChildIntrinsicHeight(child, width);
+                foreach (var child in _state.Children)
+                {
+                    totalHeight += GetChildIntrinsicHeight(child, width);
+                }
 
                 return totalHeight;
             }
+            else // Max of heights (for a Row)
+            {
+                float maxHeight = 0;
+                // Cannot know width for each child, so we pass infinite. This is a limitation.
+                foreach (var child in _state.Children)
+                {
+                    maxHeight = Mathf.Max(maxHeight, GetChildIntrinsicHeight(child, float.PositiveInfinity));
+                }
 
-            // Max of heights (for a Row)
-            float maxHeight = 0;
-            // Cannot know width for each child, so we pass infinite. This is a limitation.
-            foreach (var child in _state.Children)
-                maxHeight = Mathf.Max(maxHeight, GetChildIntrinsicHeight(child, float.PositiveInfinity));
-
-            return maxHeight;
+                return maxHeight;
+            }
         }
 
         public override float GetIntrinsicWidth(float height)
@@ -226,34 +233,32 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (_axis == Axis.Horizontal) // Sum of widths (for a Row)
             {
                 float totalWidth = 0;
-                foreach (var child in _state.Children) totalWidth += GetChildIntrinsicWidth(child, height);
+                foreach (var child in _state.Children)
+                {
+                    totalWidth += GetChildIntrinsicWidth(child, height);
+                }
 
                 return totalWidth;
             }
+            else // Max of widths (for a Column)
+            {
+                float maxWidth = 0;
+                foreach (var child in _state.Children)
+                {
+                    maxWidth = Mathf.Max(maxWidth, GetChildIntrinsicWidth(child, float.PositiveInfinity));
+                }
 
-            // Max of widths (for a Column)
-            float maxWidth = 0;
-            foreach (var child in _state.Children)
-                maxWidth = Mathf.Max(maxWidth, GetChildIntrinsicWidth(child, float.PositiveInfinity));
-
-            return maxWidth;
+                return maxWidth;
+            }
         }
 
         private float GetChildIntrinsicWidth(IState child, float height)
         {
-            if ((child as State)?.RawWidget is Expanded)
-                // An Expanded widget has infinite intrinsic width in a Row.
-                return _axis == Axis.Horizontal ? float.PositiveInfinity : 0;
-
             return child.RenderObject.GetIntrinsicWidth(height);
         }
 
         private float GetChildIntrinsicHeight(IState child, float width)
         {
-            if ((child as State)?.RawWidget is Expanded)
-                // An Expanded widget has infinite intrinsic height in a Column.
-                return _axis == Axis.Vertical ? float.PositiveInfinity : 0;
-
             return child.RenderObject.GetIntrinsicHeight(width);
         }
     }
