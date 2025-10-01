@@ -13,6 +13,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
+            if(_state.StateLifetime.IsDisposed)
+                return Vector2.zero;
             var legacySize = _state.Size;
 
             return constraints.Constrain(legacySize.GetSizeUnbounded());
