@@ -11,11 +11,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// </summary>
     public class RenderProxy : SingleChildRenderObject
     {
-        private readonly ISingleChildLayoutState _state;
-
         public RenderProxy(ISingleChildLayoutState state) : base(state)
         {
-            _state = state;
+            // Intentionally left blank.
         }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)

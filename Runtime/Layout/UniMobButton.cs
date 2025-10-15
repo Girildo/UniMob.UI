@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
@@ -6,11 +6,10 @@ namespace UniMob.UI.Layout
     /// <summary>
     /// A widget that detects click interactions.
     /// </summary>
-    public class UniMobButton : StatefulWidget
+    public class UniMobButton : SingleChildLayoutWidget
     {
         public bool Interactable { get; set; } = true;
         public Action? OnClick { get; set; }
-        public Widget Child { get; set; }
 
         public override State CreateState() => new UniMobButtonState();
 
@@ -22,22 +21,19 @@ namespace UniMob.UI.Layout
 
     // The State now implements the contract for RenderAlign (IAlignState)
     // and the contract for its View (IUniMobButtonState).
-    internal class UniMobButtonState : ViewState<UniMobButton>, 
-        Widgets.IUniMobButtonState, ISingleChildLayoutState
+    internal class UniMobButtonState : SingleChildLayoutState<UniMobButton>,
+        Widgets.IUniMobButtonState
     {
-        private readonly StateHolder _child;
-        public IState Child => _child.Value;
-        
-        public Alignment Alignment => Alignment.Center;
 
-        public UniMobButtonState()
-        {
-            _child = CreateChild(context => Widget.Child);
-        }
         
+        
+
         // --- IUniMobButtonState Implementation (for the View) ---
         public override WidgetViewReference View => WidgetViewReference.Resource("UniMob.Button");
         public bool Interactable => Widget.Interactable;
+
+        Alignment Widgets.ISingleChildLayoutState.Alignment => Alignment.TopLeft; // Interop with the view.
+
         public void OnClick()
         {
             using (Atom.NoWatch)
