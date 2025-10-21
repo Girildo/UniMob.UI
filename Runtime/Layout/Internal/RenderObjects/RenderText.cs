@@ -1,10 +1,11 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using TMPro;
 using UniMob.UI.Widgets;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using UnityEngine.TextCore.Text;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
@@ -60,8 +61,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private Vector2 GetPreferredSize(float maxWidth, float maxHeight)
         {
             if (s_textMeshProMeasurers == null || s_styleSheet == null) return Vector2.zero;
-
-
             var key = new PreferredSizeCacheKey
             {
                 Text = _state.Value,

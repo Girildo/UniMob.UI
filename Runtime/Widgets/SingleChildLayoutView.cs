@@ -1,4 +1,5 @@
 using UniMob.UI.Internal;
+using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
 
 namespace UniMob.UI.Widgets
@@ -33,6 +34,8 @@ namespace UniMob.UI.Widgets
             {
                 var child = State.Child;
                 ChildView = render.RenderItem(child);
+
+
                 var childSize = child.Size.GetSizeUnbounded();
 
                 LayoutData layout;

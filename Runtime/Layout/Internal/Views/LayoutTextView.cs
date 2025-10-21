@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
@@ -40,7 +40,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 _ => HorizontalAlignmentOptions.Left
             };
 
-            text.verticalAlignment = VerticalAlignmentOptions.Top;
+            text.verticalAlignment = VerticalAlignmentOptions.Middle;
         }
     }
 }

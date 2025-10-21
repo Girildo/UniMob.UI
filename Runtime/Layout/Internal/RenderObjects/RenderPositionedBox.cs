@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
@@ -26,6 +26,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
+            //We let the child be as small as it wants, so we loosen the constraints
             if (Child != null)
                 ChildSize = LayoutChild(Child, constraints.Loosen());
             else
@@ -33,7 +34,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
 
             // Determine if we should HUG our content or expand to fill the available space.
-
             var shrinkWrapWidth = _state.WidthFactor.HasValue || !constraints.HasBoundedWidth;
             var shrinkWrapHeight = _state.HeightFactor.HasValue || !constraints.HasBoundedHeight;
 

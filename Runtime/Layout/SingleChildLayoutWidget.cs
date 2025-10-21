@@ -19,13 +19,13 @@ namespace UniMob.UI.Layout
     public abstract class SingleChildLayoutState<TWidget> : ViewState<TWidget>, ISingleChildLayoutState
         where TWidget : SingleChildLayoutWidget
     {
-        private readonly StateHolder _child;
+        private readonly StateHolder? _child;
 
-        public IState Child => _child.Value;
+        public IState? Child => Widget.Child == null ? null : _child?.Value;
 
         protected SingleChildLayoutState()
         {
-            _child = CreateChild(_ => Widget.Child ?? new Widgets.Empty());
+            _child = CreateChild(_ => Widget.Child);
         }
 
         public override WidgetViewReference View =>

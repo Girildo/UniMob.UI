@@ -19,21 +19,18 @@ namespace UniMob.UI.Layout
         }
     }
 
-    // The State now implements the contract for RenderAlign (IAlignState)
-    // and the contract for its View (IUniMobButtonState).
-    internal class UniMobButtonState : SingleChildLayoutState<UniMobButton>,
-        Widgets.IUniMobButtonState
+    internal interface IUniMobButtonState : ISingleChildLayoutState
     {
+        bool Interactable { get; }
+        void OnClick();
+    }
 
-        
-        
-
-        // --- IUniMobButtonState Implementation (for the View) ---
-        public override WidgetViewReference View => WidgetViewReference.Resource("UniMob.Button");
+    internal class UniMobButtonState : SingleChildLayoutState<UniMobButton>,
+        IUniMobButtonState
+    {
+        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.UniMobButtonView");
         public bool Interactable => Widget.Interactable;
-
-        Alignment Widgets.ISingleChildLayoutState.Alignment => Alignment.TopLeft; // Interop with the view.
-
+        
         public void OnClick()
         {
             using (Atom.NoWatch)

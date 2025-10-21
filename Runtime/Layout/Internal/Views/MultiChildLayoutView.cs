@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;

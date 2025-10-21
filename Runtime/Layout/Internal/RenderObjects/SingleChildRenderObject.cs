@@ -1,3 +1,4 @@
+#nullable enable
 using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
@@ -15,7 +16,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         public Vector2 ChildSize { get; protected set; }
         public Vector2 ChildPosition { get; protected set; }
 
-        protected IState Child => _state.Child;
+        protected IState? Child => _state.Child;
 
         protected SingleChildRenderObject(ISingleChildLayoutState state)
         {

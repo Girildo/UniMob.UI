@@ -1,4 +1,6 @@
-﻿namespace UniMob.UI.Layout
+using UniMob.UI.Widgets;
+
+namespace UniMob.UI.Layout
 {
     /// <summary>
     /// A widget that expands a child of a Row or Column to fill the available space.
@@ -16,7 +18,7 @@
     {
         public override Widget Build(BuildContext context)
         {
-            return Widget.Child;
+            return Widget.Child ?? SizedBox.Shrink();
         }
     }
 }

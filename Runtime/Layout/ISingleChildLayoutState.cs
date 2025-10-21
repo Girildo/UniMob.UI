@@ -1,7 +1,8 @@
-﻿namespace UniMob.UI.Layout
+#nullable enable
+namespace UniMob.UI.Layout
 {
     public interface ISingleChildLayoutState : IState
     {
-        IState Child { get; }
+        IState? Child { get; }
     }
 }

@@ -32,12 +32,12 @@ namespace UniMob.UI.Layout.Internal.Views
             if (State.RenderObject is not ISingleChildRenderObject renderObject)
                 return;
 
+            if (State.Child == null)
+                return;
+
             using (var render = _mapper.CreateRender())
             {
                 var child = State.Child;
-                if (child == null)
-                    return;
-
                 var childView = render.RenderItem(child);
 
                 var rt = childView.rectTransform;

@@ -1,16 +1,16 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UniMob.UI.Layout.Internal.RenderObjects;
-using UniMob.UI.Layout.Internal.Views;
 
 namespace UniMob.UI.Layout
 {
-    public class Row : StatefulWidget, IFlexWidget
+    public class Row : StatefulWidget
     {
         public List<Widget> Children { get; set; } = new List<Widget>();
         public CrossAxisAlignment CrossAxisAlignment { get; set; }
         public MainAxisAlignment MainAxisAlignment { get; set; }
         public AxisSize MainAxisSize { get; set; } = AxisSize.Min;
         public AxisSize CrossAxisSize { get; set; } = AxisSize.Min;
+        public float Spacing { get; set; }
 
         public override State CreateState() => new RowState();
 
@@ -20,7 +20,7 @@ namespace UniMob.UI.Layout
         }
     }
 
-    internal class RowState : ViewState<Row>, IMultiChildLayoutState
+    internal class RowState : ViewState<Row>, IFlexContainerState
     {
         public IState[] Children => _children.Value;
 
@@ -32,5 +32,13 @@ namespace UniMob.UI.Layout
         }
 
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+
+        public CrossAxisAlignment CrossAxisAlignment => Widget.CrossAxisAlignment;
+
+        public MainAxisAlignment MainAxisAlignment => Widget.MainAxisAlignment;
+
+        public AxisSize MainAxisSize => Widget.MainAxisSize;
+
+        public float Spacing => Widget.Spacing;
     }
 }

@@ -7,7 +7,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         LayoutConstraints BoxConstraints { get; }
     }
-
     public class RenderConstrainedBox : RenderProxy
     {
         private readonly IConstrainedBoxState _state;
@@ -22,6 +21,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var selfConstraints = _state.BoxConstraints;
             var childConstraints = selfConstraints.Enforce(constraints);
 
+            // If there is no child, we size ourself to the smallest size allowed by the child constraints.
             if (_state.Child == null)
                 return childConstraints.Constrain(Vector2.zero);
 

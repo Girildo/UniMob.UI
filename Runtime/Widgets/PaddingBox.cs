@@ -13,10 +13,10 @@ namespace UniMob.UI.Widgets
 
         public override State CreateState() => new PaddingBoxState();
 
-        
+
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderPadding((PaddingBoxState)state);
+            return new RenderPadding((PaddingBoxState) state);
         }
     }
 

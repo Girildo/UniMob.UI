@@ -17,6 +17,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             var padding = _state.Padding;
 
+            if(_state.Child == null)
+            {
+                // If there is no child, the size is simply the padding size.
+                var width = padding.Horizontal;
+                var height = padding.Vertical;
+                return constraints.Constrain(new Vector2(width, height));
+            }
+
             // 1. Deflate the parent's constraints by the padding amount.
             // This creates the smaller box in which the child can be laid out.
             var innerConstraints = constraints.Deflate(padding);

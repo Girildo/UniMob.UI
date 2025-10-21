@@ -8,7 +8,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            return constraints.Constrain(Vector2.zero);
+            //return constraints.Constrain(Vector2.zero);
+            return Vector2.zero;
         }
 
         protected override void PerformPositioning()
