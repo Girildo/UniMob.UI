@@ -5,7 +5,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-
     public interface IFlexContainerState : IMultiChildLayoutState
     {
         CrossAxisAlignment CrossAxisAlignment { get; }
@@ -49,16 +48,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             for (var i = 0; i < childCount; i++)
             {
                 var childState = _state.Children[i];
-                var childWidget = (childState as State)?.RawWidget;
+
                 _childrenLayout.Add(new LayoutData()); // Add a placeholder
 
                 var isFlexible = false;
                 var flexFactor = 1;
 
-                if (childWidget is Expanded expanded)
+                // Check if the child is an Expanded (flex) widget
+                // -- remark: we use InnerViewState because Expanded might be composed inside other Hoc widgets
+                if (childState.InnerViewState is ExpandedState flex)
                 {
                     isFlexible = true;
-                    flexFactor = expanded.Flex;
+                    flexFactor = flex.Flex;
                 }
 
                 // Legacy widgets are considered flexible if they have infinite constraints in the main axis
@@ -222,7 +223,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     : new Vector2(crossAxisPos, mainAxisPos);
                 _childrenLayout[i] = newLayoutData;
                 mainAxisPos += (isHorizontal ? layout.Size.x : layout.Size.y) + alignmentSpacing;
-                
+
                 if (i < _childrenLayout.Count - 1)
                 {
                     mainAxisPos += fixedSpacing;
@@ -269,7 +270,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 {
                     totalWidth += GetChildIntrinsicWidth(child, height);
                 }
-                
+
                 // ADDED: Account for spacing in intrinsic width for Horizontal axis
                 if (_state.Children.Length > 0)
                 {
@@ -299,5 +300,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             return child.RenderObject.GetIntrinsicHeight(width);
         }
+
     }
 }
