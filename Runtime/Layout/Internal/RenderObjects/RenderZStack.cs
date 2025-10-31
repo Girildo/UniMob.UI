@@ -31,9 +31,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             for (var i = 0; i < _state.Children.Length; i++)
             {
                 var child = _state.Children[i];
-                var childWidget = (child as State)?.RawWidget;
-                
-                if (childWidget is Positioned)
+
+                if (child.InnerViewState is PositionedState)
                 {
                     // Add a placeholder. The positioned child will be fully laid out later.
                     _childrenLayout.Add(new LayoutData());
@@ -44,7 +43,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var childSize = LayoutChild(child, childConstraints);
 
                 _childrenLayout.Add(new LayoutData { Size = childSize });
-                
+
                 maxWidth = Mathf.Max(maxWidth, childSize.x);
                 maxHeight = Mathf.Max(maxHeight, childSize.y);
             }
@@ -62,11 +61,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             for (var i = 0; i < _childrenLayout.Count; i++)
             {
                 var child = _state.Children[i];
-                var childWidget = (child as State)?.RawWidget;
-                
-                if (childWidget is Positioned pos)
+                if (child.InnerViewState is PositionedState pos)
                 {
-                    LayoutPositionedChild(i, child, pos);
+                    LayoutPositionedChild(i, child, pos.RawWidget as Positioned);
                 }
                 else
                 {
@@ -78,13 +75,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private void LayoutNonPositionedChild(int index)
         {
             var alignment = Widget.Alignment;
-            
+
             // Now this correctly retrieves the size calculated in *this* frame's sizing pass.
             var childSize = _childrenLayout[index].Size;
 
             var x = (Size.x - childSize.x) * (alignment.X * 0.5f + 0.5f);
             var y = (Size.y - childSize.y) * (alignment.Y * 0.5f + 0.5f);
-            
+
             var layoutData = _childrenLayout[index];
             layoutData.CornerPosition = new Vector2(x, y);
             _childrenLayout[index] = layoutData;
@@ -106,14 +103,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 childConstraints = childConstraints.Tighten(width: Size.x - pos.Left - pos.Right);
             }
-            
+
             if (pos.Top != null && pos.Bottom != null)
             {
                 childConstraints = childConstraints.Tighten(height: Size.y - pos.Top - pos.Bottom);
             }
 
             var childSize = LayoutChild(child, childConstraints);
-            
+
             if (x == null)
             {
                 x = Size.x - childSize.x - (pos.Right ?? 0);
@@ -132,7 +129,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             float maxWidth = 0;
             foreach (var child in _state.Children)
             {
-                if ((child as State)?.RawWidget is Positioned) continue;
+                if (child.InnerViewState is PositionedState) continue;
                 maxWidth = Mathf.Max(maxWidth, child.RenderObject.GetIntrinsicWidth(height));
             }
             return maxWidth;
@@ -143,13 +140,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             float maxHeight = 0;
             foreach (var child in _state.Children)
             {
-                if ((child as State)?.RawWidget is Positioned) continue;
+                if (child.InnerViewState is PositionedState) continue;
                 maxHeight = Mathf.Max(maxHeight, child.RenderObject.GetIntrinsicHeight(width));
             }
             return maxHeight;
         }
-
-
-        
     }
 }

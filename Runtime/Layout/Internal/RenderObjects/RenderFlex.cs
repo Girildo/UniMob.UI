@@ -158,10 +158,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 ? new Vector2(finalMainAxisSize, crossAxisMaxSize)
                 : new Vector2(crossAxisMaxSize, finalMainAxisSize);
 
-            return new Vector2(
-                Mathf.Clamp(finalSize.x, constraints.MinWidth, constraints.MaxWidth),
-                Mathf.Clamp(finalSize.y, constraints.MinHeight, constraints.MaxHeight)
-            );
+            return constraints.Constrain(finalSize);
+
+            
         }
 
         protected override void PerformPositioning()

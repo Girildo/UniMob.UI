@@ -1,4 +1,5 @@
 using JetBrains.Annotations;
+using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
 {
@@ -6,10 +7,8 @@ namespace UniMob.UI.Layout
     /// A widget that controls where a child of a ZStack is positioned.
     /// This is a signal widget and does not create its own RenderObject.
     /// </summary>
-    public class Positioned : StatefulWidget
+    public class Positioned : SingleChildLayoutWidget
     {
-        public Widget Child { get; set; }
-
         public float? Left { get; set; }
         public float? Top { get; set; }
         public float? Right { get; set; }
@@ -18,13 +17,14 @@ namespace UniMob.UI.Layout
         public float? Height { get; set; }
 
         public override State CreateState() => new PositionedState();
+        public override RenderObject CreateRenderObject(BuildContext context, IState state)
+        {
+            return new RenderProxy((PositionedState)state);
+        }
     }
 
-    public class PositionedState : HocState<Positioned>
+    public class PositionedState : SingleChildLayoutState<Positioned>
     {
-        public override Widget Build(BuildContext context)
-        {
-            return Widget.Child;
-        }
+        
     }
 }

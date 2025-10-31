@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         public LayoutData Layout;
     }
 
-    internal interface ISliverState : IState
+    internal interface ISliverState : IMultiChildLayoutState
     {
         IState[] AllChildren { get; }
         Axis Axis { get; }
@@ -186,9 +187,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var viewportSize = isHorizontal ? _state.ViewportSize.x : _state.ViewportSize.y;
 
-            var totalContentSize = isHorizontal
-                ? GetIntrinsicWidth(_state.ViewportSize.y)
-                : GetIntrinsicHeight(_state.ViewportSize.x);
+            
+            float totalContentSize = 0;
+            var mainAxisKey = isHorizontal ? 0 : 1; // 0 for x, 1 for y
+            for (var i = 0; i < _allChildrenSizes.Count; i++)
+            {
+                totalContentSize += _allChildrenSizes[i][mainAxisKey];
+            }
+            // Add spacing
+            if (_allChildrenSizes.Count > 0)
+            {
+                totalContentSize += _state.Spacing * (_allChildrenSizes.Count - 1);
+            }
 
             var totalScrollableDist = totalContentSize - viewportSize;
 
