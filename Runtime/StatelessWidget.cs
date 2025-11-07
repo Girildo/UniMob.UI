@@ -46,8 +46,6 @@ namespace UniMob.UI
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
         public override WidgetSize Size => _stateHolder.Value.Size;
-        internal override void UpdateConstraints(LayoutConstraints constraints) => _stateHolder.Value.UpdateConstraints(constraints);
-        
 
         public StatelessElement(StatelessWidget widget)
         {

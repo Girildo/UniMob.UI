@@ -61,8 +61,6 @@ namespace UniMob.UI.Layout
 
     public class SizedBoxState : SingleChildLayoutState<SizedBox>, IConstrainedBoxState
     {
-        public float? Width => Widget.Width;
-        public float? Height => Widget.Height;
-        public LayoutConstraints BoxConstraints => LayoutConstraints.TightFor(Width, Height);
+        public LayoutConstraints BoxConstraints => LayoutConstraints.TightFor(Widget.Width, Widget.Height);
     }
 }
