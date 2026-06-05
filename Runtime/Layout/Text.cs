@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using JetBrains.Annotations;
 using TMPro;
 using UniMob.UI.Layout.Internal.RenderObjects;

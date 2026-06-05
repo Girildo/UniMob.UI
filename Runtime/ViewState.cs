@@ -43,6 +43,9 @@ namespace UniMob.UI
         // When a legacy widget contains a new layout-aware widget, this is called.
         public virtual WidgetSize CalculateSize()
         {
+            if(StateLifetime.IsDisposed)
+                return WidgetSize.Zero;
+
             var ro = RenderObject;
 
             if (RenderObject is RenderLegacy)

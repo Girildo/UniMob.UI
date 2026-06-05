@@ -3,7 +3,7 @@ using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
 {
-    public class Row : StatefulWidget
+    public class Row : StatefulWidget, IMultiChildLayoutWidget
     {
         public List<Widget> Children { get; set; } = new List<Widget>();
         public CrossAxisAlignment CrossAxisAlignment { get; set; }

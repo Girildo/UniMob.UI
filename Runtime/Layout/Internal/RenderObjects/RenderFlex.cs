@@ -14,7 +14,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
     }
 
-    internal class RenderFlex : RenderObject, IMultiChildRenderObject
+    internal class RenderFlex : RenderObject, IMultiChildrenRenderObject
     {
         private readonly IFlexContainerState _state;
         private readonly Axis _axis;
@@ -23,7 +23,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
 
-        public RenderFlex(IFlexContainerState state, Axis axis)
+        public RenderFlex(IFlexContainerState state, Axis axis) : base(state.StateLifetime)
         {
             _state = state;
             _axis = axis;
@@ -231,7 +231,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         // --- GENERIC INTRINSIC SIZING ---
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             if (_axis == Axis.Vertical) // Sum of heights (for a Column)
             {
@@ -260,7 +260,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             if (_axis == Axis.Horizontal) // Sum of widths (for a Row)
             {

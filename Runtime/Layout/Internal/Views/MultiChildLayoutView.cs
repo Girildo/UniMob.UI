@@ -27,7 +27,11 @@ namespace UniMob.UI.Layout.Internal.Views
 
         protected override void Render()
         {
-            if (State.RenderObject is not IMultiChildRenderObject multiChildRenderObject)
+#if UNITY_EDITOR
+            this.name = $"MultiChildLayoutView [{this.State.RawWidget.GetType().Name}]";
+#endif
+
+            if (State.RenderObject is not IMultiChildrenRenderObject multiChildRenderObject)
                 return;
 
             var childrenLayout = multiChildRenderObject.ChildrenLayout;
@@ -37,16 +41,29 @@ namespace UniMob.UI.Layout.Internal.Views
             for (var i = 0; i < State.Children.Length; i++)
             {
                 var child = State.Children[i];
+
+                if (child is null)
+                {
+                    throw new InvalidOperationException("Child state at position " + i + " is null. All children must have a valid state." +
+                        "Use Empty if necessary.");
+                }
+
                 if (child is ExpandedState expandedState) child = expandedState.Child;
 
 
                 var layoutData = childrenLayout[i];
 
-                if (float.IsInfinity(layoutData.Size.x) || float.IsInfinity(layoutData.Size.y))
+                if (float.IsInfinity(layoutData.Size.x))
                     throw new InvalidOperationException(
-                        $"Child {child.GetType().Name} at position {i} has an unbounded size. " +
+                        $"Child {child.GetType().Name} at position {i} has an unbounded width. " +
                         "This is not supported in MultiChildLayoutView. " +
-                        "Try wrapping it in a Container or similar widget to constrain its size.");
+                        "Try wrapping it in a Container or similar widget to constrain its width.");
+
+                if (float.IsInfinity(layoutData.Size.y))
+                    throw new InvalidOperationException(
+                        $"Child {child.GetType().Name} at position {i} has an unbounded height. " +
+                        "This is not supported in MultiChildLayoutView. " +
+                        "Try wrapping it in a Container or similar widget to constrain its height.");
 
 
                 var childView = render.RenderItem(child);

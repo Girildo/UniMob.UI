@@ -9,7 +9,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private IntrinsicSize Widget => (IntrinsicSize) _state.RawWidget;
 
-        public RenderIntrinsicSize(IntrinsicSizeState state)
+        public RenderIntrinsicSize(IntrinsicSizeState state) : base(state.StateLifetime)
         {
             _state = state;
         }
@@ -29,12 +29,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             return _state.Child.RenderObject.GetIntrinsicWidth(height);
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             return _state.Child.RenderObject.GetIntrinsicHeight(width);
         }

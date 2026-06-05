@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -82,7 +82,10 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             if (!HasState || State.StateLifetime.IsDisposed) return;
             base.OnRectTransformDimensionsChange();
-            State.ViewportSize = _rectTransform.rect.size;
+            using (Atom.NoWatch)
+            {
+                State.ViewportSize = _rectTransform.rect.size;
+            }
         }
 
         protected override void Activate()
@@ -155,14 +158,10 @@ namespace UniMob.UI.Layout.Internal.Views
             if (State.RenderObject is not RenderSliverList renderObject) return;
 
             if (rectMask != null) rectMask.enabled = State.UseMask;
-            if (scrollRect.movementType != State.MovementType) scrollRect.movementType = State.MovementType;
 
+            if ((int) scrollRect.movementType != (int) State.MovementType)
+                scrollRect.movementType = (ScrollRect.MovementType) (State.MovementType);
 
-            // var isHorizontal = State.Axis == Axis.Horizontal;
-            // scrollRect.horizontal = isHorizontal;
-            // scrollRect.vertical = !isHorizontal;
-            //
-            // EnsurePivotAndAnchorsAreConsistentWithDirection(isHorizontal);
 
             var isHorizontal = State.Axis == Axis.Horizontal;
             var axisChanged = scrollRect.horizontal != isHorizontal;
@@ -320,7 +319,7 @@ namespace UniMob.UI.Layout.Internal.Views
         Axis Axis { get; }
 
         public bool UseMask { get; }
-        public ScrollRect.MovementType MovementType { get; }
+        public MovementType MovementType { get; }
 
         float ScrollOffset { get; set; }
         Vector2 ViewportSize { get; set; }

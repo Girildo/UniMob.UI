@@ -11,6 +11,7 @@ namespace UniMob.UI.Widgets
         public IAnimation<Quaternion> Rotation { get; set; } = new ConstAnimation<Quaternion>(Quaternion.identity);
 
         public override State CreateState() => new CompositeTransitionState();
+
     }
 
     internal class CompositeTransitionState : SingleChildLayoutState<CompositeTransition>, ICompositeTransitionState

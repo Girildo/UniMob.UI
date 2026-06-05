@@ -12,6 +12,7 @@ using UnityEngine;
 
 namespace UniMob.UI
 {
+    [System.Diagnostics.DebuggerDisplay("{ToDiagnosticString()}")]
     public abstract class State : IState, IDisposable, ILifetimeScope
     {
         private readonly MutableAtom<LayoutConstraints?> _explicitConstraints = Atom.Value(default(LayoutConstraints?));
@@ -102,6 +103,8 @@ namespace UniMob.UI
 
         Vector2 IState.WatchedPerformLayout()
         {
+            if(this.StateLifetime.IsDisposed)
+                return Vector2.zero;
             var renderData = _trackedLayoutPerformer.Get();
             return renderData.renderSize;
         }
@@ -110,6 +113,9 @@ namespace UniMob.UI
         {
             return Atom.Computed(StateLifetime, () =>
             {
+                if(StateLifetime.IsDisposed)
+                    return (Vector2.zero, _renderVersion);
+
                 // PerformLayout() implicitly uses many [Atom] so trackedLayoutPerformer will be auto recomputed.
                 RenderObject.PerformLayoutImmediate(Constraints);
 
@@ -141,6 +147,11 @@ namespace UniMob.UI
                 List<Widget>> builder)
         {
             return new StateCollectionHolder(lifetime, context, builder);
+        }
+
+        public object ToDiagnosticString()
+        {
+            return $"State {this.GetType().Name} (Widget: {RawWidget.GetType().Name}, RenderObject: {RenderObject.GetType().Name}";
         }
     }
 

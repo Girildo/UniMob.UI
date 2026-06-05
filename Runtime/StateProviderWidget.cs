@@ -9,7 +9,7 @@ namespace UniMob.UI
     public class StateProviderWidget : ProxyWidget
     {
         public IStateProvider StateProvider { get; }
-        
+
         public StateProviderWidget(IStateProvider stateProvider, Func<Widget> childBuilder) : base(childBuilder)
         {
             StateProvider = stateProvider;
@@ -26,6 +26,10 @@ namespace UniMob.UI
 
     public class StateProviderState : ProxyState<StateProviderWidget>, IStateProviderSource
     {
+
         public IStateProvider StateProvider => Widget.StateProvider;
+
+        public State Of(Widget widget) => StateProvider.Of(widget);
+
     }
 }

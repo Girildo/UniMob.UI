@@ -32,23 +32,23 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         // Intrinsic sizing is also delegated directly to the child, but constrained
         // by the BoxConstraints.
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             var selfConstraints = _state.BoxConstraints;
             if (selfConstraints.HasTightWidth)
                 return selfConstraints.MinWidth;
             
-            var childIntrinsicWidth = base.GetIntrinsicWidth(height);
+            var childIntrinsicWidth = base.ComputeIntrinsicWidth(height);
             return selfConstraints.ConstrainWidth(childIntrinsicWidth);
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             var selfConstraints = _state.BoxConstraints;
-            if (selfConstraints.HasTightWidth)
-                return selfConstraints.MinWidth;
+            if (selfConstraints.HasTightHeight)
+                return selfConstraints.MinHeight;
 
-            var childIntrinsicHeight = base.GetIntrinsicHeight(width);
+            var childIntrinsicHeight = base.ComputeIntrinsicHeight(width);
             return selfConstraints.ConstrainHeight(childIntrinsicHeight);
         }
 

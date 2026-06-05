@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal class RenderZStack : RenderObject, IMultiChildRenderObject
+    internal class RenderZStack : RenderObject, IMultiChildrenRenderObject
     {
         private readonly ZStackState _state;
 
@@ -13,7 +13,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         public ZStack Widget => (ZStack) _state.RawWidget;
 
-        public RenderZStack(ZStackState state)
+        public RenderZStack(ZStackState state) : base(state.StateLifetime)
         {
             _state = state;
         }
@@ -48,10 +48,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 maxHeight = Mathf.Max(maxHeight, childSize.y);
             }
 
-            return new Vector2(
-                Mathf.Clamp(maxWidth, constraints.MinWidth, constraints.MaxWidth),
-                Mathf.Clamp(maxHeight, constraints.MinHeight, constraints.MaxHeight)
-            );
+            return constraints.Constrain(new Vector2(maxWidth, maxHeight));
         }
 
         protected override void PerformPositioning()
@@ -124,7 +121,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _childrenLayout[index] = new LayoutData { Size = childSize, CornerPosition = new Vector2(x.Value, y.Value) };
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             float maxWidth = 0;
             foreach (var child in _state.Children)
@@ -135,7 +132,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return maxWidth;
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             float maxHeight = 0;
             foreach (var child in _state.Children)

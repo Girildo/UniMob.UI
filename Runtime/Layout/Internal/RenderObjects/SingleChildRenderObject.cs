@@ -18,13 +18,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected IState? Child => _state.Child;
 
-        protected SingleChildRenderObject(ISingleChildLayoutState state)
+        protected SingleChildRenderObject(ISingleChildLayoutState state) : base(state.StateLifetime)
         {
             _state = state;
         }
 
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             if (Child != null)
             {
@@ -33,7 +33,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return 0;
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             if (Child != null)
             {

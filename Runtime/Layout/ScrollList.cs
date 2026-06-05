@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
@@ -17,7 +17,12 @@ namespace UniMob.UI.Layout
         public float Spacing { get; set; } = 0;
         
         public bool UseMask { get; set; } = true;
-        public ScrollRect.MovementType? MovementType { get; set; }
+
+        /// <summary>
+        /// Defines how the scroll content behaves when the user scrolls.
+        /// <see cref="MovementType"/> for more details."/>
+        /// </summary>
+        public MovementType MovementType{ get; set; } = MovementType.Elastic;
 
         /// <summary>
         ///     The size, in pixels, of the (bidirectional) cache extent for virtualization.
@@ -94,7 +99,7 @@ namespace UniMob.UI.Layout
         public bool UseMask => Widget.UseMask;
 
         [Atom]
-        public ScrollRect.MovementType MovementType => Widget.MovementType ?? ScrollRect.MovementType.Elastic;
+        public MovementType MovementType => Widget.MovementType;
 
         [Atom] public ScrollController ScrollController { get; private set; }
         [Atom] public Vector2 ViewportSize { get; set; }

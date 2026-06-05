@@ -25,14 +25,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         internal void SetVisibleChildren(List<IndexedLayoutData> visibleChildren);
     }
 
-    internal class RenderSliverList : RenderObject, IMultiChildRenderObject
+    internal class RenderSliverList : RenderObject, IMultiChildrenRenderObject
     {
         // Caches the measured sizes of all children to avoid re-calculating every frame.
         private readonly List<Vector2> _allChildrenSizes = new();
         private readonly ISliverState _state;
         private readonly List<LayoutData> _visibleChildrenLayout = new();
 
-        public RenderSliverList(ISliverState state)
+        public RenderSliverList(ISliverState state) : base(state.StateLifetime)
         {
             _state = state;
         }
@@ -46,6 +46,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             _allChildrenSizes.Clear();
             var isHorizontal = _state.Axis == Axis.Horizontal;
+            var isVertical = !isHorizontal;
 
             if (isHorizontal && !constraints.HasBoundedWidth)
                 throw new InvalidOperationException(
@@ -53,14 +54,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     "This usually means it is being placed inside another horizontal scrollable or a Row without an Expanded widget."
                 );
 
-            if (!isHorizontal && !constraints.HasBoundedHeight)
+            if (isVertical && !constraints.HasBoundedHeight)
                 throw new InvalidOperationException(
                     "A vertical ScrollingList must have a bounded height." +
                     "This usually means it is being placed inside another vertical scrollable or a Column without an Expanded widget."
                 );
 
             // Give children unconstrained space along the main scrolling axis
-            // but constrain them to the viewport's size on the cross axis.
+            // but constrain them to the viewport's size on the cross axis. (stretching them horizontally)
             LayoutConstraints childConstraints;
             if (isHorizontal)
                 // For a horizontal list, height is tight, width is loose.
@@ -72,9 +73,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     float.PositiveInfinity);
 
 
+
             foreach (var child in _state.AllChildren)
             {
                 var childSize = LayoutChild(child, childConstraints);
+                if (childSize.x == float.PositiveInfinity && isHorizontal)
+                    throw new InvalidOperationException(
+                        "Child of a horizontal ScrollingList cannot have an unconstrained width." +
+                        "Make sure the child is not trying to expand infinitely (e.g. by being inside a Row without an Expanded)."
+                    );
+                if (childSize.y == float.PositiveInfinity && isVertical)
+                    throw new InvalidOperationException(
+                        "Child of a vertical ScrollingList cannot have an unconstrained height." +
+                        "Make sure the child is not trying to expand infinitely (e.g. by being inside a Column without an Expanded)."
+                    );
                 _allChildrenSizes.Add(childSize);
             }
 
@@ -138,7 +150,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         // Intrinsic sizing is used to determine the total size of the scrollable content.
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             if (_state.Axis == Axis.Horizontal) return 0; // Not meaningful for a horizontal list
 
@@ -155,7 +167,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return totalHeight;
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             if (_state.Axis == Axis.Vertical) return 0; // Not meaningful for a vertical list
 
@@ -187,7 +199,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var viewportSize = isHorizontal ? _state.ViewportSize.x : _state.ViewportSize.y;
 
-            
+
             float totalContentSize = 0;
             var mainAxisKey = isHorizontal ? 0 : 1; // 0 for x, 1 for y
             for (var i = 0; i < _allChildrenSizes.Count; i++)

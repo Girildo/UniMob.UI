@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using UniMob.UI.Layout.Internal.RenderObjects;
-using UniMob.UI.Layout.Internal.Views;
 
 namespace UniMob.UI.Layout
 {
-    public class Column : StatefulWidget
+    public class Column : StatefulWidget, IMultiChildLayoutWidget
     {
         public List<Widget> Children { get; set; } = new();
         public CrossAxisAlignment CrossAxisAlignment { get; set; }
@@ -12,7 +11,7 @@ namespace UniMob.UI.Layout
 
         public AxisSize MainAxisSize { get; set; } = AxisSize.Min;
 
-        public float Spacing {get;set;} = 0f;
+        public float Spacing { get; set; } = 0f;
 
 
         public override State CreateState() => new ColumnState();

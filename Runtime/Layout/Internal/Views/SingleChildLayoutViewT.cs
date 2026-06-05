@@ -21,6 +21,8 @@ namespace UniMob.UI.Layout.Internal.Views
     {
         private ViewMapperBase _mapper;
 
+        protected IView ChildView { get; private set; }
+
         protected override void Awake()
         {
             base.Awake();
@@ -29,18 +31,27 @@ namespace UniMob.UI.Layout.Internal.Views
 
         protected override void Render()
         {
+
             if (State.RenderObject is not ISingleChildRenderObject renderObject)
-                return;
+            {
+                throw new System.InvalidOperationException
+                    ($"{typeof(SingleChildLayoutView).Name} expects the state to return a {nameof(ISingleChildRenderObject)}." +
+                    $"{State.GetType().Name} returned a {State.RenderObject.GetType().Name} instead.");
+            }
 
             if (State.Child == null)
                 return;
 
+#if UNITY_EDITOR
+            this.name = $"SingleChildLayoutView<{typeof(TState).Name}> [{this.State.RawWidget.GetType().Name}]";
+#endif
+
             using (var render = _mapper.CreateRender())
             {
                 var child = State.Child;
-                var childView = render.RenderItem(child);
+                this.ChildView = render.RenderItem(child);
 
-                var rt = childView.rectTransform;
+                var rt = this.ChildView.rectTransform;
                 rt.anchorMin = Vector2.up;
                 rt.anchorMax = Vector2.up;
 

@@ -11,20 +11,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// Represents a render object that acts as a leaf node in the render tree, with fixed constraints and intrinsic
     /// sizing behavior.
     /// </summary>
-    /// <remarks>A <see cref="RenderLeafBox"/> is a leaf node in the render tree, meaning it does not have any
+    /// <remarks>A <see cref="RenderExplicitBox"/> is a leaf node in the render tree, meaning it does not have any
     /// child render objects.  It sizes itself based on the provided <see cref="LayoutConstraints"/> and the specified
     /// <see cref="AxisSize"/>. The intrinsic dimensions of the leaf box are determined by the constraints and the axis
     /// size mode.</remarks>
-    public class RenderLeafBox : RenderObject
+    public class RenderExplicitBox : RenderObject
     {
         private readonly LayoutConstraints _leafConstraints;
         private readonly AxisSize _axisSize;
 
-        public RenderLeafBox(LayoutConstraints layoutConstraints) : this(layoutConstraints, AxisSize.Min)
+        public RenderExplicitBox(LayoutConstraints layoutConstraints) : this(layoutConstraints, AxisSize.Min)
         {
         }
 
-        public RenderLeafBox(LayoutConstraints layoutConstraints, AxisSize axisSize)
+        public RenderExplicitBox(LayoutConstraints layoutConstraints, AxisSize axisSize) : base(Lifetime.Eternal)
         {
             if(axisSize == AxisSize.Max && (!layoutConstraints.HasBoundedHeight|| !layoutConstraints.HasBoundedWidth))
             {
@@ -34,21 +34,21 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _axisSize = axisSize;
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             return _axisSize == AxisSize.Min
                 ? _leafConstraints.MinHeight
                 : _leafConstraints.MaxHeight;
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             return _axisSize == AxisSize.Min
                 ? _leafConstraints.MinWidth
                 : _leafConstraints.MaxWidth;
         }
 
-        protected override void PerformPositioning()
+        protected sealed override void PerformPositioning()
         {
             // Nothing to do: leaf box has no children.
         }

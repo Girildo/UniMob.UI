@@ -8,6 +8,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// </summary>
     public abstract class RenderObject
     {
+        protected Lifetime Lifetime { get; }
+
+        protected RenderObject(Lifetime lifetime)
+        {
+            this.Lifetime = lifetime;
+        }
+
         public Vector2 Size { get; private set; } // The final size after layout
 
         /// <summary>
@@ -30,6 +37,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// </remarks>
         public void PerformLayoutImmediate(LayoutConstraints constraints)
         {
+            if(this.Lifetime.IsDisposed)
+                return;
             // Phase 1: Perform this widget's own size.
             Size = PerformSizing(constraints);
 
@@ -79,8 +88,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <returns>The final size of the child after layout.</returns>
         protected Vector2 LayoutChild(IState child, LayoutConstraints constraints)
         {
+            if(this.Lifetime.IsDisposed)
+                return Vector2.zero;
             if (child is null)
                 return Vector2.zero;
+            
 
             child.UpdateConstraints(constraints);
 
@@ -93,11 +105,25 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <summary>
         ///     Calculates the widget's preferred width given a specific height.
         /// </summary>
-        public abstract float GetIntrinsicWidth(float height);
+        public float GetIntrinsicWidth(float height)
+        {
+            if (this.Lifetime.IsDisposed)
+                return 0;
+            return ComputeIntrinsicWidth(height);
+        }
+
+        protected abstract float ComputeIntrinsicWidth(float height);
 
         /// <summary>
         ///     Calculates the widget's preferred height given a specific width.
         /// </summary>
-        public abstract float GetIntrinsicHeight(float width);
+        public float GetIntrinsicHeight(float width)
+        {
+            if (this.Lifetime.IsDisposed)
+                return 0;
+            return ComputeIntrinsicHeight(width);
+        }
+
+        protected abstract float ComputeIntrinsicHeight(float width);
     }
 }

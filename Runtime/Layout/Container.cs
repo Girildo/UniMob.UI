@@ -1,6 +1,5 @@
 #nullable enable
 using JetBrains.Annotations;
-using UniMob.UI.Widgets;
 using UnityEngine;
 
 namespace UniMob.UI.Layout
@@ -12,14 +11,15 @@ namespace UniMob.UI.Layout
     {
         [CanBeNull]
         public Widget? Child { get; set; }
-        public Color BackgroundColor { get; set; } = Color.clear;
+        public Color? BackgroundColor { get; set; } = Color.clear;
         public Sprite? BackgroundImage { get; set; } = null;
         public Alignment? Alignment { get; set; } = null;
         public float? Width { get; set; }
         public float? Height { get; set; }
 
-        public Container(float? width = null, float? height = null)
+        public Container(Widget? child = null, float? width = null, float? height = null)
         {
+            Child = child;
             Width = width;
             Height = height;
         }
@@ -46,7 +46,7 @@ namespace UniMob.UI.Layout
             {
                 current = new ColoredImageBox
                 {
-                    Color = Widget.BackgroundColor,
+                    Color = Widget.BackgroundColor ?? Color.clear,
                     Image = Widget.BackgroundImage,
                     Child = current,
                 };
@@ -58,7 +58,7 @@ namespace UniMob.UI.Layout
                 current = new SizedBox(child: current, width: Widget.Width, height: Widget.Height);
             }
 
-            return current ?? new Empty();
+            return current ?? null;
         }
     }
 }

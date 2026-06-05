@@ -19,37 +19,42 @@ namespace UniMob.UI
         public abstract Widget Build(BuildContext context);
 
 
-        public virtual RenderObject CreateRenderObject(BuildContext context, IState state)
+        public RenderObject CreateRenderObject(BuildContext context, IState state)
         {
             return state.InnerViewState.RenderObject;
         }
 
 
         [CanBeNull]
-        public virtual State CreateState(StateProvider provider) => null;
+        public State CreateState(StateProvider provider) => null;
 
         [NotNull]
-        public virtual State CreateState()
+        public State CreateState()
         {
             return new StatelessElement(this);
         }
     }
 
-    /// <summary>
-    /// An internal State object that manages a StatelessWidget's lifecycle.
-    /// It acts as a lightweight proxy, holding the immutable widget and calling its Build method.
-    /// It delegates its View and Size properties to its child.
-    /// </summary>
+
     internal sealed class StatelessElement : State
     {
-        private StateHolder _stateHolder;
+        private readonly StateHolder _stateHolder;
+        private readonly MutableAtom<StatelessWidget> _widget = Atom.Value(default(StatelessWidget));
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
         public override WidgetSize Size => _stateHolder.Value.Size;
 
         public StatelessElement(StatelessWidget widget)
         {
-            _stateHolder = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), widget.Build);
+            _widget.Value = widget;
+            _stateHolder = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), BuildChild);
+        }
+
+        private Widget BuildChild(BuildContext context)
+        {
+            // Reads _widget.Value, establishing a reactive dependency.
+            // When the widget is replaced in Update(), this computed re-runs.
+            return _widget.Value.Build(context);
         }
 
         internal override void Update(Widget widget)
@@ -58,8 +63,7 @@ namespace UniMob.UI
 
             if (widget is StatelessWidget statelessWidget)
             {
-                _stateHolder = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context),
-                    statelessWidget.Build);
+                _widget.Value = statelessWidget;
             }
             else
             {

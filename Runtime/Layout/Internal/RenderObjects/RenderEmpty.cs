@@ -2,26 +2,26 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    public class RenderEmpty : RenderObject
+    public class RenderEmpty : LeafRenderObject
     {
         public static readonly RenderEmpty Shared = new RenderEmpty();
 
+        public RenderEmpty() : base(Lifetime.Eternal)
+        {
+
+        }
+
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            //return constraints.Constrain(Vector2.zero);
             return Vector2.zero;
         }
 
-        protected override void PerformPositioning()
-        {
-        }
-
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             return 0f;
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             return 0f;
         }

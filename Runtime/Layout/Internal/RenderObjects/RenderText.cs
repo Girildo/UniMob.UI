@@ -9,7 +9,7 @@ using UnityEngine.TextCore.Text;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal class RenderText : RenderObject
+    internal class RenderText : LeafRenderObject
     {
         private static Dictionary<WidgetViewReference, TextMeshProUGUI?> s_textMeshProMeasurers = new();
         private static TMP_StyleSheet? s_styleSheet;
@@ -18,12 +18,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private readonly ITextState _state;
 
-        public RenderText(ITextState state)
+        public RenderText(ITextState state) : base(state.StateLifetime)
         {
             _state = state;
 
             var viewRefence = _state.View;
-            
+
             // Ensure static sizer is initialized for the given view reference.
             if (!s_textMeshProMeasurers.TryGetValue(viewRefence, out var sizer) || sizer == null)
             {
@@ -122,18 +122,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return constraints.Constrain(preferredSize);
         }
 
-        protected override void PerformPositioning()
-        {
-            // No positioning needed for text, as it is handled by the TextMeshPro component.
-            // This method is required to be overridden, but does not need to do anything.
-        }
-
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             return GetPreferredSize(width, float.PositiveInfinity).y;
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             return GetPreferredSize(float.PositiveInfinity, height).x;
         }

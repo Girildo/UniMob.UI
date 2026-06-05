@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
-using UniMob.UI.Widgets;
+
 
 namespace UniMob.UI.Layout
 {
@@ -9,11 +9,6 @@ namespace UniMob.UI.Layout
     {
         public List<Widget> Children { get; set; } = new List<Widget>();
         public Alignment Alignment { get; set; } = Alignment.Center;
-
-        // Not used by ZStack, but part of the interface
-        public MainAxisAlignment MainAxisAlignment => MainAxisAlignment.Start;
-        public CrossAxisAlignment CrossAxisAlignment => CrossAxisAlignment.Start;
-        public AxisSize MainAxisSize => AxisSize.Min;
 
         public override State CreateState() => new ZStackState();
 

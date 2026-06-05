@@ -49,17 +49,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             ChildPosition = new Vector2(padding.Left, padding.Top);
         }
 
-        public override float GetIntrinsicWidth(float height)
+        protected override float ComputeIntrinsicWidth(float height)
         {
             var padding = _state.Padding;
-            var childIntrinsicWidth = base.GetIntrinsicWidth(height - padding.Vertical);
+            var childIntrinsicWidth = base.ComputeIntrinsicWidth(height - padding.Vertical);
             return childIntrinsicWidth + padding.Horizontal;
         }
 
-        public override float GetIntrinsicHeight(float width)
+        protected override float ComputeIntrinsicHeight(float width)
         {
             var padding = _state.Padding;
-            var childIntrinsicHeight = base.GetIntrinsicHeight(width - padding.Horizontal);
+            var childIntrinsicHeight = base.ComputeIntrinsicHeight(width - padding.Horizontal);
             return childIntrinsicHeight + padding.Vertical;
         }
     }
