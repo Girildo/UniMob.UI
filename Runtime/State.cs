@@ -25,7 +25,7 @@ namespace UniMob.UI
 
         private int _renderVersion = int.MinValue;
 
-        public RenderObject RenderObject => _renderObject;
+        public virtual RenderObject RenderObject => _renderObject;
         public BuildContext Context => _context;
 
         internal Widget RawWidget { get; private set; }
@@ -85,7 +85,8 @@ namespace UniMob.UI
             _context.SetParent(context);
         }
 
-        internal void InitRenderObject()
+        
+        internal virtual void InitRenderObject()
         {
             _renderObject = RawWidget.CreateRenderObject(Context, this);
         }

@@ -48,9 +48,6 @@ namespace UniMob.UI.Layout.Internal.Views
                         "Use Empty if necessary.");
                 }
 
-                if (child is ExpandedState expandedState) child = expandedState.Child;
-
-
                 var layoutData = childrenLayout[i];
 
                 if (float.IsInfinity(layoutData.Size.x))

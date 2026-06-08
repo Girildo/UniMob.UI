@@ -9,8 +9,8 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class Container : StatefulWidget
     {
-        [CanBeNull]
-        public Widget? Child { get; set; }
+        
+        public Widget Child { get; set; } = SizedBox.Shrink();
         public Color? BackgroundColor { get; set; } = Color.clear;
         public Sprite? BackgroundImage { get; set; } = null;
         public Alignment? Alignment { get; set; } = null;
@@ -19,7 +19,7 @@ namespace UniMob.UI.Layout
 
         public Container(Widget? child = null, float? width = null, float? height = null)
         {
-            Child = child;
+            Child = child ?? SizedBox.Shrink();
             Width = width;
             Height = height;
         }
@@ -58,7 +58,7 @@ namespace UniMob.UI.Layout
                 current = new SizedBox(child: current, width: Widget.Width, height: Widget.Height);
             }
 
-            return current ?? null;
+            return current;
         }
     }
 }

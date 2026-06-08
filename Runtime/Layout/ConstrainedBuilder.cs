@@ -8,6 +8,7 @@ using UniMob.UI.Layout.Internal.RenderObjects;
 namespace UniMob.UI.Layout
 {
     public delegate T ConstrainedBuilderDelegate<out T>(BuildContext context, LayoutConstraints constraints) where T : Widget;
+    
     public class ConstrainedBuilder : SingleChildLayoutWidget
     {
         public ConstrainedBuilderDelegate<Widget> Builder { get; set; }
@@ -15,8 +16,6 @@ namespace UniMob.UI.Layout
         public override State CreateState() => new ConstrainedBuilderState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state) => new RenderProxy((ConstrainedBuilderState)state);
-        
-        
     }
 
     public class ConstrainedBuilderState : ViewState<ConstrainedBuilder>, ISingleChildLayoutState

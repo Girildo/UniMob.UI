@@ -1,5 +1,7 @@
 using System;
 using JetBrains.Annotations;
+using UniMob.UI.Layout;
+using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine.Assertions;
 
 namespace UniMob.UI
@@ -22,10 +24,18 @@ namespace UniMob.UI
 
         public IState Child => _child.Value;
 
+        internal sealed override void InitRenderObject()
+        {
+            // A higher order state does not have a render object -- it forwards the accessor to its child.
+        }
+        public sealed override RenderObject RenderObject => _child.Value?.RenderObject;
+
         protected HocState()
         {
             _child = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), Build);
         }
+
+        
 
         internal sealed override void Update(Widget widget)
         {
@@ -44,6 +54,14 @@ namespace UniMob.UI
             {
                 DidUpdateWidget(oldWidget);
             }
+        }
+
+        
+
+        internal sealed override void UpdateConstraints(LayoutConstraints constraints)
+        {
+            base.UpdateConstraints(constraints); // Keep HocState's own atoms happy
+            Child?.UpdateConstraints(constraints);
         }
 
         public abstract Widget Build(BuildContext context);
