@@ -10,7 +10,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     internal struct IndexedLayoutData
     {
         public int ChildIndex;
-        public LayoutData Layout;
+        public LayoutInfo Layout;
     }
 
     internal interface ISliverState : IMultiChildLayoutState
@@ -30,14 +30,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         // Caches the measured sizes of all children to avoid re-calculating every frame.
         private readonly List<Vector2> _allChildrenSizes = new();
         private readonly ISliverState _state;
-        private readonly List<LayoutData> _visibleChildrenLayout = new();
+        private readonly List<LayoutInfo> _visibleChildrenLayout = new();
 
         public RenderSliverList(ISliverState state) : base(state.StateLifetime)
         {
             _state = state;
         }
 
-        public IReadOnlyList<LayoutData> ChildrenLayout => _visibleChildrenLayout;
+        public IReadOnlyList<LayoutInfo> ChildrenLayout => _visibleChildrenLayout;
 
         /// <summary>
         ///     SIZING PASS: Measures every child to determine the total scrollable content size.
@@ -131,10 +131,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     visibleChildrenData.Add(new IndexedLayoutData
                     {
                         ChildIndex = i,
-                        Layout = new LayoutData
+                        Layout = new LayoutInfo
                         {
                             Size = childSize,
-                            CornerPosition = cornerPosition
+                            Position = cornerPosition
                         }
                     });
                 }

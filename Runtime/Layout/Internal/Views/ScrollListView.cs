@@ -64,7 +64,7 @@ namespace UniMob.UI.Layout.Internal.Views
             var childrenLayout = renderObject.ChildrenLayout;
             foreach (var layout in childrenLayout)
             {
-                var layoutPos = layout.CornerPosition.Value;
+                var layoutPos = layout.Position;
                 var layoutSize = layout.Size;
 
                 // The layoutPos is relative to the content's top-left, with Y-down.
@@ -217,7 +217,7 @@ namespace UniMob.UI.Layout.Internal.Views
                         -layoutData.Size.y * (1.0f - rt.pivot.y));
                     rt.sizeDelta = layoutData.Size;
                     rt.anchoredPosition =
-                        new Vector2(layoutData.CornerPosition.Value.x, -layoutData.CornerPosition.Value.y) +
+                        new Vector2(layoutData.Position.x, -layoutData.Position.y) +
                         pivotOffset;
                 }
             }

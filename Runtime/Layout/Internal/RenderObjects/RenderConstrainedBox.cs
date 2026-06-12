@@ -13,7 +13,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         public RenderConstrainedBox(IConstrainedBoxState state) : base(state)
         {
-            _state = state;
+            this._state = state;
         }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
@@ -22,11 +22,23 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var childConstraints = selfConstraints.Enforce(constraints);
 
             // If there is no child, we size ourself to the smallest size allowed by the child constraints.
-            if (_state.Child == null)
-                return childConstraints.Constrain(Vector2.zero);
+            if (_state.Child != null)
+            {
+                ChildSize = LayoutChild(_state.Child, childConstraints);
+                return ChildSize;
+            }
 
-            ChildSize = LayoutChild(_state.Child, childConstraints);
-            return ChildSize;
+
+            // Constraining Vector2.zero mathematically guarantees we return the MinWidth/MinHeight.
+            var width = childConstraints.MinWidth;
+            var height = childConstraints.MinHeight;
+
+            // If the box was asked to expand (Infinity), but the parent ALSO gave infinite space, 
+            // we must collapse back to the parent's safest minimum bound (usually 0) to avoid crashing Unity.
+            if (float.IsPositiveInfinity(width)) width = constraints.MinWidth;
+            if (float.IsPositiveInfinity(height)) height = constraints.MinHeight;
+
+            return new Vector2(width, height);
         }
 
 
@@ -37,7 +49,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var selfConstraints = _state.BoxConstraints;
             if (selfConstraints.HasTightWidth)
                 return selfConstraints.MinWidth;
-            
+
             var childIntrinsicWidth = base.ComputeIntrinsicWidth(height);
             return selfConstraints.ConstrainWidth(childIntrinsicWidth);
         }
@@ -52,6 +64,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return selfConstraints.ConstrainHeight(childIntrinsicHeight);
         }
 
-        
+
     }
 }

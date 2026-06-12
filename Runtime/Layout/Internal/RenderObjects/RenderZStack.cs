@@ -8,8 +8,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly ZStackState _state;
 
-        private readonly List<LayoutData> _childrenLayout = new();
-        public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
+        private readonly List<LayoutInfo> _childrenLayout = new();
+        public IReadOnlyList<LayoutInfo> ChildrenLayout => _childrenLayout;
 
         public ZStack Widget => (ZStack) _state.RawWidget;
 
@@ -35,14 +35,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 if (child.InnerViewState is PositionedState)
                 {
                     // Add a placeholder. The positioned child will be fully laid out later.
-                    _childrenLayout.Add(new LayoutData());
+                    _childrenLayout.Add(new LayoutInfo());
                     continue;
                 }
 
                 // This is a non-positioned child.
                 var childSize = LayoutChild(child, childConstraints);
 
-                _childrenLayout.Add(new LayoutData { Size = childSize });
+                _childrenLayout.Add(new LayoutInfo { Size = childSize });
 
                 maxWidth = Mathf.Max(maxWidth, childSize.x);
                 maxHeight = Mathf.Max(maxHeight, childSize.y);
@@ -80,7 +80,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var y = (Size.y - childSize.y) * (alignment.Y * 0.5f + 0.5f);
 
             var layoutData = _childrenLayout[index];
-            layoutData.CornerPosition = new Vector2(x, y);
+            layoutData.Position = new Vector2(x, y);
             _childrenLayout[index] = layoutData;
         }
 
@@ -118,7 +118,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 y = Size.y - childSize.y - (pos.Bottom ?? 0);
             }
 
-            _childrenLayout[index] = new LayoutData { Size = childSize, CornerPosition = new Vector2(x.Value, y.Value) };
+            _childrenLayout[index] = new LayoutInfo { Size = childSize, Position = new Vector2(x.Value, y.Value) };
         }
 
         protected override float ComputeIntrinsicWidth(float height)

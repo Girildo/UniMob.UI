@@ -2,6 +2,7 @@ using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
 {
+
     public class Align : SingleChildLayoutWidget
     {
         public Alignment Alignment { get; set; } = Alignment.Center;

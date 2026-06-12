@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
@@ -19,9 +20,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly IFlexContainerState _state;
         private readonly Axis _axis;
         private float _unconstrainedMainAxisSize;
-        private readonly List<LayoutData> _childrenLayout = new();
+        private readonly List<LayoutInfo> _childrenLayout = new();
 
-        public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
+        public IReadOnlyList<LayoutInfo> ChildrenLayout => _childrenLayout;
 
         public RenderFlex(IFlexContainerState state, Axis axis) : base(state.StateLifetime)
         {
@@ -49,7 +50,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 var childState = _state.Children[i];
 
-                _childrenLayout.Add(new LayoutData()); // Add a placeholder
+                _childrenLayout.Add(new LayoutInfo()); // Add a placeholder
 
                 var isFlexible = false;
                 var flexFactor = 1;
@@ -100,7 +101,31 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 }
 
                 var childSize = LayoutChild(_state.Children[i], childConstraints);
-                _childrenLayout[i] = new LayoutData { Size = childSize };
+
+
+#if UNITY_EDITOR
+                string debugWarning = null;
+                var infiniteMain = isHorizontal ? float.IsInfinity(childSize.x) : float.IsInfinity(childSize.y);
+                if (infiniteMain)
+                {
+                    var axisName = isHorizontal ? "width" : "height";
+                    debugWarning = $"Returned infinite {axisName} under unbounded {axisName} constraints. " +
+                                    "Wrap in Expanded/Flexible to fix.";
+                    Debug.LogError($"{_state.GetType().Name}: child {_state.Children[i].GetType().Name} " +
+                                    $"(index {i}) {debugWarning}");
+
+                    childSize = isHorizontal ? new Vector2(0, childSize.y) : new Vector2(childSize.x, 0);
+                }
+#endif
+
+                _childrenLayout[i] = new LayoutInfo
+                {
+                    Size = childSize,
+#if UNITY_EDITOR
+                    DebugWarning = debugWarning
+#endif
+
+                };
                 mainAxisTotalSize += isHorizontal ? childSize.x : childSize.y;
                 crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
             }
@@ -114,12 +139,42 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             if (freeSpace < 0)
             {
-                Debug.LogWarning("No free space available for flexible children. They will be sized to zero.");
+                var overflowAmount = -freeSpace;
+                var axisName = isHorizontal ? "horizontal" : "vertical";
+                var childNames = string.Join(", ", nonFlexChildrenIndices
+                    .Select(i => _state.Children[i].GetType().Name));
+
+                Debug.LogWarning(
+                    $"{_state.GetType().Name} overflowed by {overflowAmount:F1}px on the {axisName} axis. " +
+                    $"Non-flex children ({childNames}) requested more space than is available.");
+
+#if UNITY_EDITOR
+                if (nonFlexChildrenIndices.Count > 0)
+                {
+                    var lastIndex = nonFlexChildrenIndices[^1];
+                    var layoutData = _childrenLayout[lastIndex];
+                    var msg = $"Container overflowed by {overflowAmount:F1}px ({axisName}). " +
+                              "This child doesn't fit alongside its siblings.";
+                    layoutData.DebugWarning = layoutData.DebugWarning is null
+                        ? msg
+                        : layoutData.DebugWarning + " | " + msg;
+                    _childrenLayout[lastIndex] = layoutData;
+                }
+#endif
+
                 freeSpace = 0;
             }
 
             if (totalFlexFactor > 0)
             {
+                if (float.IsInfinity(maxMainAxis))
+                {
+                    Debug.LogError(
+                        $"{_state.GetType().Name}: has flexible (Expanded) children but received " +
+                        $"unbounded {(isHorizontal ? "width" : "height")} constraints. " +
+                        "An ancestor must provide a bounded size on this axis, or remove Expanded.");
+                }
+
                 foreach (var (i, flex) in flexChildrenData)
                 {
                     var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
@@ -139,7 +194,19 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     }
 
                     var childSize = LayoutChild(_state.Children[i], flexConstraints);
-                    _childrenLayout[i] = new LayoutData { Size = childSize };
+
+
+
+                    if (isHorizontal ? float.IsInfinity(childSize.x) : float.IsInfinity(childSize.y))
+                    {
+                        Debug.LogError(
+                            $"{_state.Children[i].GetType().Name} returned an infinite " +
+                            $"{(isHorizontal ? "width" : "height")} when given unconstrained " +
+                            $"{(isHorizontal ? "width" : "height")}. Wrap it in Expanded/Flexible " +
+                            "so it receives a bounded constraint.");
+                    }
+
+                    _childrenLayout[i] = new LayoutInfo { Size = childSize };
                     crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
                 }
             }
@@ -160,7 +227,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             return constraints.Constrain(finalSize);
 
-            
+
         }
 
         protected override void PerformPositioning()
@@ -217,7 +284,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     _ => 0, // Start and Stretch align to 0
                 };
                 var newLayoutData = _childrenLayout[i];
-                newLayoutData.CornerPosition = isHorizontal
+                newLayoutData.Position = isHorizontal
                     ? new Vector2(mainAxisPos, crossAxisPos)
                     : new Vector2(crossAxisPos, mainAxisPos);
                 _childrenLayout[i] = newLayoutData;
@@ -270,7 +337,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     totalWidth += GetChildIntrinsicWidth(child, height);
                 }
 
-                // ADDED: Account for spacing in intrinsic width for Horizontal axis
+
                 if (_state.Children.Length > 0)
                 {
                     totalWidth += Mathf.Max(0, _state.Children.Length - 1) * _state.Spacing;

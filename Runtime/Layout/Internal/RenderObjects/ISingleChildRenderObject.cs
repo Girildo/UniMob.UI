@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
@@ -6,5 +6,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         Vector2 ChildSize { get; }
         Vector2 ChildPosition { get; }
+
+        LayoutInfo ChildLayout { get; }
     }
 }

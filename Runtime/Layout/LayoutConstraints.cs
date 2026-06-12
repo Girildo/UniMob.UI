@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace UniMob.UI.Layout
@@ -43,14 +43,22 @@ namespace UniMob.UI.Layout
                 height ?? float.PositiveInfinity
             );
         }
-        
-        
+
+
         /// <summary>
         ///     Creates a set of unbounded constraints, allowing any size.
         /// </summary>
         public static LayoutConstraints Unbounded()
         {
             return new LayoutConstraints(0, 0, float.PositiveInfinity, float.PositiveInfinity);
+        }
+
+        /// <summary>
+        ///     Create a set of expanded constraints, forcing the size to be as large as possible within the given bounds.
+        /// </summary>
+        public static LayoutConstraints Expanded()
+        {
+            return Tight(float.PositiveInfinity, float.PositiveInfinity);
         }
 
 
@@ -69,13 +77,19 @@ namespace UniMob.UI.Layout
         }
 
         /// <summary>
-        ///     Creates a new set of constraints by enforcing the bounds of another.
-        ///     The final constraints will be within the bounds of both.
+        ///     Returns a new set of constraints by taking the current constraints and clamping them 
+        ///     to safely fit inside the bounds of the <paramref name="other"/> constraints.
         /// </summary>
         /// <remarks>
-        ///     This operation is <i>not</i> commutative, i.e. <c>a.Enforce(b)</c>
-        ///     is not the same as <c>b.Enforce(a)</c>.
+        ///     In UI layout math, <c>this</c> instance usually represents the "desired" constraints (e.g., a child's requested size), 
+        ///     and the <paramref name="other"/> instance represents the "strict" constraints (e.g., the rules passed down by a parent).
+        ///     <br/>
+        ///     This operation is <i>not</i> commutative. 
+        ///     <br/>
+        ///     <c>childRequest.Enforce(parentRules)</c> means: "Take the child's desired size, and force it to obey the parent's rules."
         /// </remarks>
+        /// <param name="other">The strict boundary constraints that this instance must be clamped to.</param>
+        /// <returns>A new set of constraints guaranteed to be within the <paramref name="other"/> bounds.</returns>
         public LayoutConstraints Enforce(LayoutConstraints other)
         {
             return new LayoutConstraints(
@@ -104,7 +118,7 @@ namespace UniMob.UI.Layout
                 Mathf.Max(deflatedMinHeight, MaxHeight - vertical)
             );
         }
-        
+
         /// <summary>
         ///     Creates a new set of constraints by tightening the minimums.
         /// </summary>
@@ -128,7 +142,7 @@ namespace UniMob.UI.Layout
                 Mathf.Clamp(size.y, MinHeight, MaxHeight)
             );
         }
-        
+
         /// <summary>
         /// Constrain  that respects these constraints.
         /// </summary>
@@ -169,6 +183,6 @@ namespace UniMob.UI.Layout
             return HashCode.Combine(MinWidth, MinHeight, MaxWidth, MaxHeight);
         }
 
-        
+
     }
 }

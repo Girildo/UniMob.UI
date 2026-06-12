@@ -19,8 +19,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private MainAxisAlignment RunAlignment => _state.RunAlignment;
         
 
-        private readonly List<LayoutData> _childrenLayout = new();
-        public IReadOnlyList<LayoutData> ChildrenLayout => _childrenLayout;
+        private readonly List<LayoutInfo> _childrenLayout = new();
+        public IReadOnlyList<LayoutInfo> ChildrenLayout => _childrenLayout;
 
         private class RunMetrics
         {
@@ -58,7 +58,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var child = _state.Children[i];
                 var childSize = LayoutChild(child, childConstraints);
                 
-                _childrenLayout.Add(new LayoutData { Size = childSize });
+                _childrenLayout.Add(new LayoutInfo { Size = childSize });
 
                 var childMain = Direction == Axis.Horizontal ? childSize.x : childSize.y;
                 var childCross = Direction == Axis.Horizontal ? childSize.y : childSize.x;
@@ -208,7 +208,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     var xPos = Direction == Axis.Horizontal ? currentMain : finalCross;
                     var yPos = Direction == Axis.Horizontal ? finalCross : currentMain;
 
-                    layoutData.CornerPosition = new Vector2(xPos, yPos);
+                    layoutData.Position = new Vector2(xPos, yPos);
                     _childrenLayout[childIndex] = layoutData;
 
                     currentMain += childMain + mainStep;

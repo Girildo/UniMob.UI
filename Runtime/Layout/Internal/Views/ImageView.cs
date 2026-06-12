@@ -26,6 +26,8 @@ namespace UniMob.UI.Layout.Internal.Views
         protected override void Render()
         {
             if (_rawImage == null) return;
+            
+            
 
             _rawImage.texture = State.Texture;
             _rawImage.color = State.Color;
@@ -41,6 +43,9 @@ namespace UniMob.UI.Layout.Internal.Views
             _rawImage.uvRect = CalculateUVRect(rect.size, texSize, State.Fit, State.Alignment);
         }
 
+        /// <summary>
+        /// Calculate the UVs to apply the fitting mode (cover, contain, etc) and alignment to the RawImage.
+        /// </summary>
         private Rect CalculateUVRect(Vector2 boxSize, Vector2 texSize, ImageFit fit, Alignment alignment)
         {
             if (fit == ImageFit.Fill)
