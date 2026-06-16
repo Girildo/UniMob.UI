@@ -42,7 +42,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var maxCrossAxis = isHorizontal ? constraints.MaxHeight : constraints.MaxWidth;
 
             var nonFlexChildrenIndices = new List<int>();
-            var flexChildrenData = new List<(int index, int flex)>();
+            var flexChildrenData = new List<(int index, int flex, FlexFit fit)>();
 
             // --- First Pass: Identify flex vs. non-flex children ---
             var childCount = _state.Children.Length;
@@ -54,13 +54,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 var isFlexible = false;
                 var flexFactor = 1;
+                var fit = FlexFit.Tight;
 
-                // Check if the child is an Expanded (flex) widget
+                // Check if the child is an Flex widget
                 // -- remark: we use InnerViewState because Expanded might be composed inside other Hoc widgets
-                if (childState.InnerViewState is ExpandedState flex)
+                if (childState.InnerViewState is FlexibleState flex)
                 {
                     isFlexible = true;
                     flexFactor = flex.Flex;
+                    fit = flex.Fit;
                 }
 
                 // Legacy widgets are considered flexible if they have infinite constraints in the main axis
@@ -76,7 +78,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 if (isFlexible)
                 {
                     totalFlexFactor += flexFactor;
-                    flexChildrenData.Add((i, flexFactor));
+                    flexChildrenData.Add((i, flexFactor, fit));
                 }
                 else
                 {
@@ -139,28 +141,33 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             if (freeSpace < 0)
             {
-                var overflowAmount = -freeSpace;
-                var axisName = isHorizontal ? "horizontal" : "vertical";
-                var childNames = string.Join(", ", nonFlexChildrenIndices
-                    .Select(i => _state.Children[i].GetType().Name));
+                // Handle overflow: non-flex children exceed available space. We log a warning and set freeSpace to 0, so flex children won't get negative space.
+                // The tolerance bandis to absorb small floating point errors without logging warnings, but still catch significant overflows.
+                if (freeSpace < -LayoutConstants.OverflowTolerance)
+                {
+                    var overflowAmount = -freeSpace;
+                    var axisName = isHorizontal ? "horizontal" : "vertical";
+                    var childNames = string.Join(", ", nonFlexChildrenIndices
+                        .Select(i => _state.Children[i].GetType().Name));
 
-                Debug.LogWarning(
-                    $"{_state.GetType().Name} overflowed by {overflowAmount:F1}px on the {axisName} axis. " +
-                    $"Non-flex children ({childNames}) requested more space than is available.");
+                    Debug.LogWarning(
+                        $"{_state.GetType().Name} overflowed by {overflowAmount:F1}px on the {axisName} axis. " +
+                        $"Non-flex children ({childNames}) requested more space than is available.");
 
 #if UNITY_EDITOR
-                if (nonFlexChildrenIndices.Count > 0)
-                {
-                    var lastIndex = nonFlexChildrenIndices[^1];
-                    var layoutData = _childrenLayout[lastIndex];
-                    var msg = $"Container overflowed by {overflowAmount:F1}px ({axisName}). " +
-                              "This child doesn't fit alongside its siblings.";
-                    layoutData.DebugWarning = layoutData.DebugWarning is null
-                        ? msg
-                        : layoutData.DebugWarning + " | " + msg;
-                    _childrenLayout[lastIndex] = layoutData;
-                }
+                    if (nonFlexChildrenIndices.Count > 0)
+                    {
+                        var lastIndex = nonFlexChildrenIndices[^1];
+                        var layoutData = _childrenLayout[lastIndex];
+                        var msg = $"Container overflowed by {overflowAmount:F1}px ({axisName}). " +
+                                  "This child doesn't fit alongside its siblings.";
+                        layoutData.DebugWarning = layoutData.DebugWarning is null
+                            ? msg
+                            : layoutData.DebugWarning + " | " + msg;
+                        _childrenLayout[lastIndex] = layoutData;
+                    }
 #endif
+                }
 
                 freeSpace = 0;
             }
@@ -173,24 +180,30 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                         $"{_state.GetType().Name}: has flexible (Expanded) children but received " +
                         $"unbounded {(isHorizontal ? "width" : "height")} constraints. " +
                         "An ancestor must provide a bounded size on this axis, or remove Expanded.");
+                    
                 }
 
-                foreach (var (i, flex) in flexChildrenData)
+                foreach (var (i, flex, fit) in flexChildrenData)
                 {
                     var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
 
                     LayoutConstraints flexConstraints;
                     if (isHorizontal)
                     {
-                        // If stretching, the cross-axis (height) is tight. Otherwise, it's loose (0 to max).
-                        flexConstraints = LayoutConstraints.TightFor(width: flexSpace)
-                            .Tighten(height: shouldStretchCrossAxis ? maxCrossAxis : null);
+                        flexConstraints = fit == FlexFit.Tight
+                                    ? LayoutConstraints.TightFor(width: flexSpace)
+                                    : new LayoutConstraints(minWidth: 0, minHeight: 0, maxWidth: flexSpace, maxHeight: maxCrossAxis);
+
+                        flexConstraints = flexConstraints.Tighten(height: shouldStretchCrossAxis ? maxCrossAxis : null);
                     }
                     else // isVertical
                     {
-                        // If stretching, the cross-axis (width) is tight. Otherwise, it's loose (0 to max).
-                        flexConstraints = LayoutConstraints.TightFor(height: flexSpace)
-                            .Tighten(width: shouldStretchCrossAxis ? maxCrossAxis : null);
+                        flexConstraints = fit == FlexFit.Tight
+                                    ? LayoutConstraints.TightFor(height: flexSpace)
+                                    : new LayoutConstraints(minWidth: 0, minHeight: 0, maxWidth: maxCrossAxis, maxHeight: flexSpace);
+
+
+                        flexConstraints = flexConstraints.Tighten(width: shouldStretchCrossAxis ? maxCrossAxis : null);
                     }
 
                     var childSize = LayoutChild(_state.Children[i], flexConstraints);

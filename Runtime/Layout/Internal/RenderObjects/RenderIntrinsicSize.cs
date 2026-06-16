@@ -22,7 +22,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 ? constraints.Tighten(width: GetIntrinsicWidth(float.PositiveInfinity))
                 : constraints.Tighten(height: GetIntrinsicHeight(float.PositiveInfinity));
 
-            return LayoutChild(_state.Child, childConstraints);
+            var laidOut = LayoutChild(_state.Child, childConstraints);
+            return constraints.Constrain(laidOut);
         }
 
         protected override void PerformPositioning()

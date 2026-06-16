@@ -1,10 +1,16 @@
 #nullable enable
 namespace UniMob.UI.Layout
 {
+    public interface ISingleChildLayoutWidget : Widget
+    {
+        Widget? Child { get; set; }
+    }
+
+
     /// <summary>
     /// Represents a widget that manages the layout of a single child widget.
     /// </summary>
-    public abstract class SingleChildLayoutWidget : StatefulWidget
+    public abstract class SingleChildLayoutWidget : StatefulWidget, ISingleChildLayoutWidget
     {
         public Widget? Child { get; set; }
     }
@@ -17,7 +23,7 @@ namespace UniMob.UI.Layout
     /// non-painting layout view. Subclasses can override this property if they need to provide a different view.
     /// </remarks>
     public abstract class SingleChildLayoutState<TWidget> : ViewState<TWidget>, ISingleChildLayoutState
-        where TWidget : SingleChildLayoutWidget
+        where TWidget : ISingleChildLayoutWidget
     {
         private readonly StateHolder? _child;
 

@@ -18,6 +18,11 @@ namespace UniMob.UI.Layout
             MaxHeight = maxHeight;
         }
 
+        public LayoutConstraints CopyWith(float? minWidth = null, float? minHeight = null, float? maxWidth = null, float? maxHeight = null)
+        {
+            return new LayoutConstraints(minWidth ?? this.MinWidth, minHeight ?? this.MinHeight, maxWidth??this.MaxWidth, maxHeight ?? this.MaxHeight);
+        }
+
         /// <summary>
         ///     Creates a set of tight constraints, forcing an exact size.
         /// </summary>
@@ -34,6 +39,12 @@ namespace UniMob.UI.Layout
             return new LayoutConstraints(0, 0, width, height);
         }
 
+        /// <summary>
+        ///     Creates a set of tight constraints for the specified dimensions, allowing optional width and height.
+        /// </summary>
+        /// <param name="width">The desired width, or null to allow any width.</param>
+        /// <param name="height">The desired height, or null to allow any height.</param>
+        /// <returns>A new set of layout constraints with the specified dimensions.</returns>
         public static LayoutConstraints TightFor(float? width = null, float? height = null)
         {
             return new LayoutConstraints(
@@ -120,7 +131,7 @@ namespace UniMob.UI.Layout
         }
 
         /// <summary>
-        ///     Creates a new set of constraints by tightening the minimums.
+        ///     Returns a new set of constraints with a tight width and/or height as close to the given width and height as possible while still respecting the original box constraints.
         /// </summary>
         public LayoutConstraints Tighten(float? width = null, float? height = null)
         {
