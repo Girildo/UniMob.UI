@@ -43,6 +43,7 @@ namespace UniMob.UI.Layout
         public Color Color { get; set; } = Color.white;
         public ImageFit Fit { get; set; } = ImageFit.Contain;
         public Alignment Alignment { get; set; } = Alignment.Center;
+        public bool IsRaycastTarget { get; set; }
 
         public override State CreateState() => new ImageState();
 
@@ -58,6 +59,8 @@ namespace UniMob.UI.Layout
         Color Color { get; }
         ImageFit Fit { get; }
         Alignment Alignment { get; }
+        
+        bool IsRaycastTarget { get; }
     }
 
     public class ImageState : ViewState<UniMobImage>, IImageState
@@ -66,6 +69,8 @@ namespace UniMob.UI.Layout
         public Color Color => Widget.Color;
         public ImageFit Fit => Widget.Fit;
         public Alignment Alignment => Widget.Alignment;
+
+        public bool IsRaycastTarget => Widget.IsRaycastTarget;
 
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.ImageView");
     }

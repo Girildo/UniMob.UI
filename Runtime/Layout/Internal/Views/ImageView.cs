@@ -19,24 +19,22 @@ namespace UniMob.UI.Layout.Internal.Views
             if (_rawImage == null)
             {
                 _rawImage = GetComponent<RawImage>();
-                _rawImage.raycastTarget = false; // Images usually shouldn't block raycasts by default
             }
         }
 
         protected override void Render()
         {
             if (_rawImage == null) return;
-            
-            
+            if (State.Texture == null) return;
 
-            _rawImage.texture = State.Texture;
+            _rawImage.raycastTarget = State.IsRaycastTarget;
             _rawImage.color = State.Color;
 
-            if (State.Texture == null) return;
+            _rawImage.texture = State.Texture;
 
             // Sizing: The RenderImage already calculated our RectTransform size.
             // Painting: Now we calculate the UVs to map the texture inside this RectTransform.
-            Rect rect = ((RectTransform)transform).rect;
+            Rect rect = ((RectTransform) transform).rect;
             if (rect.width <= 0 || rect.height <= 0) return;
 
             Vector2 texSize = new Vector2(State.Texture.width, State.Texture.height);
@@ -68,7 +66,7 @@ namespace UniMob.UI.Layout.Internal.Views
                     if (isBoxWider)
                     {
                         // Crop vertical
-                        uvHeight = texAspect / boxAspect; 
+                        uvHeight = texAspect / boxAspect;
                     }
                     else
                     {

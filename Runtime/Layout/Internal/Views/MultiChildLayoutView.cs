@@ -90,11 +90,6 @@ namespace UniMob.UI.Layout.Internal.Views
                 );
 
                 rt.sizeDelta = layoutData.Size;
-                //if (!layoutData.Position)
-                //{
-                //    throw new InvalidOperationException(
-                //        $"LayoutData for child {i} does not have a CornerPosition set. This is required for positioning.");
-                //}
                 rt.anchoredPosition =
                     new Vector2(layoutData.Position.x, -layoutData.Position.y) + pivotOffset;
 
@@ -106,6 +101,11 @@ namespace UniMob.UI.Layout.Internal.Views
                     PaintLayoutWarning(rt);
                 }
 #endif
+                // SYNC UNITY HIERARCHY WITH DECLARATIVE ORDER
+                if (rt.GetSiblingIndex() != i)
+                {
+                    rt.SetSiblingIndex(i);
+                }
             }
 
 #if UNITY_EDITOR

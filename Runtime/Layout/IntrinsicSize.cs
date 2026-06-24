@@ -19,10 +19,8 @@ namespace UniMob.UI.Layout
         public override Axis Axis => Axis.Vertical;
     }
 
-    public abstract class IntrinsicSize : StatefulWidget
+    public abstract class IntrinsicSize : SingleChildLayoutWidget
     {
-        public Widget Child { get; set; } = new Empty();
-
         public abstract Axis Axis { get; }
 
         public override State CreateState() => new IntrinsicSizeState();
@@ -33,11 +31,8 @@ namespace UniMob.UI.Layout
         }
     }
 
-    public class IntrinsicSizeState : HocState<IntrinsicSize>
+    public class IntrinsicSizeState : SingleChildLayoutState<IntrinsicSize>
     {
-        public override Widget Build(BuildContext context)
-        {
-            return Widget.Child;
-        }
+        public Axis Axis => this.Widget.Axis;
     }
 }

@@ -24,6 +24,7 @@ namespace UniMob.UI
             return state.InnerViewState.RenderObject;
         }
 
+        public virtual string? GetDiagnosticsInfo() => null;
 
         [CanBeNull]
         public State CreateState(StateProvider provider) => null;
@@ -48,6 +49,11 @@ namespace UniMob.UI
         {
             _widget.Value = widget;
             _stateHolder = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), BuildChild);
+        }
+
+        public override string GetDiagnosticInfo()
+        {
+            return this._widget.Value?.GetDiagnosticsInfo();
         }
 
         private Widget BuildChild(BuildContext context)

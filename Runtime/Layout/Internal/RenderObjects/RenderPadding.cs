@@ -25,15 +25,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return constraints.Constrain(new Vector2(width, height));
             }
 
-            // 1. Deflate the parent's constraints by the padding amount.
-            // This creates the smaller box in which the child can be laid out.
             var innerConstraints = constraints.Deflate(padding);
 
-            // 2. Lay out the child within those smaller, inner constraints.
             ChildSize = LayoutChild(_state.Child, innerConstraints);
 
-            // 3. The final size of the Padding widget is the child's size
-            // plus the padding on all sides.
             var finalWidth = ChildSize.x + padding.Horizontal;
             var finalHeight = ChildSize.y + padding.Vertical;
 

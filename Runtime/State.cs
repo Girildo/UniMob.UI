@@ -150,10 +150,7 @@ namespace UniMob.UI
             return new StateCollectionHolder(lifetime, context, builder);
         }
 
-        public object ToDiagnosticString()
-        {
-            return $"State {this.GetType().Name} (Widget: {RawWidget.GetType().Name}, RenderObject: {RenderObject.GetType().Name}";
-        }
+        public virtual string GetDiagnosticInfo() => null;
     }
 
     public class StateCollectionHolder

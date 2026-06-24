@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UniMob.UI.Layout.Internal.Diagnostics;
 using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
@@ -180,7 +181,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                         $"{_state.GetType().Name}: has flexible (Expanded) children but received " +
                         $"unbounded {(isHorizontal ? "width" : "height")} constraints. " +
                         "An ancestor must provide a bounded size on this axis, or remove Expanded.");
-                    
+
+                    Debug.LogError(_state.PrintHierarchy());
                 }
 
                 foreach (var (i, flex, fit) in flexChildrenData)

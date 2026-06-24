@@ -1,5 +1,3 @@
-using UniMob.UI.Layout.Internal.RenderObjects;
-
 namespace UniMob.UI.Widgets
 {
     public class PaddingBox : SingleChildLayoutWidget
@@ -12,12 +10,6 @@ namespace UniMob.UI.Widgets
         public RectPadding Padding { get; }
 
         public override State CreateState() => new PaddingBoxState();
-
-
-        public override RenderObject CreateRenderObject(BuildContext context, IState state)
-        {
-            return new RenderPadding((PaddingBoxState) state);
-        }
     }
 
     internal class PaddingBoxState : SingleChildLayoutState<PaddingBox>, IPaddingBoxState, Layout.IPaddingState

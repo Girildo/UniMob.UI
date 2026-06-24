@@ -79,9 +79,6 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             if (this.rectTransform == null) return;
 
-            // FIX 1: The "Active Selection" Lock. 
-            // This ensures we ONLY draw this elaborate Gizmo for the primary object you clicked.
-            // It prevents the massive clutter if you multi-select or if Unity tries to draw children.
             if (UnityEditor.Selection.activeGameObject != this.gameObject) return;
 
             Matrix4x4 originalMatrix = Gizmos.matrix;

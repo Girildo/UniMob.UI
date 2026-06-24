@@ -12,6 +12,11 @@ namespace UniMob.UI.Layout
 
         public LayoutConstraints(float minWidth, float minHeight, float maxWidth, float maxHeight)
         {
+            if(minWidth > maxWidth)
+                minWidth = maxWidth;
+
+            if(minHeight > maxHeight)
+                minHeight = maxHeight;
             MinWidth = minWidth;
             MinHeight = minHeight;
             MaxWidth = maxWidth;
@@ -78,6 +83,7 @@ namespace UniMob.UI.Layout
         public bool IsTight => HasTightWidth && HasTightHeight;
         public bool HasBoundedWidth => float.IsFinite(MaxWidth);
         public bool HasBoundedHeight => float.IsFinite(MaxHeight);
+
 
         /// <summary>
         ///     Creates a new set of constraints with the minimums removed.
@@ -155,17 +161,24 @@ namespace UniMob.UI.Layout
         }
 
         /// <summary>
-        /// Constrain  that respects these constraints.
+        /// Returns the largest possible size that obeys these constraints.
+        /// </summary>
+        public Vector2 Largest => new Vector2(this.MaxWidth, this.MaxHeight);
+        /// <summary>
+        /// Returns the smallest possible size that respects these constraints.
+        /// </summary>
+        public Vector2 Smallest => new Vector2(this.MinHeight, this.MinHeight);
+
+        /// <summary>
+        /// Clamps <paramref name="width"/> to make it respect these constraints.
         /// </summary>
         public float ConstrainWidth(float width)
         {
             return Mathf.Clamp(width, MinWidth, MaxWidth);
         }
         /// <summary>
-        /// Returns a height that respects these constraints.
+        /// Clamps <paramref name="height"/> to make it respect these constraints.
         /// </summary>
-        /// <param name="height"></param>
-        /// <returns></returns>
         public float ConstrainHeight(float height)
         {
             return Mathf.Clamp(height, MinHeight, MaxHeight);
