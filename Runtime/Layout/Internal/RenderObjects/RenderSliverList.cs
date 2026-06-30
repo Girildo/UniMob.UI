@@ -17,9 +17,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         IState[] AllChildren { get; }
         Axis Axis { get; }
-        Vector2 ViewportSize { get; }
-        float ScrollOffset { get; }
-        float VirtualizationCacheExtent { get; }
+        //Vector2 ViewportSize { get; }
+        float NormalizedScrollOffset { get; }
+        float? VirtualizationCacheExtent { get; }
         float Spacing { get; }
 
         internal void SetVisibleChildren(List<IndexedLayoutData> visibleChildren);
@@ -31,10 +31,27 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly List<Vector2> _allChildrenSizes = new();
         private readonly ISliverState _state;
         private readonly List<LayoutInfo> _visibleChildrenLayout = new();
+        private readonly List<IndexedLayoutData> _visibleChildrenIndexed = new();
+        private Vector2 _viewportSize; // this is determined after the sizing pass, based on the constraints from the parent.
+        private float _virtualizationCacheExtent; // this is determined after the sizing pass, based on the view port size OR the user-defined value.
+                                                  // (todo: probably not too much sense in having this an absolute value, maybe it should be a percentage)
 
         public RenderSliverList(ISliverState state) : base(state.StateLifetime)
         {
             _state = state;
+        }
+
+        private float ComputeVirtualizationCacheExtent()
+        {
+            var isHorizontal = this._state.Axis == Axis.Horizontal;
+            var viewportSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
+
+            // Default to 1x the viewport size if not set.
+            // Note: This means that we have 'three' screens worth of cache:
+            // - 1 screen before the viewport
+            // - 1 screen in the viewport
+            // - 1 screen after the viewport
+            return viewportSize;
         }
 
         public IReadOnlyList<LayoutInfo> ChildrenLayout => _visibleChildrenLayout;
@@ -92,7 +109,25 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // The RenderObject's own size is simply the size of the viewport,
             // as dictated by the parent's constraints.
-            return new Vector2(constraints.MaxWidth, constraints.MaxHeight);
+            //return new Vector2(constraints.MaxWidth, constraints.MaxHeight);
+            this._viewportSize = constraints.Largest;
+            if (_state.VirtualizationCacheExtent.HasValue && _state.VirtualizationCacheExtent.Value < 0)
+                throw new InvalidOperationException("VirtualizationCacheExtent cannot be negative.");
+            this._virtualizationCacheExtent = _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
+            return this._viewportSize;
+        }
+
+        public float TotalContentSize()
+        {
+            var isHorizontal = _state.Axis == Axis.Horizontal;
+            float totalSize = 0;
+            foreach (var childSize in _allChildrenSizes)
+            {
+                totalSize += isHorizontal ? childSize.x : childSize.y;
+            }
+            if (_allChildrenSizes.Count > 0)
+                totalSize += _state.Spacing * (_allChildrenSizes.Count - 1);
+            return totalSize + (_state.VirtualizationCacheExtent ?? 0);
         }
 
         /// <summary>
@@ -100,13 +135,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// </summary>
         protected override void PerformPositioning()
         {
-            var visibleChildrenData = new List<IndexedLayoutData>();
-            var cacheExtent = _state.VirtualizationCacheExtent; // The buffer for smooth scrolling.
+            var visibleChildrenData = _visibleChildrenIndexed;
+            visibleChildrenData.Clear();
+            var cacheExtent = this._virtualizationCacheExtent; // The buffer for smooth scrolling.
 
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            var scrollOffset = _state.ScrollOffset;
+            var scrollOffset = _state.NormalizedScrollOffset * this.TotalContentSize();
             var spacing = _state.Spacing;
-            var viewportMainAxisSize = isHorizontal ? _state.ViewportSize.x : _state.ViewportSize.y;
+            var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
 
             var viewportStart = scrollOffset - cacheExtent;
             var viewportEnd = scrollOffset + viewportMainAxisSize + cacheExtent;
@@ -184,6 +220,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
 
+
         private static float GetChildIntrinsicWidth(IState child, float height)
         {
             return child.RenderObject.GetIntrinsicWidth(height);
@@ -197,7 +234,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         public float CalculateNormalizedOffset(int index, ScrollToPosition position)
         {
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            var viewportSize = isHorizontal ? _state.ViewportSize.x : _state.ViewportSize.y;
+            var viewportSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
 
 
             float totalContentSize = 0;

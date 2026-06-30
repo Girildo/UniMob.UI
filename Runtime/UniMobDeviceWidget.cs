@@ -23,8 +23,12 @@ namespace UniMob.UI
     {
         private RectInt _lastFullArea;
         private RectInt _lastSafeArea;
+        private CanvasScaler _canvasScaler;
+
 
         [Atom] public RectPadding SafeArea { get; private set; }
+
+        [Atom] public float Scale { get; private set; }
 
         public StateProvider StateProvider => Widget.StateProvider;
 
@@ -40,7 +44,8 @@ namespace UniMob.UI
         public override void InitState()
         {
             base.InitState();
-
+            
+            Scale = GetScale();
             RefreshSafeArea();
 
             Zone.Current.AddTicker(Tick);
@@ -55,6 +60,10 @@ namespace UniMob.UI
 
         private void Tick()
         {
+            if (GetScale() is var scale && Scale != scale)
+            {
+                Scale = scale;
+            }
             if (!GetFullArea().Equals(_lastFullArea) || !GetSafeArea().Equals(_lastSafeArea))
             {
                 RefreshSafeArea();
@@ -72,12 +81,12 @@ namespace UniMob.UI
         {
             var safeArea = GetSafeArea();
             var adjustedForSafeArea = new Vector2(screenPoint.x - safeArea.xMin, screenPoint.y - safeArea.yMin);
-            return adjustedForSafeArea / GetScale();
+            return adjustedForSafeArea / Scale;
         }
 
         public void RefreshSafeArea()
         {
-            var invScale = 1f / GetScale();
+            var invScale = 1f / Scale;
 
             _lastFullArea = GetFullArea();
             _lastSafeArea = GetSafeArea();
@@ -92,33 +101,31 @@ namespace UniMob.UI
 
         private float GetScale()
         {
-            var canvasScaler = Widget.Root.GetComponentInParent<CanvasScaler>();
-            if (canvasScaler == null)
+            if (_canvasScaler == null)
+            {
+                _canvasScaler = Widget.Root.GetComponentInParent<CanvasScaler>();
+            }
+
+            if (_canvasScaler == null)
             {
                 return 1f;
             }
 
             var screen = new Vector2(Screen.width, Screen.height);
-            var reference = canvasScaler.referenceResolution;
-            var referenceDpi = canvasScaler.fallbackScreenDPI;
+            var reference = _canvasScaler.referenceResolution;
+            var referenceDpi = _canvasScaler.fallbackScreenDPI;
             var dpiScale = referenceDpi / Screen.dpi;
 
-            switch (canvasScaler.screenMatchMode)
+            var scale = _canvasScaler.screenMatchMode switch
             {
-                case CanvasScaler.ScreenMatchMode.MatchWidthOrHeight:
-                    return Mathf.Pow(2f, Mathf.Lerp(
-                        Mathf.Log(screen.x / reference.x, 2f),
-                        Mathf.Log(screen.y / reference.y, 2f), canvasScaler.matchWidthOrHeight));
-
-                case CanvasScaler.ScreenMatchMode.Expand:
-                    return dpiScale * Mathf.Min(screen.x / reference.x, screen.y / reference.y);
-
-                case CanvasScaler.ScreenMatchMode.Shrink:
-                    return dpiScale * Mathf.Max(screen.x / reference.x, screen.y / reference.y);
-
-                default:
-                    return dpiScale * 1f;
-            }
+                CanvasScaler.ScreenMatchMode.MatchWidthOrHeight => Mathf.Pow(2f, Mathf.Lerp(
+                                        Mathf.Log(screen.x / reference.x, 2f),
+                                        Mathf.Log(screen.y / reference.y, 2f), _canvasScaler.matchWidthOrHeight)),
+                CanvasScaler.ScreenMatchMode.Expand => dpiScale * Mathf.Min(screen.x / reference.x, screen.y / reference.y),
+                CanvasScaler.ScreenMatchMode.Shrink => dpiScale * Mathf.Max(screen.x / reference.x, screen.y / reference.y),
+                _ => dpiScale * 1f,
+            };
+            return scale;
         }
 
         private static RectInt GetFullArea()

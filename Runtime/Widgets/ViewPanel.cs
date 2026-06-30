@@ -1,5 +1,6 @@
 using UniMob.UI.Internal;
 using UniMob.UI.Layout;
+using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
 
 namespace UniMob.UI.Widgets
@@ -45,10 +46,19 @@ namespace UniMob.UI.Widgets
 
                 LayoutData layout;
                 layout.Size = finalSize;
-                layout.Alignment = Alignment.Center;
-                layout.Corner = Alignment.Center;
+                if (State.RenderObject is RenderLegacy)
+                {
+                    layout.Alignment = Alignment.Center;
+                    layout.Corner = Alignment.Center;
+                }
+                else
+                {
+                    layout.Alignment = Alignment.TopLeft;
+                    layout.Corner = Alignment.TopLeft;
+                }
                 layout.CornerPosition = Vector2.zero;
                 ViewLayoutUtility.SetLayout(childView.rectTransform, layout);
+
             }
         }
 

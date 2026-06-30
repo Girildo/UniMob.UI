@@ -34,59 +34,10 @@ namespace UniMob.UI.Layout.Internal.Views
                     " Please set either horizontal or vertical to true, but not both.");
 
             EnsurePivotAndAnchorsAreConsistentWithDirection(scrollRect.horizontal && !scrollRect.vertical);
-            // The onValueChanged listener is now connected with a guard flag.
+
             scrollRect.onValueChanged.AddListener(OnScrollPositionChanged);
         }
 
-
-        private void OnDrawGizmos()
-        {
-            if (!HasState || State.RenderObject is not RenderSliverList renderObject || !Application.isPlaying) return;
-
-            // --- 1. Get World Space Origin of the Content ---
-            var contentCorners = new Vector3[4];
-            contentRoot.GetWorldCorners(contentCorners);
-            // contentCorners[1] is the top-left corner of the content in world space
-            var contentWorldTopLeft = (Vector2) contentCorners[1];
-
-            // --- 2. Draw the Static Viewport (Green) ---
-            Gizmos.color = new Color(0, 1, 0, 0.2f);
-            var viewportSize = State.ViewportSize;
-            var rectTransform = (RectTransform) transform;
-            var viewportCorners = new Vector3[4];
-            rectTransform.GetWorldCorners(viewportCorners);
-            var viewportWorldCenter = (Vector2) viewportCorners[1] +
-                                      new Vector2(viewportSize.x * 0.5f, -viewportSize.y * 0.5f);
-            Gizmos.DrawCube(viewportWorldCenter, viewportSize);
-
-            // --- 3. Draw the Visible Children (Blue) ---
-            Gizmos.color = new Color(0, 0, 1, 0.2f);
-            var childrenLayout = renderObject.ChildrenLayout;
-            foreach (var layout in childrenLayout)
-            {
-                var layoutPos = layout.Position;
-                var layoutSize = layout.Size;
-
-                // The layoutPos is relative to the content's top-left, with Y-down.
-                // We add it to the content's world-space top-left to find the child's world position.
-                var childWorldTopLeft = contentWorldTopLeft + new Vector2(layoutPos.x, -layoutPos.y);
-
-                // Gizmos.DrawCube requires a center position, so we offset by half the size.
-                var childWorldCenter = childWorldTopLeft + new Vector2(layoutSize.x * 0.5f, -layoutSize.y * 0.5f);
-
-                Gizmos.DrawCube(childWorldCenter, layoutSize);
-            }
-        }
-
-        protected override void OnRectTransformDimensionsChange()
-        {
-            if (!HasState || State.StateLifetime.IsDisposed) return;
-            base.OnRectTransformDimensionsChange();
-            using (Atom.NoWatch)
-            {
-                State.ViewportSize = _rectTransform.rect.size;
-            }
-        }
 
         protected override void Activate()
         {
@@ -94,7 +45,6 @@ namespace UniMob.UI.Layout.Internal.Views
 
             // Set the initial scroll position when the view becomes active.
             var isHorizontal = State.Axis == Axis.Horizontal;
-            State.ViewportSize = _rectTransform.rect.size;
             if (isHorizontal)
                 scrollRect.horizontalNormalizedPosition = State.ScrollController.NormalizedValue;
             else
@@ -116,7 +66,6 @@ namespace UniMob.UI.Layout.Internal.Views
                     else
                         scrollRect.verticalNormalizedPosition = 1 - controllerValue;
 
-                    // Use Zone.NextFrame to reset the flag, as you correctly suggested.
                     Zone.Current.NextFrame(() => _isUpdatingFromController = false);
                 }
             });
@@ -153,6 +102,8 @@ namespace UniMob.UI.Layout.Internal.Views
         }
 
 
+
+
         protected override void Render()
         {
             if (State.RenderObject is not RenderSliverList renderObject) return;
@@ -183,16 +134,15 @@ namespace UniMob.UI.Layout.Internal.Views
                 contentRoot.pivot = targetPivot;
 
 
-                // 3. Reset the content's anchored position AFTER setting the new anchors.
-                //    This places the content correctly at the start of the reset ScrollRect.
+
                 contentRoot.anchoredPosition = Vector2.zero;
                 contentRoot.offsetMax = Vector2.zero;
                 contentRoot.offsetMin = Vector2.zero;
             }
 
-            var totalContentSize = isHorizontal
-                ? renderObject.GetIntrinsicWidth(_rectTransform.rect.height)
-                : renderObject.GetIntrinsicHeight(_rectTransform.rect.width);
+            // Resize the content size based on the total content size calculated by the render object.
+            // with some tolerance.
+            var totalContentSize = renderObject.TotalContentSize();
 
             var currentSize = isHorizontal ? contentRoot.rect.width : contentRoot.rect.height;
             if (Mathf.Abs(currentSize - totalContentSize) > 0.01f)
@@ -210,12 +160,16 @@ namespace UniMob.UI.Layout.Internal.Views
                     var child = children[i];
                     var layoutData = childrenLayout[i];
                     var childView = render.RenderItem(child);
+
                     var rt = childView.rectTransform;
                     rt.anchorMin = new Vector2(0, 1);
                     rt.anchorMax = new Vector2(0, 1);
+
                     var pivotOffset = new Vector2(layoutData.Size.x * rt.pivot.x,
                         -layoutData.Size.y * (1.0f - rt.pivot.y));
+
                     rt.sizeDelta = layoutData.Size;
+
                     rt.anchoredPosition =
                         new Vector2(layoutData.Position.x, -layoutData.Position.y) +
                         pivotOffset;
@@ -236,11 +190,10 @@ namespace UniMob.UI.Layout.Internal.Views
 
             var normalizedValue = isHorizontal ? normalizedPosition.x : 1 - normalizedPosition.y;
 
-            State.ScrollOffset = normalizedValue * totalScrollableDist;
             State.ScrollController.NormalizedValue = normalizedValue;
         }
 
-        public bool ScrollTo(int index, float duration, ScrollToPosition scrollToPosition, Easing easing)
+        public bool ScrollTo(int index, float duration, ScrollToPosition scrollToPosition, Easing easing) // this should be moved to the controller
         {
             if (State?.RenderObject is not RenderSliverList renderSliver) return false;
 
@@ -252,8 +205,7 @@ namespace UniMob.UI.Layout.Internal.Views
             return true;
         }
 
-        private IEnumerator AnimateScrollTo(float normalizedPosition, float duration,
-            Easing easing)
+        private IEnumerator AnimateScrollTo(float normalizedPosition, float duration, Easing easing)
         {
             var originalMovementType = scrollRect.movementType;
             try
@@ -321,7 +273,5 @@ namespace UniMob.UI.Layout.Internal.Views
         public bool UseMask { get; }
         public MovementType MovementType { get; }
 
-        float ScrollOffset { get; set; }
-        Vector2 ViewportSize { get; set; }
     }
 }

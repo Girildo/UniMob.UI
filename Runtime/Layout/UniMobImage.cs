@@ -43,7 +43,7 @@ namespace UniMob.UI.Layout
         public Color Color { get; set; } = Color.white;
         public ImageFit Fit { get; set; } = ImageFit.Contain;
         public Alignment Alignment { get; set; } = Alignment.Center;
-        public bool IsRaycastTarget { get; set; }
+        //public bool IsRaycastTarget { get; set; }
 
         public override State CreateState() => new ImageState();
 
@@ -70,7 +70,7 @@ namespace UniMob.UI.Layout
         public ImageFit Fit => Widget.Fit;
         public Alignment Alignment => Widget.Alignment;
 
-        public bool IsRaycastTarget => Widget.IsRaycastTarget;
+        public bool IsRaycastTarget => true; // Widget.IsRaycastTarget;
 
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.ImageView");
     }

@@ -150,6 +150,12 @@ namespace UniMob.UI
             return new StateCollectionHolder(lifetime, context, builder);
         }
 
+        protected void AddPostFrameCallback(Action callback)
+        {
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            Zone.Current.NextFrame(callback);
+        }
+
         public virtual string GetDiagnosticInfo() => null;
     }
 

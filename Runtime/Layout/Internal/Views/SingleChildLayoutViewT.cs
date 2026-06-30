@@ -30,6 +30,7 @@ namespace UniMob.UI.Layout.Internal.Views
             _mapper = new PooledViewMapper(transform);
         }
 
+
         protected override void Render()
         {
 
@@ -85,16 +86,16 @@ namespace UniMob.UI.Layout.Internal.Views
             Gizmos.matrix = this.rectTransform.localToWorldMatrix;
 
             // --- PARENT VIEW (BLUE) ---
-            Color parentBorder = new Color(0.2f, 0.6f, 1.0f, 0.9f); 
+            Color parentBorder = new Color(0.2f, 0.6f, 1.0f, 0.9f);
             Color parentFill = new Color(0.2f, 0.6f, 1.0f, 0.1f);
-            
+
             Gizmos.color = parentFill;
             Gizmos.DrawCube(this.rectTransform.rect.center, this.rectTransform.rect.size);
             Gizmos.color = parentBorder;
             Gizmos.DrawWireCube(this.rectTransform.rect.center, this.rectTransform.rect.size);
 
             string parentText = $"{this.gameObject.name} [{this.rectTransform.rect.width}x{this.rectTransform.rect.height}]";
-            
+
             // FIX 2: Place Parent Label at the TOP-LEFT
             Vector3 parentLabelPos = new Vector3(this.rectTransform.rect.xMin, this.rectTransform.rect.yMax + 2f, 0f);
             DrawOutlinedLabel(parentLabelPos, parentText, parentBorder);
@@ -103,7 +104,7 @@ namespace UniMob.UI.Layout.Internal.Views
             // --- CHILD VIEW (GREEN) ---
             if (this.State != null && this.State.RenderObject is ISingleChildRenderObject renderObj)
             {
-                Color childBorder = new Color(0.2f, 0.8f, 0.2f, 0.9f); 
+                Color childBorder = new Color(0.2f, 0.8f, 0.2f, 0.9f);
                 Color childFill = new Color(0.2f, 0.8f, 0.2f, 0.15f);
 
                 var childSize = renderObj.ChildSize;
@@ -123,9 +124,9 @@ namespace UniMob.UI.Layout.Internal.Views
                 Gizmos.DrawCube(childCenterLocal, childSize3D);
                 Gizmos.color = childBorder;
                 Gizmos.DrawWireCube(childCenterLocal, childSize3D);
-                
+
                 string childText = $"Child [{childSize.x}x{childSize.y}]";
-                
+
                 // FIX 3: Place Child Label at the BOTTOM-LEFT. 
                 // Even if the child is the exact same size as the parent, the text will never overlap.
                 Vector3 childLabelPos = new Vector3(childLocalXMin, childLocalYMax - childSize.y - 15f, 0f);

@@ -15,14 +15,14 @@ namespace UniMob.UI.Layout
         public ScrollController ScrollController { get; set; }
 
         public float Spacing { get; set; } = 0;
-        
+
         public bool UseMask { get; set; } = true;
 
         /// <summary>
         /// Defines how the scroll content behaves when the user scrolls.
         /// <see cref="MovementType"/> for more details."/>
         /// </summary>
-        public MovementType MovementType{ get; set; } = MovementType.Elastic;
+        public MovementType MovementType { get; set; } = MovementType.Elastic;
 
         /// <summary>
         ///     The size, in pixels, of the (bidirectional) cache extent for virtualization.
@@ -49,13 +49,17 @@ namespace UniMob.UI.Layout
     // compute the layout, while the View only needs the visible children to render the UI.
     public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState
     {
-        
+
         private readonly StateCollectionHolder _allChildren;
         private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
         private readonly Atom<IState[]> _visibleChildren;
 
         // A reactive atom holding the INDICES of the visible children.
         private readonly MutableAtom<List<int>> _visibleIndices = Atom.Value(new List<int>());
+
+        // The buffer not currently referenced by _visibleIndices.Value, reused to build the next candidate
+        // set without allocating. Ping-pongs with whatever _visibleIndices.Value held previously.
+        private List<int> _visibleIndicesScratch = new();
         public float Spacing => this.Widget.Spacing;
 
 
@@ -93,7 +97,7 @@ namespace UniMob.UI.Layout
         }
 
         [Atom]
-        public IState[] Children => _visibleChildren.Value;
+        IState[] IMultiChildLayoutState.Children => _visibleChildren.Value;
 
         [Atom]
         public bool UseMask => Widget.UseMask;
@@ -103,7 +107,8 @@ namespace UniMob.UI.Layout
 
         [Atom] public ScrollController ScrollController { get; private set; }
         [Atom] public Vector2 ViewportSize { get; set; }
-        [Atom] public float ScrollOffset { get; set; }
+
+        [Atom] public float NormalizedScrollOffset => ScrollController.NormalizedValue;
 
         [Atom]
         public IState[] AllChildren => _allChildren.Value;
@@ -112,8 +117,7 @@ namespace UniMob.UI.Layout
         public Axis Axis => Widget.Axis;
 
         [Atom]
-        public float VirtualizationCacheExtent =>
-            Widget.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
+        public float? VirtualizationCacheExtent => Widget.VirtualizationCacheExtent;
 
 
         public override void DidViewMount(IView view)
@@ -130,29 +134,48 @@ namespace UniMob.UI.Layout
 
         public override WidgetViewReference View => WidgetViewReference.Resource("Layout/UniMob.ScrollList");
 
+        float? ISliverState.VirtualizationCacheExtent => VirtualizationCacheExtent;
+
         void ISliverState.SetVisibleChildren(List<IndexedLayoutData> visibleChildren)
         {
-            var indices = new List<int>(visibleChildren.Count);
-            for (var i = 0; i < visibleChildren.Count; i++) indices.Add(visibleChildren[i].ChildIndex);
+            var scratch = _visibleIndicesScratch;
+            scratch.Clear();
+            for (var i = 0; i < visibleChildren.Count; i++) scratch.Add(visibleChildren[i].ChildIndex);
 
+            // Reading _visibleIndices.Value here would normally subscribe whichever atom is currently
+            // evaluating (this is invoked from inside the ScrollList's own layout computation) as a
+            // watcher of _visibleIndices -- which we're also about to write to below. That would make the
+            // layout atom depend on a value it writes itself. Keep the read inside NoWatch too.
             using (Atom.NoWatch)
             {
-                _visibleIndices.Value = new List<int>(indices);
+                var current = _visibleIndices.Value;
+                if (IndicesEqual(current, scratch))
+                {
+                    // The visible window hasn't actually changed (e.g. a scroll delta that didn't cross
+                    // an item boundary). Skip the write entirely to avoid invalidating downstream atoms
+                    // (and the IState[] allocation that triggers) for no observable change.
+                    return;
+                }
+
+                _visibleIndices.Value = scratch;
+
+                // The old value is now orphaned from the atom; reuse it as the next scratch buffer.
+                _visibleIndicesScratch = current;
             }
         }
 
-        private float ComputeVirtualizationCacheExtent()
+        private static bool IndicesEqual(List<int> a, List<int> b)
         {
-            var isHorizontal = Widget.Axis == Axis.Horizontal;
-            var viewportSize = isHorizontal ? ViewportSize.x : ViewportSize.y;
+            if (a.Count != b.Count) return false;
+            for (var i = 0; i < a.Count; i++)
+            {
+                if (a[i] != b[i]) return false;
+            }
 
-            // Default to 1x the viewport size if not set.
-            // Note: This means that we have 'three' screens worth of cache:
-            // - 1 screen before the viewport
-            // - 1 screen in the viewport
-            // - 1 screen after the viewport
-            return viewportSize;
+            return true;
         }
+
+
 
         public override void InitState()
         {

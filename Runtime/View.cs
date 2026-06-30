@@ -330,6 +330,7 @@ namespace UniMob.UI
 
         protected virtual void Activate()
         {
+            this.rectTransform.localScale = Vector2.one;
             if (_activationCallbacks != null)
             {
                 foreach (var call in _activationCallbacks)

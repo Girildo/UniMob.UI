@@ -44,6 +44,12 @@ namespace UniMob.UI
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
         public override WidgetSize Size => _stateHolder.Value.Size;
+        internal sealed override void InitRenderObject()
+        {
+            
+        }
+
+        public sealed override RenderObject RenderObject => _stateHolder.Value?.RenderObject;
 
         public StatelessElement(StatelessWidget widget)
         {
@@ -61,6 +67,12 @@ namespace UniMob.UI
             // Reads _widget.Value, establishing a reactive dependency.
             // When the widget is replaced in Update(), this computed re-runs.
             return _widget.Value.Build(context);
+        }
+
+        internal sealed override void UpdateConstraints(LayoutConstraints constraints)
+        {
+            base.UpdateConstraints(constraints);
+            _stateHolder.Value.UpdateConstraints(constraints);
         }
 
         internal override void Update(Widget widget)

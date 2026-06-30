@@ -22,6 +22,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly Axis _axis;
         private float _unconstrainedMainAxisSize;
         private readonly List<LayoutInfo> _childrenLayout = new();
+        private readonly List<int> _nonFlexChildrenIndices = new();
+        private readonly List<(int index, int flex, FlexFit fit)> _flexChildrenData = new();
 
         public IReadOnlyList<LayoutInfo> ChildrenLayout => _childrenLayout;
 
@@ -34,16 +36,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
             _childrenLayout.Clear();
+            _nonFlexChildrenIndices.Clear();
+            _flexChildrenData.Clear();
             var mainAxisTotalSize = 0f;
             var crossAxisMaxSize = 0f;
             var totalFlexFactor = 0;
 
             var isHorizontal = _axis == Axis.Horizontal;
             var maxMainAxis = isHorizontal ? constraints.MaxWidth : constraints.MaxHeight;
-            var maxCrossAxis = isHorizontal ? constraints.MaxHeight : constraints.MaxWidth;
-
-            var nonFlexChildrenIndices = new List<int>();
-            var flexChildrenData = new List<(int index, int flex, FlexFit fit)>();
+            var maxCrossAxis = isHorizontal ? constraints.MaxHeight : constraints.MaxWidth;            
 
             // --- First Pass: Identify flex vs. non-flex children ---
             var childCount = _state.Children.Length;
@@ -79,11 +80,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 if (isFlexible)
                 {
                     totalFlexFactor += flexFactor;
-                    flexChildrenData.Add((i, flexFactor, fit));
+                    _flexChildrenData.Add((i, flexFactor, fit));
                 }
                 else
                 {
-                    nonFlexChildrenIndices.Add(i);
+                    _nonFlexChildrenIndices.Add(i);
                 }
             }
 
@@ -93,7 +94,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 : new LayoutConstraints(0, 0, maxCrossAxis, float.PositiveInfinity);
             var shouldStretchCrossAxis = _state.CrossAxisAlignment == CrossAxisAlignment.Stretch;
 
-            foreach (var i in nonFlexChildrenIndices)
+            foreach (var i in _nonFlexChildrenIndices)
             {
                 var childConstraints = nonFlexConstraints;
                 if (shouldStretchCrossAxis)
@@ -143,12 +144,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (freeSpace < 0)
             {
                 // Handle overflow: non-flex children exceed available space. We log a warning and set freeSpace to 0, so flex children won't get negative space.
-                // The tolerance bandis to absorb small floating point errors without logging warnings, but still catch significant overflows.
+                // The tolerance bands to absorb small floating point errors without logging warnings, but still catch significant overflows.
                 if (freeSpace < -LayoutConstants.OverflowTolerance)
                 {
                     var overflowAmount = -freeSpace;
                     var axisName = isHorizontal ? "horizontal" : "vertical";
-                    var childNames = string.Join(", ", nonFlexChildrenIndices
+                    var childNames = string.Join(", ", _nonFlexChildrenIndices
                         .Select(i => _state.Children[i].GetType().Name));
 
                     Debug.LogWarning(
@@ -156,9 +157,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                         $"Non-flex children ({childNames}) requested more space than is available.");
 
 #if UNITY_EDITOR
-                    if (nonFlexChildrenIndices.Count > 0)
+                    if (_nonFlexChildrenIndices.Count > 0)
                     {
-                        var lastIndex = nonFlexChildrenIndices[^1];
+                        var lastIndex = _nonFlexChildrenIndices[^1];
                         var layoutData = _childrenLayout[lastIndex];
                         var msg = $"Container overflowed by {overflowAmount:F1}px ({axisName}). " +
                                   "This child doesn't fit alongside its siblings.";
@@ -185,7 +186,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     Debug.LogError(_state.PrintHierarchy());
                 }
 
-                foreach (var (i, flex, fit) in flexChildrenData)
+                foreach (var (i, flex, fit) in _flexChildrenData)
                 {
                     var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
 
