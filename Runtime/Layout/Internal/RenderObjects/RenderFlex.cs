@@ -54,28 +54,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 _childrenLayout.Add(new LayoutInfo()); // Add a placeholder
 
-                var isFlexible = false;
-                var flexFactor = 1;
-                var fit = FlexFit.Tight;
-
-                // Check if the child is an Flex widget
-                // -- remark: we use InnerViewState because Expanded might be composed inside other Hoc widgets
-                if (childState.InnerViewState is FlexibleState flex)
-                {
-                    isFlexible = true;
-                    flexFactor = flex.Flex;
-                    fit = flex.Fit;
-                }
-
-                // Legacy widgets are considered flexible if they have infinite constraints in the main axis
-                if (childState.RenderObject is RenderLegacy)
-                {
-                    var legacySize = childState.Size;
-                    if (isHorizontal ? float.IsInfinity(legacySize.MaxWidth) : float.IsInfinity(legacySize.MaxHeight))
-                    {
-                        isFlexible = true;
-                    }
-                }
+                var isFlexible = TryGetFlex(childState, isHorizontal, out var flexFactor, out var fit);
 
                 if (isFlexible)
                 {
@@ -330,13 +309,44 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 }
                 return totalHeight;
             }
-            else // Max of heights (for a Row)
+            else // Max of heights (for a Row): mirror PerformSizing's flex distribution so each
+                 // child is measured at the width it will actually receive, not at infinity.
             {
-                float maxHeight = 0;
-                // Cannot know width for each child, so we pass infinite. This is a limitation.
+                var totalFlex = 0;
+                var inflexibleWidth = 0f;
+                var maxHeight = 0f;
+
                 foreach (var child in _state.Children)
                 {
-                    maxHeight = Mathf.Max(maxHeight, GetChildIntrinsicHeight(child, float.PositiveInfinity));
+                    if (TryGetFlex(child, isHorizontal: true, out var flex, out _))
+                    {
+                        totalFlex += flex;
+                        continue;
+                    }
+
+                    var childWidth = GetChildIntrinsicWidth(child, float.PositiveInfinity);
+                    inflexibleWidth += childWidth;
+                    maxHeight = Mathf.Max(maxHeight, GetChildIntrinsicHeight(child, childWidth));
+                }
+
+                if (_state.Children.Length > 0)
+                {
+                    inflexibleWidth += Mathf.Max(0, _state.Children.Length - 1) * _state.Spacing;
+                }
+
+                if (totalFlex > 0)
+                {
+                    var spacePerFlex = float.IsInfinity(width)
+                        ? float.PositiveInfinity
+                        : Mathf.Max(0, width - inflexibleWidth) / totalFlex;
+
+                    foreach (var child in _state.Children)
+                    {
+                        if (!TryGetFlex(child, isHorizontal: true, out var flex, out _)) continue;
+
+                        var childWidth = float.IsInfinity(spacePerFlex) ? float.PositiveInfinity : spacePerFlex * flex;
+                        maxHeight = Mathf.Max(maxHeight, GetChildIntrinsicHeight(child, childWidth));
+                    }
                 }
 
                 return maxHeight;
@@ -361,12 +371,44 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 return totalWidth;
             }
-            else // Max of widths (for a Column)
+            else // Max of widths (for a Column): mirror PerformSizing's flex distribution so each
+                 // child is measured at the height it will actually receive, not at infinity.
             {
-                float maxWidth = 0;
+                var totalFlex = 0;
+                var inflexibleHeight = 0f;
+                var maxWidth = 0f;
+
                 foreach (var child in _state.Children)
                 {
-                    maxWidth = Mathf.Max(maxWidth, GetChildIntrinsicWidth(child, float.PositiveInfinity));
+                    if (TryGetFlex(child, isHorizontal: false, out var flex, out _))
+                    {
+                        totalFlex += flex;
+                        continue;
+                    }
+
+                    var childHeight = GetChildIntrinsicHeight(child, float.PositiveInfinity);
+                    inflexibleHeight += childHeight;
+                    maxWidth = Mathf.Max(maxWidth, GetChildIntrinsicWidth(child, childHeight));
+                }
+
+                if (_state.Children.Length > 0)
+                {
+                    inflexibleHeight += Mathf.Max(0, _state.Children.Length - 1) * _state.Spacing;
+                }
+
+                if (totalFlex > 0)
+                {
+                    var spacePerFlex = float.IsInfinity(height)
+                        ? float.PositiveInfinity
+                        : Mathf.Max(0, height - inflexibleHeight) / totalFlex;
+
+                    foreach (var child in _state.Children)
+                    {
+                        if (!TryGetFlex(child, isHorizontal: false, out var flex, out _)) continue;
+
+                        var childHeight = float.IsInfinity(spacePerFlex) ? float.PositiveInfinity : spacePerFlex * flex;
+                        maxWidth = Mathf.Max(maxWidth, GetChildIntrinsicWidth(child, childHeight));
+                    }
                 }
 
                 return maxWidth;
@@ -381,6 +423,35 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private float GetChildIntrinsicHeight(IState child, float width)
         {
             return child.RenderObject.GetIntrinsicHeight(width);
+        }
+
+        // Shared with PerformSizing() so the intrinsic-size estimate can never silently diverge
+        // from what the real flex layout pass actually does.
+        private static bool TryGetFlex(IState child, bool isHorizontal, out int flex, out FlexFit fit)
+        {
+            // -- remark: we use InnerViewState because Expanded might be composed inside other Hoc widgets
+            if (child.InnerViewState is FlexibleState flexible)
+            {
+                flex = flexible.Flex;
+                fit = flexible.Fit;
+                return true;
+            }
+
+            // Legacy widgets are considered flexible if they have infinite constraints in the main axis
+            if (child.RenderObject is RenderLegacy)
+            {
+                var legacySize = child.Size;
+                if (isHorizontal ? float.IsInfinity(legacySize.MaxWidth) : float.IsInfinity(legacySize.MaxHeight))
+                {
+                    flex = 1;
+                    fit = FlexFit.Tight;
+                    return true;
+                }
+            }
+
+            flex = 0;
+            fit = FlexFit.Tight;
+            return false;
         }
 
     }

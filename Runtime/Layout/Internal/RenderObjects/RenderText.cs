@@ -16,6 +16,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private static readonly Dictionary<PreferredSizeCacheKey, Vector2> s_sizeCache = new();
 
+        // TMP's own default for TMP_Text.maxVisibleLines -- used to reset the shared measurer
+        // when a widget doesn't clamp its line count.
+        private const int DefaultMaxVisibleLines = 99999;
+
+        // A large-but-finite size to hand TMP's RectTransform-based layout when a dimension is
+        // unconstrained (GenerateTextMesh reads rect.width/height, not float.PositiveInfinity).
+        private const float UnconstrainedMeasureExtent = 1_000_000f;
+
         private readonly ITextState _state;
 
         public RenderText(ITextState state) : base(state.StateLifetime)
@@ -32,7 +40,27 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 go.name = "TextMeshPro Measurer -- " + viewRefence;
                 Object.DontDestroyOnLoad(go);
                 go.hideFlags = HideFlags.HideAndDontSave;
-                s_textMeshProMeasurers.Add(viewRefence, go.GetComponent<UniMobTextMeshProBehaviour>());
+
+                var behaviour = go.GetComponent<UniMobTextMeshProBehaviour>();
+
+                // Pin anchors so rect.width/height are driven purely by sizeDelta, regardless of
+                // the prefab's authored anchors. We rely on this below to make the measurer's
+                // RectTransform report exactly the width/height we hand it for constrained measurement.
+                var measurerRect = behaviour.rectTransform;
+                measurerRect.anchorMin = measurerRect.anchorMax = Vector2.up;
+                measurerRect.pivot = Vector2.up;
+
+                // GenerateTextMesh() (unlike GetPreferredValues()) dereferences this.canvas, which is
+                // null for a free-floating, unparented GameObject. Give it a Canvas so that resolves.
+                // Graphic.CacheCanvas() only accepts a canvas where isActiveAndEnabled is true, so we
+                // can't just disable the component to hide it -- instead make it WorldSpace and park
+                // it far from the origin so it resolves correctly but is never in view of any camera.
+                var measurerCanvas = go.GetComponent<Canvas>();
+                if (measurerCanvas == null) measurerCanvas = go.AddComponent<Canvas>();
+                measurerCanvas.renderMode = RenderMode.WorldSpace;
+                go.transform.position = new Vector3(1_000_000f, 1_000_000f, 1_000_000f);
+
+                s_textMeshProMeasurers.Add(viewRefence, behaviour);
                 s_styleSheet = TMP_Settings.defaultStyleSheet;
             }
         }
@@ -89,26 +117,43 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             measurer.enableWordWrapping = _state.WrappingEnabled;
             measurer.overflowMode = _state.OverflowMode;
 
-
-            var fullSize = measurer.GetPreferredValues(_state.Value, maxWidth, maxHeight);
-
-            // The above full size is computed ignoring the max lines property. This is a limitation of TMP_Pro.
-            // We recover here by manually computing the line height from the font face info and altering our
-            // preferred size. 
             var maxLines = _state.MaxLines;
+            Vector2 fullSize;
+
             if (maxLines is < int.MaxValue and > 0)
             {
-                var font = measurer.font;
-                var fontScale = measurer.fontSize / font.faceInfo.pointSize;
-                var fontLineHeight = font.faceInfo.lineHeight * fontScale;
+                // GetPreferredValues() runs TMP's stripped-down CalculatePreferredValues() pass, which
+                // computes the *natural* size and ignores maxVisibleLines entirely (a known TMP
+                // limitation). Approximating the clamp from a single face's line height breaks as soon
+                // as the text/style uses rich text or a style with its own font size/asset/line height.
+                // Instead we run GetTextInfo(), which goes through the real GenerateTextMesh() pass --
+                // the same style/rich-text-aware code path the actual renderer uses -- and read back the
+                // true per-line metrics for just the lines that would actually be visible.
+                measurer.maxVisibleLines = maxLines;
 
-                var additionalLineSpacing = measurer.lineSpacing;
+                var measurerRect = measurer.rectTransform;
+                measurerRect.sizeDelta = new Vector2(
+                    float.IsPositiveInfinity(maxWidth) ? UnconstrainedMeasureExtent : maxWidth,
+                    float.IsPositiveInfinity(maxHeight) ? UnconstrainedMeasureExtent : maxHeight);
 
-                // The total height of N lines is (N * font_line_height) + ((N-1) * additional_spacing).
-                var maxLinesHeight = maxLines * fontLineHeight + Mathf.Max(0, maxLines - 1) * additionalLineSpacing;
+                var textInfo = measurer.GetTextInfo(_state.Value);
+                var visibleLineCount = Mathf.Min(textInfo.lineCount, maxLines);
 
-                // 4. The final height is the SMALLER of the two.
-                fullSize.y = Mathf.Min(fullSize.y, maxLinesHeight);
+                var width = 0f;
+                var height = 0f;
+                for (var i = 0; i < visibleLineCount; i++)
+                {
+                    var line = textInfo.lineInfo[i];
+                    height += line.lineHeight;
+                    width = Mathf.Max(width, line.lineExtents.max.x - line.lineExtents.min.x);
+                }
+
+                fullSize = new Vector2(width, height);
+            }
+            else
+            {
+                measurer.maxVisibleLines = DefaultMaxVisibleLines;
+                fullSize = measurer.GetPreferredValues(_state.Value, maxWidth, maxHeight);
             }
 
             s_sizeCache[key] = fullSize;

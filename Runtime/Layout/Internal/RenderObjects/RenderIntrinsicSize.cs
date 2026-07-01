@@ -16,8 +16,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             
             var childConstraints = _state.Axis == Axis.Horizontal
-                ? constraints.Tighten(width: GetIntrinsicWidth(float.PositiveInfinity))
-                : constraints.Tighten(height: GetIntrinsicHeight(float.PositiveInfinity));
+                ? constraints.Tighten(width: GetIntrinsicWidth(constraints.HasBoundedHeight ? constraints.MaxHeight : float.PositiveInfinity))
+                : constraints.Tighten(height: GetIntrinsicHeight(constraints.HasBoundedWidth ? constraints.MaxWidth : float.PositiveInfinity));
             var laidOut = LayoutChild(_state.Child, childConstraints);
             return constraints.Constrain(laidOut);
         }
