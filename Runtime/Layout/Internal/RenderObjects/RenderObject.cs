@@ -96,7 +96,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             child.UpdateConstraints(constraints);
 
-            var childSize = child.WatchedPerformLayout();
+            // WatchedSize (not WatchedPerformLayout) deliberately: we only care about the child's
+            // resulting Size here, not about being re-run whenever the child's subtree merely
+            // repositions itself internally (e.g. a nested ScrollList scrolling). See IState.WatchedSize.
+            var childSize = child.WatchedSize();
 
             return childSize;
         }
