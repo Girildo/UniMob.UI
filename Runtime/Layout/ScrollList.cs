@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
+using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
 using UnityEngine.UI;
@@ -10,7 +12,36 @@ namespace UniMob.UI.Layout
 {
     public class ScrollList : StatefulWidget
     {
+        /// <summary>
+        ///     Eagerly-built children. Mutually exclusive with <see cref="ItemBuilder"/>/<see cref="ItemCount"/>.
+        /// </summary>
         public List<Widget> Children { get; set; } = new();
+
+        /// <summary>
+        ///     Builds the widget for the item at <c>index</c> on demand, only for items near the viewport.
+        ///     Requires <see cref="ItemCount"/> to be set, and is mutually exclusive with <see cref="Children"/>.
+        /// </summary>
+        public IndexedWidgetBuilder ItemBuilder { get; set; }
+
+        /// <summary>
+        ///     The total number of items when using <see cref="ItemBuilder"/>.
+        /// </summary>
+        public int? ItemCount { get; set; }
+
+        /// <summary>
+        ///     When set, every item is assumed to have exactly this size along the scrolling axis. This lets the
+        ///     list compute exact positions/total size without measuring or estimating -- the recommended option
+        ///     for uniformly-sized items. Only meaningful together with <see cref="ItemBuilder"/>.
+        /// </summary>
+        public float? ItemExtent { get; set; }
+
+        /// <summary>
+        ///     Resolves a <see cref="Key"/> to its item index for <c>ScrollTo(Key)</c> under <see cref="ItemBuilder"/>,
+        ///     where not every item is necessarily built yet. Returns <c>null</c> if the key is unresolvable.
+        ///     If not provided, <c>ScrollTo(Key)</c> only resolves against items that have been built at least once.
+        /// </summary>
+        public Func<Key, int?> KeyToIndexResolver { get; set; }
+
         public Axis Axis { get; set; } = Axis.Vertical;
         public ScrollController ScrollController { get; set; }
 
@@ -47,7 +78,7 @@ namespace UniMob.UI.Layout
     // and our specific interface for the RenderObject (IScrollingListState).
     // The reason is that the RenderObject needs the entire children collection (visible AND invisible) to correctly
     // compute the layout, while the View only needs the visible children to render the UI.
-    public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState
+    public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState, IScrollControllerExecutor
     {
 
         private readonly StateCollectionHolder _allChildren;
@@ -62,6 +93,26 @@ namespace UniMob.UI.Layout
         private List<int> _visibleIndicesScratch = new();
         public float Spacing => this.Widget.Spacing;
 
+        // --- Lazy building (ItemBuilder/ItemCount mode) ---
+        // Sparse, manually-managed cache of currently-built items, keyed by logical index. Deliberately NOT
+        // routed through StateCollectionHolder/UpdateChildren: that reconciler disposes anything absent from
+        // the widget list it's given, so feeding it a windowed subset every frame would tear down and rebuild
+        // items every time the window shifts. Plain mutable field (not an Atom), same pattern as
+        // RenderSliverList's own _allChildrenSizes -- mutated synchronously within a layout pass.
+        private readonly Dictionary<int, State> _builtStates = new();
+
+        // Every index ever built, kept even after eviction, so ScrollTo(Key) can still resolve keys for items
+        // that scrolled out of the build window (unless Widget.KeyToIndexResolver is supplied instead).
+        private readonly Dictionary<Key, int> _seenKeyToIndex = new();
+
+        // Scratch buffer for RequestBuildWindow's eviction pass, reused to avoid per-call allocation.
+        private readonly List<int> _evictionScratch = new();
+
+        // Shared BuildContext for every lazily-built item -- mirrors CreateChildren's `new BuildContext(this, Context)`,
+        // just cached once since, unlike per-widget-instance children, there's no per-item context to derive here.
+        private BuildContext _itemBuildContext;
+
+        private bool IsLazy => Widget.ItemBuilder != null;
 
         [CanBeNull] private ScrollListView _view;
 
@@ -80,20 +131,49 @@ namespace UniMob.UI.Layout
                 return children;
             });
 
+            _itemBuildContext = new BuildContext(this, Context);
+
             _visibleChildren = Atom.Computed(StateLifetime, () =>
             {
                 var indices = _visibleIndices.Value;
-                var all = _allChildren.Value;
                 var visible = new IState[indices.Count];
 
-                for (var i = 0; i < indices.Count; i++)
+                if (IsLazy)
                 {
-                    var index = indices[i];
-                    if (index < all.Length) visible[i] = all[index];
+                    // _builtStates is a plain field, not tracked by this computed atom -- safe here because it's
+                    // only ever mutated inside RequestBuildWindow (RenderSliverList.PerformSizing), which always
+                    // runs strictly before SetVisibleChildren writes _visibleIndices.Value within the same layout
+                    // pass. By the time this recomputes, _builtStates already reflects the current pass.
+                    for (var i = 0; i < indices.Count; i++)
+                    {
+                        _builtStates.TryGetValue(indices[i], out var state);
+                        visible[i] = state;
+                    }
+                }
+                else
+                {
+                    var all = _allChildren.Value;
+                    for (var i = 0; i < indices.Count; i++)
+                    {
+                        var index = indices[i];
+                        if (index < all.Length) visible[i] = all[index];
+                    }
                 }
 
                 return visible;
             });
+
+            StateLifetime.Register(DeactivateBuiltStates);
+        }
+
+        private void DeactivateBuiltStates()
+        {
+            foreach (var state in _builtStates.Values)
+            {
+                StateUtilities.DeactivateChild(state);
+            }
+
+            _builtStates.Clear();
         }
 
         [Atom]
@@ -111,7 +191,13 @@ namespace UniMob.UI.Layout
         [Atom] public float NormalizedScrollOffset => ScrollController.NormalizedValue;
 
         [Atom]
-        public IState[] AllChildren => _allChildren.Value;
+        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
+
+        [Atom]
+        public int? ItemCount => Widget.ItemCount;
+
+        [Atom]
+        public float? ItemExtent => Widget.ItemExtent;
 
         [Atom]
         public Axis Axis => Widget.Axis;
@@ -175,48 +261,123 @@ namespace UniMob.UI.Layout
             return true;
         }
 
+        IState[] ISliverState.RequestBuildWindow(int startIndexInclusive, int endIndexExclusive)
+        {
+            _evictionScratch.Clear();
+            foreach (var index in _builtStates.Keys)
+            {
+                if (index < startIndexInclusive || index >= endIndexExclusive)
+                    _evictionScratch.Add(index);
+            }
 
+            // Reconciliation (UpdateChild/DeactivateChild) asserts it isn't running inside a tracked atom scope,
+            // but this is called from RequestBuildWindow's own caller (RenderSliverList.PerformSizing), which
+            // runs inside the layout computed-atom -- same reason StateCollectionHolder.ComputeStates() wraps
+            // its own UpdateChildren call in NoWatch.
+            using (Atom.NoWatch)
+            {
+                foreach (var index in _evictionScratch)
+                {
+                    StateUtilities.DeactivateChild(_builtStates[index]);
+                    _builtStates.Remove(index);
+                }
+
+                // Re-invoke ItemBuilder for every index in the window on every call, not just newly-entering
+                // ones -- mirrors how the eager Children path already re-diffs its full list on every rebuild.
+                // UpdateChild is cheap when the widget is unchanged (returns the same State), and correctly
+                // detects when the item at a given index now represents different data (its Key/Type no longer
+                // matches), disposing and rebuilding just that slot instead of silently going stale.
+                for (var index = startIndexInclusive; index < endIndexExclusive; index++)
+                {
+                    var widget = Widget.ItemBuilder(_itemBuildContext, index);
+                    var built = StateUtilities.UpdateChild(_itemBuildContext, _builtStates.GetValueOrDefault(index), widget);
+                    _builtStates[index] = built;
+
+                    if (built.Key != null) _seenKeyToIndex[built.Key] = index;
+                }
+            }
+
+            var result = new IState[endIndexExclusive - startIndexInclusive];
+            for (var index = startIndexInclusive; index < endIndexExclusive; index++)
+                result[index - startIndexInclusive] = _builtStates[index];
+
+            return result;
+        }
 
         public override void InitState()
         {
             base.InitState();
 
+            ValidateMode();
+
             // Use the provided controller or create a new one.
             ScrollController = Widget.ScrollController ?? new ScrollController(StateLifetime);
+            ScrollController.Attach(this);
+
+            // ScrollController reads this lazily on dispose, so it always detaches from whichever
+            // controller is current at that point, even if DidUpdateWidget swapped it in the meantime.
+            StateLifetime.Register(() => ScrollController.Detach(this));
         }
 
         public override void DidUpdateWidget(ScrollList oldWidget)
         {
             base.DidUpdateWidget(oldWidget);
 
+            ValidateMode();
+
             if (Widget.ScrollController != null && Widget.ScrollController != ScrollController)
+            {
+                ScrollController.Detach(this);
                 ScrollController = Widget.ScrollController;
+                ScrollController.Attach(this);
+            }
         }
 
-
-        public bool ScrollTo(int index)
+        private void ValidateMode()
         {
-            return ScrollTo(index, 0);
+            var hasBuilder = Widget.ItemBuilder != null;
+            var hasChildren = Widget.Children is { Count: > 0 };
+
+            if (hasBuilder && hasChildren)
+                throw new InvalidOperationException(
+                    "ScrollList cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount " +
+                    "for lazy building, or Children for eager building, not both.");
+
+            if (hasBuilder && Widget.ItemCount == null)
+                throw new InvalidOperationException("ScrollList.ItemCount must be set when ItemBuilder is provided.");
+
+            if (!hasBuilder && Widget.ItemCount != null)
+                throw new InvalidOperationException("ScrollList.ItemCount has no effect without ItemBuilder.");
         }
 
-        public bool ScrollTo(Key key)
+        bool IScrollControllerExecutor.ScrollTo(int index, float duration, ScrollToPosition position, Easing easing)
         {
-            return ScrollTo(key, 0);
+            return _view?.ScrollTo(index, duration, position, easing) ?? false;
         }
 
-        public bool ScrollTo(int index, float duration, ScrollToPosition? position = null, Easing easing = null)
+        bool IScrollControllerExecutor.ScrollTo(Key key, float duration, ScrollToPosition position, Easing easing)
         {
-            return _view?.ScrollTo(index, duration, position ?? ScrollToPosition.Start, easing ?? Ease.InOutCirc) ??
-                   false;
-        }
+            int index;
 
-
-        public bool ScrollTo(Key key, float duration, ScrollToPosition? position = null, Easing easing = null)
-        {
-            if (!_childKeyToIndexMap.TryGetValue(key, out var index))
+            if (IsLazy)
+            {
+                if (Widget.KeyToIndexResolver != null)
+                {
+                    var resolved = Widget.KeyToIndexResolver(key);
+                    if (resolved == null) return false;
+                    index = resolved.Value;
+                }
+                else if (!_seenKeyToIndex.TryGetValue(key, out index))
+                {
+                    return false;
+                }
+            }
+            else if (!_childKeyToIndexMap.TryGetValue(key, out index))
+            {
                 return false;
+            }
 
-            return ScrollTo(index, duration, position, easing);
+            return ((IScrollControllerExecutor) this).ScrollTo(index, duration, position, easing);
         }
     }
 }
