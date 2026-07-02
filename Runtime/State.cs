@@ -17,6 +17,7 @@ namespace UniMob.UI
     {
         private readonly MutableAtom<LayoutConstraints?> _explicitConstraints = Atom.Value(default(LayoutConstraints?));
         private readonly Atom<(Vector2 renderSize, int version)> _trackedLayoutPerformer;
+        private readonly Atom<Vector2> _trackedSize;
 
         private readonly MutableBuildContext _context;
 
@@ -59,6 +60,7 @@ namespace UniMob.UI
         {
             _context = new MutableBuildContext(this, null);
             _trackedLayoutPerformer = CreateTrackedLayout();
+            _trackedSize = CreateTrackedSize();
         }
 
         internal virtual void Update(Widget widget)
@@ -110,6 +112,13 @@ namespace UniMob.UI
             return renderData.renderSize;
         }
 
+        Vector2 IState.WatchedSize()
+        {
+            if (this.StateLifetime.IsDisposed)
+                return Vector2.zero;
+            return _trackedSize.Get();
+        }
+
         private Atom<(Vector2 renderSize, int version)> CreateTrackedLayout()
         {
             return Atom.Computed(StateLifetime, () =>
@@ -129,6 +138,18 @@ namespace UniMob.UI
                 // so we always return a new number.
                 return (renderSize, _renderVersion = ((_renderVersion + 1) % int.MaxValue));
             });
+        }
+
+        // Mirrors _trackedLayoutPerformer's renderSize, but as a plain Vector2-valued computed atom.
+        // Unlike _trackedLayoutPerformer (which always bumps a version number so View-layer consumers
+        // refresh on every layout pass, including pure repositioning), this atom goes through UniMob's
+        // normal equality-based propagation cutoff: a subscriber here only gets invalidated when the
+        // Size itself actually changes. Used by RenderObject.LayoutChild so a parent's sizing pass
+        // doesn't get dragged into re-running every time a child's subtree merely repositions itself
+        // (e.g. a nested ScrollList scrolling).
+        private Atom<Vector2> CreateTrackedSize()
+        {
+            return Atom.Computed(StateLifetime, () => _trackedLayoutPerformer.Get().renderSize);
         }
 
         internal static StateHolder<TState> Create<TWidget, TState>(
