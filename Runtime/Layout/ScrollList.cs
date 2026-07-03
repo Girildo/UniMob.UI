@@ -284,7 +284,10 @@ namespace UniMob.UI.Layout
 
         IState[] ISliverState.RequestBuildWindow(int startIndexInclusive, int endIndexExclusive)
         {
-            _buildWindowRange.Value = (startIndexInclusive, endIndexExclusive);
+            using (Atom.NoWatch)
+            {
+                _buildWindowRange.Value = (startIndexInclusive, endIndexExclusive);
+            }
             return _builtWindow.Value;
         }
 
