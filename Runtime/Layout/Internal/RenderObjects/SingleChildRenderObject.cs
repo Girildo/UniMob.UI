@@ -13,6 +13,19 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     public abstract class SingleChildRenderObject : RenderObject, ISingleChildRenderObject
     {
         private readonly ISingleChildLayoutState _state;
+
+        // TODO(layout): ChildSize/ChildPosition are set manually by each PerformSizing/PerformPositioning
+        // override (see RenderProxy, RenderPadding, RenderConstrainedBox, RenderPositionedBox,
+        // RenderAspectRatio, RenderIntrinsicSize). Forgetting to assign ChildSize after laying out Child
+        // silently strands the child's RectTransform at (0,0) -- see the RenderIntrinsicSize bug this
+        // TODO was added for, and the identical latent gap in RenderConstrainedBox's no-child branch.
+        // A shadowed/overridden LayoutChild that auto-writes ChildSize was tried and reverted: it just
+        // relocates the smell (LayoutChild stops being able to run without committing ChildSize, which
+        // rules out ever adding a speculative/non-committing measurement later). The real fix is to split
+        // PerformSizing into pure hooks -- GetChildConstraints(constraints) and
+        // ComputeSize(constraints, childSize) -- so the base class is the only place that ever calls
+        // LayoutChild/writes ChildSize, exactly once, and subclasses stay side-effect-free. That's a
+        // breaking change for library consumers who've subclassed these render objects, so it's deferred.
         public Vector2 ChildSize { get; protected set; }
         public Vector2 ChildPosition { get; protected set; }
 
@@ -29,7 +42,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             _state = state;
         }
-
 
         protected override float ComputeIntrinsicWidth(float height)
         {

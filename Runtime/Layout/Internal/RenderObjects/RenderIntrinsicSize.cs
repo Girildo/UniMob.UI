@@ -14,16 +14,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            
+
             var childConstraints = _state.Axis == Axis.Horizontal
                 ? constraints.Tighten(width: GetIntrinsicWidth(constraints.HasBoundedHeight ? constraints.MaxHeight : float.PositiveInfinity))
                 : constraints.Tighten(height: GetIntrinsicHeight(constraints.HasBoundedWidth ? constraints.MaxWidth : float.PositiveInfinity));
-            var laidOut = LayoutChild(_state.Child, childConstraints);
-            return constraints.Constrain(laidOut);
+            ChildSize = LayoutChild(_state.Child, childConstraints);
+            return constraints.Constrain(ChildSize);
         }
 
         protected override void PerformPositioning()
         {
+            ChildPosition = Vector2.zero;
         }
 
         protected override float ComputeIntrinsicWidth(float height)

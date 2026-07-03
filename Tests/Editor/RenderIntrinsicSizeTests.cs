@@ -27,6 +27,11 @@ namespace UniMob.UI.Tests
             // Width got tightened to the child's intrinsic width (measured at the bounded height, 77);
             // height was left loose, so the child collapsed to its own minimum (0).
             Assert.AreEqual(new Vector2(77, 0), render.Size);
+
+            // ChildSize/ChildPosition are what the View applies to the child's RectTransform --
+            // distinct from render.Size, which is only reported to this render object's own parent.
+            Assert.AreEqual(render.Size, render.ChildSize);
+            Assert.AreEqual(Vector2.zero, render.ChildPosition);
         }
 
         [Test]
