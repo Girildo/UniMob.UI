@@ -45,30 +45,61 @@ namespace UniMob.UI.Layout.Internal.Views
 
             // Set the initial scroll position when the view becomes active.
             var isHorizontal = State.Axis == Axis.Horizontal;
-            if (isHorizontal)
-                scrollRect.horizontalNormalizedPosition = State.ScrollController.NormalizedValue;
-            else
-                scrollRect.verticalNormalizedPosition = 1f - State.ScrollController.NormalizedValue;
+            ApplyPixelOffsetToScrollRect(State.ScrollController.PixelOffset, isHorizontal);
 
             Atom.Reaction(StateLifetime, () =>
             {
-                var controllerValue = State.ScrollController.NormalizedValue;
+                var controllerValue = State.ScrollController.PixelOffset;
+                var currentValue = ReadPixelOffsetFromScrollRect(isHorizontal);
 
-                var currentScrollRectValue = isHorizontal
-                    ? scrollRect.horizontalNormalizedPosition
-                    : 1 - scrollRect.verticalNormalizedPosition;
-
-                if (Mathf.Abs(currentScrollRectValue - controllerValue) > 0.001f)
+                if (Mathf.Abs(currentValue - controllerValue) > 0.5f)
                 {
                     _isUpdatingFromController = true;
-                    if (isHorizontal)
-                        scrollRect.horizontalNormalizedPosition = controllerValue;
-                    else
-                        scrollRect.verticalNormalizedPosition = 1 - controllerValue;
-
+                    ApplyPixelOffsetToScrollRect(controllerValue, isHorizontal);
                     Zone.Current.NextFrame(() => _isUpdatingFromController = false);
                 }
             });
+        }
+
+        // Total distance, in pixels, the content can scroll along the given axis. The ScrollRect's own
+        // normalizedPosition is always a ratio against this value -- since it's the render object's estimated
+        // TotalContentSize() for a lazy list, it can change from one call to the next. That's fine here: unlike
+        // RenderSliverList's *own* internal math (which used to re-derive "current scroll pixels" from this
+        // ratio on every layout pass, even ones nobody scrolled), this conversion only ever runs at the moment
+        // Unity's own position actually changed (drag/inertia/elastic-bounce/ScrollTo write), so a shifting
+        // denominator here doesn't cause drift -- it just means each real scroll event is measured against the
+        // freshest size estimate available at that instant.
+        private float GetTotalScrollableDistance(bool isHorizontal)
+        {
+            var contentSize = contentRoot.rect.size;
+            var viewportSize = _rectTransform.rect.size;
+            var dist = isHorizontal ? contentSize.x - viewportSize.x : contentSize.y - viewportSize.y;
+            return Mathf.Max(0, dist);
+        }
+
+        // Reads the ScrollRect's current position in pixels, via Unity's own normalized-position getter (not
+        // raw content.anchoredPosition) so this always agrees with whatever Unity's internal
+        // drag/inertia/elastic-bounce bookkeeping currently considers "the" position.
+        private float ReadPixelOffsetFromScrollRect(bool isHorizontal)
+        {
+            var normalized = isHorizontal
+                ? scrollRect.horizontalNormalizedPosition
+                : 1f - scrollRect.verticalNormalizedPosition;
+            return normalized * GetTotalScrollableDistance(isHorizontal);
+        }
+
+        // Writes a pixel offset to the ScrollRect via Unity's own normalized-position setter -- not by poking
+        // content.anchoredPosition directly -- so Unity's internal drag-velocity/inertia state stays consistent
+        // for whatever the user does right after (e.g. grabbing the list mid-ScrollTo-animation).
+        private void ApplyPixelOffsetToScrollRect(float pixelOffset, bool isHorizontal)
+        {
+            var totalScrollableDistance = GetTotalScrollableDistance(isHorizontal);
+            var normalized = totalScrollableDistance > 0 ? pixelOffset / totalScrollableDistance : 0f;
+
+            if (isHorizontal)
+                scrollRect.horizontalNormalizedPosition = normalized;
+            else
+                scrollRect.verticalNormalizedPosition = 1f - normalized;
         }
 
         private void EnsurePivotAndAnchorsAreConsistentWithDirection(bool isHorizontal)
@@ -182,30 +213,28 @@ namespace UniMob.UI.Layout.Internal.Views
             if (_isUpdatingFromController || !HasState || State.StateLifetime.IsDisposed) return;
 
             var isHorizontal = State.Axis == Axis.Horizontal;
-            var contentSize = contentRoot.rect.size;
-            var viewportSize = _rectTransform.rect.size;
-
-            var totalScrollableDist = isHorizontal ? contentSize.x - viewportSize.x : contentSize.y - viewportSize.y;
-            if (totalScrollableDist < 0) totalScrollableDist = 0;
-
             var normalizedValue = isHorizontal ? normalizedPosition.x : 1 - normalizedPosition.y;
 
-            State.ScrollController.NormalizedValue = normalizedValue;
+            // Converted once, right here, at the moment Unity tells us the position actually changed
+            // (drag/inertia/elastic-bounce/clamp) -- not re-derived on every layout pass. That's what keeps
+            // PixelOffset stable against RenderSliverList's estimated TotalContentSize() drifting between
+            // scroll events: as long as the user hasn't actually moved, nothing re-runs this conversion.
+            State.ScrollController.PixelOffset = normalizedValue * GetTotalScrollableDistance(isHorizontal);
         }
 
         public bool ScrollTo(int index, float duration, ScrollToPosition scrollToPosition, Easing easing) // this should be moved to the controller
         {
             if (State?.RenderObject is not RenderSliverList renderSliver) return false;
 
-            var normalizedPosition = renderSliver.CalculateNormalizedOffset(index, scrollToPosition);
+            var targetPixelOffset = renderSliver.CalculateScrollPixelOffset(index, scrollToPosition);
 
             // Stop any existing scroll animations before starting a new one.
             StopAllCoroutines();
-            StartCoroutine(AnimateScrollTo(normalizedPosition, duration, easing));
+            StartCoroutine(AnimateScrollTo(targetPixelOffset, duration, easing));
             return true;
         }
 
-        private IEnumerator AnimateScrollTo(float normalizedPosition, float duration, Easing easing)
+        private IEnumerator AnimateScrollTo(float targetPixelOffset, float duration, Easing easing)
         {
             var originalMovementType = scrollRect.movementType;
             try
@@ -214,48 +243,38 @@ namespace UniMob.UI.Layout.Internal.Views
                 var time = 0f;
                 var isHorizontal = State.Axis == Axis.Horizontal;
 
-                var startPosition = isHorizontal
-                    ? scrollRect.horizontalNormalizedPosition
-                    : scrollRect.verticalNormalizedPosition;
-
-                var targetPosition = isHorizontal
-                    ? normalizedPosition
-                    : 1f - normalizedPosition;
+                var startPixelOffset = ReadPixelOffsetFromScrollRect(isHorizontal);
 
                 while (time < duration)
                 {
                     // Check for user interruption by comparing the current position with where
                     // our animation left it last frame. If they differ, the user has taken control.
-                    var lastFrameValue = isHorizontal
-                        ? scrollRect.horizontalNormalizedPosition
-                        : scrollRect.verticalNormalizedPosition;
-                    if (time > 0 && Mathf.Abs(lastFrameValue - startPosition) > 0.001f)
+                    var lastFrameValue = ReadPixelOffsetFromScrollRect(isHorizontal);
+                    if (time > 0 && Mathf.Abs(lastFrameValue - startPixelOffset) > 1f)
                         // Recalculate start position if interrupted, but for simplicity we can just break.
                         // A more advanced implementation could adjust the animation from the new start point.
                         yield break;
 
                     time += Time.unscaledDeltaTime;
 
-                    var newPosition = Mathf.LerpUnclamped(
-                        startPosition,
-                        targetPosition,
+                    var newPixelOffset = Mathf.LerpUnclamped(
+                        startPixelOffset,
+                        targetPixelOffset,
                         easing(time, duration)
                     );
 
-                    if (isHorizontal)
-                        scrollRect.horizontalNormalizedPosition = newPosition;
-                    else
-                        scrollRect.verticalNormalizedPosition = newPosition;
+                    // Writes via the normalized-position setter (see ApplyPixelOffsetToScrollRect), which in
+                    // turn fires ScrollRect.onValueChanged -> OnScrollPositionChanged, keeping
+                    // ScrollController.PixelOffset (and therefore RenderSliverList's build window) in sync
+                    // with the animation every frame, same as the pre-pixel-tracking version relied on.
+                    ApplyPixelOffsetToScrollRect(newPixelOffset, isHorizontal);
 
-                    startPosition = newPosition; // Update for next frame's interruption check.
+                    startPixelOffset = newPixelOffset; // Update for next frame's interruption check.
                     yield return null;
                 }
 
                 // Ensure it ends at the exact target position.
-                if (isHorizontal)
-                    scrollRect.horizontalNormalizedPosition = targetPosition;
-                else
-                    scrollRect.verticalNormalizedPosition = targetPosition;
+                ApplyPixelOffsetToScrollRect(targetPixelOffset, isHorizontal);
             }
             finally
             {
