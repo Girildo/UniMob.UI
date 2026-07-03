@@ -16,7 +16,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
     }
 
-    internal class RenderFlex : RenderObject, IMultiChildrenRenderObject
+    public class RenderFlex : RenderObject, IMultiChildrenRenderObject
     {
         private readonly IFlexContainerState _state;
         private readonly Axis _axis;

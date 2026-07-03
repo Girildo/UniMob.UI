@@ -31,7 +31,12 @@ namespace UniMob.UI.Layout
         }
     }
 
-    public class IntrinsicSizeState : SingleChildLayoutState<IntrinsicSize>
+    public interface IIntrinsicSizeState : ISingleChildLayoutState
+    {
+        Axis Axis { get; }
+    }
+
+    public class IntrinsicSizeState : SingleChildLayoutState<IntrinsicSize>, IIntrinsicSizeState
     {
         public Axis Axis => this.Widget.Axis;
     }

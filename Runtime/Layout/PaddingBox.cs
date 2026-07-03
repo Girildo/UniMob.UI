@@ -24,7 +24,7 @@ namespace UniMob.UI.Layout
     }
 
 
-    internal interface IPaddingState : ISingleChildLayoutState
+    public interface IPaddingState : ISingleChildLayoutState
     {
         RectPadding Padding { get; }
     }

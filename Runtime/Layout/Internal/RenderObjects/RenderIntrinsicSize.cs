@@ -5,9 +5,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     public class RenderIntrinsicSize : SingleChildRenderObject
     {
-        private readonly IntrinsicSizeState _state;
+        private readonly IIntrinsicSizeState _state;
 
-        public RenderIntrinsicSize(IntrinsicSizeState state) : base(state)
+        public RenderIntrinsicSize(IIntrinsicSizeState state) : base(state)
         {
             _state = state;
         }

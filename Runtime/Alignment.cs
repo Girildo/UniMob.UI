@@ -25,6 +25,15 @@ namespace UniMob.UI
         public Vector2 ToAnchor() => new Vector2(X * 0.5f + 0.5f, -Y * 0.5f + 0.5f);
 
         /// <summary>
+        /// Resolves the top-left offset at which a child of <paramref name="childSize"/> should be placed
+        /// within an area of <paramref name="availableSize"/> to honor this alignment.
+        /// </summary>
+        public Vector2 ResolveOffset(Vector2 availableSize, Vector2 childSize) => new Vector2(
+            (availableSize.x - childSize.x) * (X * 0.5f + 0.5f),
+            (availableSize.y - childSize.y) * (Y * 0.5f + 0.5f)
+        );
+
+        /// <summary>
         /// The center point along the bottom edge.
         /// </summary>
         public static readonly Alignment BottomCenter = new Alignment(0.0f, 1.0f);

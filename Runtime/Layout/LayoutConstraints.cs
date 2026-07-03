@@ -167,7 +167,7 @@ namespace UniMob.UI.Layout
         /// <summary>
         /// Returns the smallest possible size that respects these constraints.
         /// </summary>
-        public Vector2 Smallest => new Vector2(this.MinHeight, this.MinHeight);
+        public Vector2 Smallest => new Vector2(this.MinWidth, this.MinHeight);
 
         /// <summary>
         /// Clamps <paramref name="width"/> to make it respect these constraints.

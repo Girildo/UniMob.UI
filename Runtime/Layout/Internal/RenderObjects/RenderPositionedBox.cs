@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal interface IPositionedBoxState : ISingleChildLayoutState
+    public interface IPositionedBoxState : ISingleChildLayoutState
     {
         Alignment Alignment { get; }
         float? WidthFactor { get; }
@@ -15,7 +15,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// more space for alignment by expanding or applying size factors.
     /// It inherits common child management from SingleChildRenderObject.
     /// </summary>
-    internal class RenderPositionedBox : SingleChildRenderObject
+    public class RenderPositionedBox : SingleChildRenderObject
     {
         private readonly IPositionedBoxState _state;
 
@@ -53,14 +53,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return;
             }
 
-            var alignment = _state.Alignment;
-
             // Calculate the top-left corner of the child based on the alignment
             // and the available space (Size) versus the child's size (ChildSize).
-            var x = (Size.x - ChildSize.x) * (alignment.X * 0.5f + 0.5f);
-            var y = (Size.y - ChildSize.y) * (alignment.Y * 0.5f + 0.5f);
-
-            ChildPosition = new Vector2(x, y);
+            ChildPosition = _state.Alignment.ResolveOffset(Size, ChildSize);
         }
     }
 }

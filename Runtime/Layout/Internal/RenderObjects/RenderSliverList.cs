@@ -7,13 +7,13 @@ using UnityEngine;
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     // A simple struct to pair a child's original index with its final layout data.
-    internal struct IndexedLayoutData
+    public struct IndexedLayoutData
     {
         public int ChildIndex;
         public LayoutInfo Layout;
     }
 
-    internal interface ISliverState : IMultiChildLayoutState
+    public interface ISliverState : IMultiChildLayoutState
     {
         /// <summary>Eager mode only (<see cref="ItemCount"/> is null); empty otherwise.</summary>
         IState[] AllChildren { get; }
@@ -26,21 +26,26 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         Axis Axis { get; }
         //Vector2 ViewportSize { get; }
-        float NormalizedScrollOffset { get; }
+
+        /// <summary>
+        ///     Current scroll offset in pixels along the scrolling axis. An absolute value, not a 0..1 ratio --
+        ///     see <see cref="UniMob.UI.ScrollController.PixelOffset"/> for why this render object needs that.
+        /// </summary>
+        float ScrollPixelOffset { get; }
         float? VirtualizationCacheExtent { get; }
         float Spacing { get; }
 
-        internal void SetVisibleChildren(List<IndexedLayoutData> visibleChildren);
+        void SetVisibleChildren(List<IndexedLayoutData> visibleChildren);
 
         /// <summary>
         ///     Lazy mode only. Ensures indices in [startIndexInclusive, endIndexExclusive) are built (constructing
         ///     newly-entering ones and evicting ones that fell outside the window since the last call), and returns
         ///     their states in index order.
         /// </summary>
-        internal IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive);
+        IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive);
     }
 
-    internal class RenderSliverList : RenderObject, IMultiChildrenRenderObject
+    public class RenderSliverList : RenderObject, IMultiChildrenRenderObject
     {
         // Caches the measured sizes of all children to avoid re-calculating every frame. Eager mode only.
         private readonly List<Vector2> _allChildrenSizes = new();
@@ -189,7 +194,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
 
             var stride = (itemExtent ?? _averageExtent) + spacing;
-            var scrollOffset = _state.NormalizedScrollOffset * TotalContentSize();
+            var scrollOffset = _state.ScrollPixelOffset;
 
             var startIndex = Mathf.Clamp(Mathf.FloorToInt((scrollOffset - cacheExtent) / stride), 0, itemCount - 1);
             var endIndex = Mathf.Clamp(Mathf.CeilToInt((scrollOffset + viewportMainAxisSize + cacheExtent) / stride),
@@ -329,7 +334,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var cacheExtent = this._virtualizationCacheExtent; // The buffer for smooth scrolling.
 
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            var scrollOffset = _state.NormalizedScrollOffset * this.TotalContentSize();
+            var scrollOffset = _state.ScrollPixelOffset;
             var spacing = _state.Spacing;
             var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
 
@@ -470,14 +475,19 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return child.RenderObject.GetIntrinsicHeight(width);
         }
 
-        public float CalculateNormalizedOffset(int index, ScrollToPosition position)
+        /// <summary>
+        ///     Target scroll offset in pixels to bring <paramref name="index"/> into view at <paramref name="position"/>.
+        ///     Returns pixels (not a 0..1 ratio) for the same reason <see cref="ISliverState.ScrollPixelOffset"/> is
+        ///     pixel-based -- see that property's doc.
+        /// </summary>
+        public float CalculateScrollPixelOffset(int index, ScrollToPosition position)
         {
             return _state.ItemCount.HasValue
-                ? CalculateLazyNormalizedOffset(index, position)
-                : CalculateEagerNormalizedOffset(index, position);
+                ? CalculateLazyScrollPixelOffset(index, position)
+                : CalculateEagerScrollPixelOffset(index, position);
         }
 
-        private float CalculateEagerNormalizedOffset(int index, ScrollToPosition position)
+        private float CalculateEagerScrollPixelOffset(int index, ScrollToPosition position)
         {
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var viewportSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
@@ -523,17 +533,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     break;
             }
 
-            // Convert the pixel offset to a normalized value based on the SCROLLABLE distance.
-            return childOffset / totalScrollableDist;
+            return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
 
         /// <summary>
-        ///     Same shape as <see cref="CalculateEagerNormalizedOffset"/>, using the exact extent for <paramref name="index"/>
+        ///     Same shape as <see cref="CalculateEagerScrollPixelOffset"/>, using the exact extent for <paramref name="index"/>
         ///     if it's ever been measured (see <see cref="_measuredExtents"/>), and the uniform stride estimate
         ///     (matching <see cref="PerformLazySizing"/>/<see cref="PerformLazyPositioning"/>) otherwise. Scrolling to
         ///     an unmeasured index may land imprecisely on the first pass and settle once the target is built.
         /// </summary>
-        private float CalculateLazyNormalizedOffset(int index, ScrollToPosition position)
+        private float CalculateLazyScrollPixelOffset(int index, ScrollToPosition position)
         {
             var itemCount = _state.ItemCount!.Value;
             var isHorizontal = _state.Axis == Axis.Horizontal;
@@ -574,7 +583,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     break;
             }
 
-            return childOffset / totalScrollableDist;
+            return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
     }
 }

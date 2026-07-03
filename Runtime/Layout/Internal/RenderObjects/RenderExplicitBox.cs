@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
@@ -15,7 +11,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// child render objects.  It sizes itself based on the provided <see cref="LayoutConstraints"/> and the specified
     /// <see cref="AxisSize"/>. The intrinsic dimensions of the leaf box are determined by the constraints and the axis
     /// size mode.</remarks>
-    public class RenderExplicitBox : RenderObject
+    public class RenderExplicitBox : LeafRenderObject
     {
         private readonly LayoutConstraints _leafConstraints;
         private readonly AxisSize _axisSize;
@@ -46,11 +42,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return _axisSize == AxisSize.Min
                 ? _leafConstraints.MinWidth
                 : _leafConstraints.MaxWidth;
-        }
-
-        protected sealed override void PerformPositioning()
-        {
-            // Nothing to do: leaf box has no children.
         }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)

@@ -16,6 +16,16 @@ namespace UniMob.UI
         [Atom] public float NormalizedValue { get; internal set; }
 
         /// <summary>
+        ///     The current scroll offset in pixels along the scrolling axis, measured from the start (top/left)
+        ///     of the content. Unlike <see cref="NormalizedValue"/> (a 0..1 ratio against the total content
+        ///     size), this is an absolute value that doesn't drift when the total content size estimate changes
+        ///     underneath it -- which <see cref="Layout.ScrollList"/>'s lazy-building estimator does on
+        ///     essentially every layout pass. Used internally by <see cref="Layout.ScrollList"/>; other
+        ///     scrollable widgets that share this controller type are unaffected (they never read/write it).
+        /// </summary>
+        [Atom] public float PixelOffset { get; internal set; }
+
+        /// <summary>
         ///     Scrolls to the item at the given index, if this controller is currently attached to a
         ///     mounted <see cref="ScrollList"/>.
         /// </summary>

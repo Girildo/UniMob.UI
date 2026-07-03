@@ -1,10 +1,8 @@
-// In a new file: Runtime/Layout/Internal/RenderObjects/RenderPadding.cs
-
 using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal class RenderPadding : SingleChildRenderObject, ISingleChildRenderObject
+    public class RenderPadding : SingleChildRenderObject, ISingleChildRenderObject
     {
         private readonly IPaddingState _state;
 

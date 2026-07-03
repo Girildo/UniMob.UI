@@ -9,7 +9,7 @@ using UnityEngine.TextCore.Text;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal class RenderText : LeafRenderObject
+    public class RenderText : LeafRenderObject
     {
         private static Dictionary<WidgetViewReference, TextMeshProUGUI?> s_textMeshProMeasurers = new();
         private static TMP_StyleSheet? s_styleSheet;
@@ -39,7 +39,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var go = Object.Instantiate(prefab.gameObject);
                 go.name = "TextMeshPro Measurer -- " + viewRefence;
                 Object.DontDestroyOnLoad(go);
-                go.hideFlags = HideFlags.HideAndDontSave;
+                //go.hideFlags = HideFlags.HideAndDontSave;
 
                 var behaviour = go.GetComponent<UniMobTextMeshProBehaviour>();
 
@@ -131,10 +131,24 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 // true per-line metrics for just the lines that would actually be visible.
                 measurer.maxVisibleLines = maxLines;
 
+                // Width is only bounded to maxWidth when wrapping is actually enabled -- wrapping is a
+                // genuine function of available width, so that bound is necessary there. When wrapping is
+                // off (e.g. a single-line MaxLines=1 title), there's no wrapping decision to make, so
+                // bounding the measurement width has the same circularity height always had: with
+                // overflowMode=Ellipsis, GetTextInfo() below truncates as soon as the rect is even a hair
+                // narrower than the content, so if maxWidth happens to already be close to the text's
+                // natural width (as it typically is here, since a Flexible sibling usually allocates close
+                // to what's asked), the *measurement* silently ellipsizes too -- reporting a preferred width
+                // that's a hair under the true natural width instead of the true value. Constrain() (in
+                // PerformSizing) then has nothing left to clamp, so the real box ends up just shy of what's
+                // actually needed, and the real TMP component ellipsizes at render time even though there
+                // was enough room. Height never has a legitimate bound to begin with -- see PerformSizing.
+                var measureWidth = _state.WrappingEnabled && !float.IsPositiveInfinity(maxWidth)
+                    ? maxWidth
+                    : UnconstrainedMeasureExtent;
+
                 var measurerRect = measurer.rectTransform;
-                measurerRect.sizeDelta = new Vector2(
-                    float.IsPositiveInfinity(maxWidth) ? UnconstrainedMeasureExtent : maxWidth,
-                    float.IsPositiveInfinity(maxHeight) ? UnconstrainedMeasureExtent : maxHeight);
+                measurerRect.sizeDelta = new Vector2(measureWidth, UnconstrainedMeasureExtent);
 
                 var textInfo = measurer.GetTextInfo(_state.Value);
                 var visibleLineCount = Mathf.Min(textInfo.lineCount, maxLines);
@@ -145,7 +159,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 {
                     var line = textInfo.lineInfo[i];
                     height += line.lineHeight;
-                    width = Mathf.Max(width, line.lineExtents.max.x - line.lineExtents.min.x);
+
+                    // lineExtents is the ink/glyph bounding box of the first/last visible characters,
+                    // which is consistently narrower than the advance-based width GetPreferredValues()
+                    // (CalculatePreferredValues) uses for the unclamped branch below -- the last glyph's
+                    // ink extent stops short of its full advance (right-side bearing). Reconstruct the
+                    // same advance-based width from characterInfo so both branches agree.
+                    var firstChar = textInfo.characterInfo[line.firstVisibleCharacterIndex];
+                    var lastChar = textInfo.characterInfo[line.lastVisibleCharacterIndex];
+                    width = Mathf.Max(width, lastChar.xAdvance - firstChar.origin);
                 }
 
                 fullSize = new Vector2(width, height);
@@ -162,8 +184,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            // The text must be sized based on its content, respecting the constraints.
-            var preferredSize = GetPreferredSize(constraints.MaxWidth, constraints.MaxHeight);
+            // Always measure the *natural* height (unbounded), then let Constrain() below clamp it to
+            // whatever the parent actually allows -- never feed constraints.MaxHeight into the measurement
+            // itself. Wrapping legitimately depends on width, so MaxWidth still bounds the measurer, but
+            // height doesn't work the same way: if we bounded the measurer's rect to a tight incoming
+            // MaxHeight, TMP's own line-fitting (GetTextInfo, see GetPreferredSize) would silently stop
+            // short of MaxLines whenever that height constraint was tighter than the content needs (e.g. a
+            // Text inside a Row's fixed-height cross axis). The real TMP component at render time still gets
+            // the full, un-truncated MaxLines value (LayoutTextView sets it from the widget, not from this
+            // measurement), so it would then try to fit more lines into a box only sized for the fewer lines
+            // this method under-measured -- visibly cutting the extra line(s) off. Matches
+            // ComputeIntrinsicHeight below, which already always measures unbounded for the same reason.
+            var preferredSize = GetPreferredSize(constraints.MaxWidth, float.PositiveInfinity);
             return constraints.Constrain(preferredSize);
         }
 

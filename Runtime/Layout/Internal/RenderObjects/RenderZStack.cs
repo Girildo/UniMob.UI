@@ -4,16 +4,14 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    internal class RenderZStack : RenderObject, IMultiChildrenRenderObject
+    public class RenderZStack : RenderObject, IMultiChildrenRenderObject
     {
-        private readonly ZStackState _state;
+        private readonly IZStackState _state;
 
         private readonly List<LayoutInfo> _childrenLayout = new();
         public IReadOnlyList<LayoutInfo> ChildrenLayout => _childrenLayout;
 
-        public ZStack Widget => (ZStack) _state.RawWidget;
-
-        public RenderZStack(ZStackState state) : base(state.StateLifetime)
+        public RenderZStack(IZStackState state) : base(state.StateLifetime)
         {
             _state = state;
         }
@@ -53,8 +51,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override void PerformPositioning()
         {
-            var widget = this.Widget;
-
             for (var i = 0; i < _childrenLayout.Count; i++)
             {
                 var child = _state.Children[i];
@@ -71,16 +67,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private void LayoutNonPositionedChild(int index)
         {
-            var alignment = Widget.Alignment;
-
             // Now this correctly retrieves the size calculated in *this* frame's sizing pass.
             var childSize = _childrenLayout[index].Size;
 
-            var x = (Size.x - childSize.x) * (alignment.X * 0.5f + 0.5f);
-            var y = (Size.y - childSize.y) * (alignment.Y * 0.5f + 0.5f);
-
             var layoutData = _childrenLayout[index];
-            layoutData.Position = new Vector2(x, y);
+            layoutData.Position = _state.Alignment.ResolveOffset(Size, childSize);
             _childrenLayout[index] = layoutData;
         }
 
