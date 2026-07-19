@@ -29,5 +29,13 @@ namespace UniMob.UI.Tests
         public virtual Vector2 WatchedPerformLayout() => throw new NotImplementedException();
         public virtual Vector2 WatchedSize() => throw new NotImplementedException();
         public virtual string GetDiagnosticInfo() => null;
+
+        // ILayoutMetricsState members (the single-/multi-child layout state interfaces now extend it).
+        // A RenderObject under test never reads a widget's rendered geometry, so -- like the rest of this
+        // fake -- these throw unless a subclass deliberately overrides them.
+        public virtual Vector2 LocalSize => throw new NotImplementedException();
+        public virtual Rect LocalRect => throw new NotImplementedException();
+        public virtual bool TryGetGlobalGeometry(out WidgetGeometry geometry) => throw new NotImplementedException();
+        public virtual WidgetGeometry GlobalGeometry => throw new NotImplementedException();
     }
 }
