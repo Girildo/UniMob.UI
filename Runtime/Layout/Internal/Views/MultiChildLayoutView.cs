@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 namespace UniMob.UI.Layout.Internal.Views
 {
-    public interface IMultiChildLayoutState : IState
+    public interface IMultiChildLayoutState : ILayoutMetricsState
     {
         IState[] Children { get; }
     }
