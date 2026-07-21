@@ -1,3 +1,4 @@
+using System;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 
@@ -10,6 +11,11 @@ namespace UniMob.UI.Layout
     {
         public RectPadding Padding { get; set; }
 
+        public PaddingBox()
+        {
+        }
+
+        [Obsolete("Use the object-initializer form: new PaddingBox { Padding = ..., Child = ... }.")]
         public PaddingBox(RectPadding padding)
         {
             this.Padding = padding;
