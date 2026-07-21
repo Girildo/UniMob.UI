@@ -141,7 +141,7 @@ namespace UniMob.UI.Layout
                 _childKeyToIndexMap.Clear();
                 for (var i = 0; i < children.Count; i++)
                 {
-                    var key = children[i].Key;
+                    var key = children[i]?.Key;
                     if (key != null) _childKeyToIndexMap.Add(key, i);
                 }
 
