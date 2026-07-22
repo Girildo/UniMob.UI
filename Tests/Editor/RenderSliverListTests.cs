@@ -111,6 +111,55 @@ namespace UniMob.UI.Tests
         }
 
         [Test]
+        public void Lazy_LastItemTrailingEdge_CoincidesWithContentSize_AfterMeasuringVariedSizes()
+        {
+            // Item 0 is a tall header (300); every other item is 50. An item's real extent only becomes
+            // known once the window containing it is built, so after scrolling past the header the running
+            // average diverges from the exact extents already recorded for items above the window. That
+            // divergence used to be applied to the content size (TotalContentSize, exact-measured model) but
+            // NOT to the positioning anchor (uniform-stride model), pushing the final item's trailing edge
+            // past the content rect the view is sized to -- so it rendered under the RectMask2D and was
+            // clipped, with no way to scroll far enough to reveal it (max scroll == content size - viewport).
+            float SizeOf(int i) => i == 0 ? 300f : 50f;
+
+            var state = new FakeSliverState
+            {
+                ItemCount = 50,
+                VirtualizationCacheExtent = 0,
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(i => Box(SizeOf(i))).ToArray(),
+            };
+
+            var render = new RenderSliverList(state);
+            var viewport = new LayoutConstraints(0, 0, 100, 200);
+
+            // First lay out at the top so the header (and a couple of small items) get measured, seeding the
+            // average well above the 50px that dominates the rest of the list.
+            state.ScrollPixelOffset = 0f;
+            render.PerformLayoutImmediate(viewport);
+
+            // Then hold at the bottom -- clamping to the current content size exactly as the ScrollRect does --
+            // until the estimate settles. The estimate starts biased high (from the header) and relaxes toward
+            // 50 over several passes; keep laying out at the (moving) bottom so it converges.
+            for (var pass = 0; pass < 80; pass++)
+            {
+                state.ScrollPixelOffset = Mathf.Max(0f, render.TotalContentSize() - 200f);
+                render.PerformLayoutImmediate(viewport);
+            }
+
+            var visible = state.LastVisibleChildren;
+            Assert.IsNotEmpty(visible, "the bottom of the list must have visible items once the estimate settles");
+
+            var last = visible[visible.Count - 1];
+            Assert.AreEqual(49, last.ChildIndex, "the final item must be in the window when scrolled to the bottom");
+
+            var trailingEdge = last.Layout.Position.y + last.Layout.Size.y;
+            Assert.AreEqual(render.TotalContentSize(), trailingEdge, 1f,
+                "the final item's trailing edge must coincide with the content size the view is sized to, " +
+                "otherwise it renders past the mask and is clipped");
+        }
+
+        [Test]
         public void CalculateScrollPixelOffset_LazyWithItemExtent_StartCenterEnd()
         {
             var state = new FakeSliverState
