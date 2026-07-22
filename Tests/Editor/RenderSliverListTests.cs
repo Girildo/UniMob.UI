@@ -43,6 +43,9 @@ namespace UniMob.UI.Tests
 
         private static IState Box(float mainAxisSize) => TestHarness.Mount(new FixedSizeBox { Size = new Vector2(0, mainAxisSize) });
 
+        // Horizontal-axis box: main-axis size on x (the cross axis y gets stretched to the viewport by the list).
+        private static IState HBox(float mainAxisSize) => TestHarness.Mount(new FixedSizeBox { Size = new Vector2(mainAxisSize, 0) });
+
         [Test]
         public void Eager_TotalContentSize_SumsChildrenPlusSpacing()
         {
@@ -56,6 +59,25 @@ namespace UniMob.UI.Tests
             render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 1000));
 
             Assert.AreEqual(70f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2
+        }
+
+        [Test]
+        public void TotalContentSize_ExcludesVirtualizationCacheExtent()
+        {
+            // The cache extent warms an off-screen build window; it is NOT scrollable content. Adding it to the
+            // content size used to leave a dead-zone of empty scroll past the last item (max scroll is derived
+            // from the content rect, which the View sizes to TotalContentSize()).
+            var state = new FakeSliverState
+            {
+                AllChildren = new[] { Box(10), Box(20), Box(30) },
+                Spacing = 5,
+                VirtualizationCacheExtent = 500,
+            };
+
+            var render = new RenderSliverList(state);
+            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 1000));
+
+            Assert.AreEqual(70f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2 -- and crucially NOT + 500
         }
 
         [Test]
@@ -175,6 +197,91 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(200f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Start), 0.01f);
             Assert.AreEqual(175f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Center), 0.01f);
             Assert.AreEqual(150f, render.CalculateScrollPixelOffset(4, ScrollToPosition.End), 0.01f);
+        }
+
+        // --- Horizontal axis: every branch above is axis-conditional (constraints, culling, positioning,
+        //     total size, scroll-to), and the rest of the fixture only exercises the vertical side. ---
+
+        [Test]
+        public void Horizontal_CullsAndPositionsAlongXAxis()
+        {
+            var state = new FakeSliverState
+            {
+                Axis = Axis.Horizontal,
+                AllChildren = new[] { HBox(10), HBox(10), HBox(10) }, // occupy x [0,10) [10,20) [20,30)
+                ScrollPixelOffset = 15,
+                VirtualizationCacheExtent = 0,
+            };
+
+            var render = new RenderSliverList(state);
+            // A horizontal list must have a bounded width; width == viewport main axis == 20 -> viewport x [15, 35).
+            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 20, 100));
+
+            var visible = state.LastVisibleChildren;
+            CollectionAssert.AreEqual(new[] { 1, 2 }, visible.Select(v => v.ChildIndex).ToArray());
+
+            // Offsets advance along x (y stays 0), and each child is stretched to the cross axis (height 100).
+            Assert.AreEqual(new Vector2(10, 0), visible[0].Layout.Position);
+            Assert.AreEqual(new Vector2(20, 0), visible[1].Layout.Position);
+            Assert.AreEqual(new Vector2(10, 100), visible[0].Layout.Size);
+        }
+
+        [Test]
+        public void Horizontal_TotalContentSize_SumsChildrenPlusSpacing()
+        {
+            var state = new FakeSliverState
+            {
+                Axis = Axis.Horizontal,
+                AllChildren = new[] { HBox(10), HBox(20), HBox(30) },
+                Spacing = 5,
+            };
+
+            var render = new RenderSliverList(state);
+            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 1000, 100));
+
+            Assert.AreEqual(70f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2, summed on the x-axis
+        }
+
+        [Test]
+        public void CalculateScrollPixelOffset_Horizontal_StartCenterEnd()
+        {
+            var state = new FakeSliverState
+            {
+                Axis = Axis.Horizontal,
+                AllChildren = new[] { HBox(50), HBox(50), HBox(50), HBox(50), HBox(50) },
+            };
+
+            var render = new RenderSliverList(state);
+            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 100)); // viewport main axis (width) = 100
+
+            Assert.AreEqual(100f, render.CalculateScrollPixelOffset(2, ScrollToPosition.Start), 0.01f);
+            Assert.AreEqual(75f, render.CalculateScrollPixelOffset(2, ScrollToPosition.Center), 0.01f);
+            Assert.AreEqual(50f, render.CalculateScrollPixelOffset(2, ScrollToPosition.End), 0.01f);
+        }
+
+        [Test]
+        public void CalculateScrollPixelOffset_LazyMeasured_UsesExactPrefix_StartCenterEnd()
+        {
+            // No ItemExtent -> extents are measured, and the target's offset must come from the exact per-item
+            // prefix (EstimateLeadingEdgeOffset over _measuredExtents), NOT a uniform average*index -- the path
+            // rewritten alongside the drift fix. A huge cache builds & measures the whole list in one pass, so
+            // every extent is exact and the math is fully deterministic.
+            var sizes = new[] { 10f, 20f, 30f, 40f, 50f };
+            var state = new FakeSliverState
+            {
+                ItemCount = sizes.Length,
+                VirtualizationCacheExtent = 10000,
+                BuildWindow = (start, end) => Enumerable.Range(start, end - start).Select(i => Box(sizes[i])).ToArray(),
+            };
+
+            var render = new RenderSliverList(state);
+            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 50)); // viewport main axis = 50
+
+            // Item 3's exact leading edge is 10+20+30 = 60 (a uniform average would give 3*30 = 90); extent 40.
+            // Content = 150, viewport = 50 -> scrollable = 100, so none of these clamp.
+            Assert.AreEqual(60f, render.CalculateScrollPixelOffset(3, ScrollToPosition.Start), 0.01f);
+            Assert.AreEqual(55f, render.CalculateScrollPixelOffset(3, ScrollToPosition.Center), 0.01f); // 60 - (50-40)/2
+            Assert.AreEqual(50f, render.CalculateScrollPixelOffset(3, ScrollToPosition.End), 0.01f);    // 60 - (50-40)
         }
     }
 }

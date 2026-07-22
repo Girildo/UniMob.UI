@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -61,6 +62,24 @@ namespace UniMob.UI.Tests
             state.RequestBuildWindow(2, 7);
 
             CollectionAssert.AreEquivalent(new[] { 2, 3, 4, 5, 6 }, builtIndices);
+        }
+
+        [Test]
+        public void WindowMovingAway_DeactivatesEvictedStates()
+        {
+            var (_, state, _) = MountCountingList(itemCount: 20);
+
+            var firstWindow = state.RequestBuildWindow(0, 5); // States for indices 0..4.
+            Assert.AreEqual(5, firstWindow.Length);
+            Assert.IsFalse(firstWindow.Any(s => s.StateLifetime.IsDisposed), "just-built states must be alive");
+
+            // Move the window entirely past the first range: 0..4 fall outside [10,15) and must be evicted.
+            // This is the manually-managed _builtStates cache's job -- if eviction ever stops disposing, the
+            // States (and their reactive subscriptions) leak for the life of the list.
+            state.RequestBuildWindow(10, 15);
+
+            Assert.IsTrue(firstWindow.All(s => s.StateLifetime.IsDisposed),
+                "states that left the build window must be deactivated (disposed), not leaked");
         }
 
         [Test]
