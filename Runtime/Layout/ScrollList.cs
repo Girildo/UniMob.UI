@@ -74,10 +74,13 @@ namespace UniMob.UI.Layout
     }
 
 
-    // The state implements both the generic interface for the View (IMultiChildLayoutState)
-    // and our specific interface for the RenderObject (IScrollingListState).
-    // The reason is that the RenderObject needs the entire children collection (visible AND invisible) to correctly
-    // compute the layout, while the View only needs the visible children to render the UI.
+    // The reactive half of the virtualized list -- the full architecture & pitfalls are documented at the top of
+    // RenderSliverList.cs; this file only adds the reactive-bridge hazards specific to it.
+    //
+    // It implements two interfaces on purpose: ISliverState/IScrollingListState feed the RenderObject the *full*
+    // logical shape (it needs every item, visible or not, to compute layout), while IMultiChildLayoutState exposes
+    // only the *visible* States to the View. The imperative layout pass writes indices while the View reads a
+    // computed [Atom] -- that impedance mismatch is why this class exists, and why the NoWatch scoping below is fiddly.
     public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState, IScrollControllerExecutor
     {
 
@@ -94,11 +97,9 @@ namespace UniMob.UI.Layout
         public float Spacing => this.Widget.Spacing;
 
         // --- Lazy building (ItemBuilder/ItemCount mode) ---
-        // Sparse, manually-managed cache of currently-built items, keyed by logical index. Deliberately NOT
-        // routed through StateCollectionHolder/UpdateChildren: that reconciler disposes anything absent from
-        // the widget list it's given, so feeding it a windowed subset every frame would tear down and rebuild
-        // items every time the window shifts. Plain mutable field (not an Atom), same pattern as
-        // RenderSliverList's own _allChildrenSizes -- mutated synchronously within a layout pass.
+        // Cache of currently-built items by logical index. Deliberately NOT routed through StateCollectionHolder
+        // (its reconciler disposes anything absent from the list it's given, so a windowed subset would rebuild
+        // every item each time the window shifts). A plain field, not an Atom: mutated within a layout pass.
         private readonly Dictionary<int, State> _builtStates = new();
 
         // Every index ever built, kept even after eviction, so ScrollTo(Key) can still resolve keys for items
@@ -108,21 +109,16 @@ namespace UniMob.UI.Layout
         // Scratch buffer for BuildWindow's eviction pass, reused to avoid per-call allocation.
         private readonly List<int> _evictionScratch = new();
 
-        // The [start, end) index window RenderSliverList currently wants built. A MutableAtom, not a plain
-        // field: writing the SAME range on consecutive calls (the common case -- RequestBuildWindow runs on
-        // every scroll-position tick, but crossing an item boundary is comparatively rare) is a no-op for
-        // reactive purposes, since MutableAtom<T>.Value's setter already skips invalidation when the new
-        // value equals the cached one (see UniMob.Core.ValueAtom<T>.Value). That equality-skip is what lets
-        // _builtWindow below stay untouched across pure-scroll frames, with no manual bookkeeping here.
+        // The [start, end) window RenderSliverList currently wants built. A MutableAtom, not a plain field, so
+        // re-writing the SAME range (the common case: RequestBuildWindow fires every scroll tick, but crossing an
+        // item boundary is rare) is a reactive no-op -- MutableAtom's setter skips invalidation on an equal value,
+        // which is what leaves _builtWindow untouched across pure-scroll frames with no manual bookkeeping here.
         private readonly MutableAtom<(int start, int end)> _buildWindowRange = Atom.Value((0, 0));
 
-        // The built States for _buildWindowRange's current window. A ComputedAtom rather than a plain method:
-        // its pull body (BuildWindow) reads _buildWindowRange.Value AND, transitively via ItemBuilder,
-        // whatever reactive state each item's builder reads (e.g. a ViewModel's [Atom] selection flag).
-        // UniMob's normal computed-atom staleness tracking then does the right thing on its own: it re-runs
-        // ItemBuilder for the window when the window range actually changes OR when anything ItemBuilder
-        // reads changes, and skips it otherwise -- without RequestBuildWindow, or any item widget, needing to
-        // reason about *why* the window was requested again. See BuildWindow for the actual logic.
+        // Built States for _buildWindowRange's current window. A ComputedAtom, not a method, so UniMob's staleness
+        // tracking re-runs its pull body (BuildWindow) exactly when it should: when the range changes OR when
+        // anything ItemBuilder transitively reads (e.g. a ViewModel's [Atom] selection flag) changes, and skips it
+        // otherwise -- no caller has to reason about *why* the window was requested again.
         private readonly Atom<IState[]> _builtWindow;
 
         // Shared BuildContext for every lazily-built item -- mirrors CreateChildren's `new BuildContext(this, Context)`,
@@ -158,10 +154,9 @@ namespace UniMob.UI.Layout
 
                 if (IsLazy)
                 {
-                    // _builtStates is a plain field, not tracked by this computed atom -- safe here because it's
-                    // only ever mutated inside RequestBuildWindow (RenderSliverList.PerformSizing), which always
-                    // runs strictly before SetVisibleChildren writes _visibleIndices.Value within the same layout
-                    // pass. By the time this recomputes, _builtStates already reflects the current pass.
+                    // _builtStates is a plain field (untracked here) yet safe: it's only mutated in
+                    // RequestBuildWindow, which runs before SetVisibleChildren writes _visibleIndices in the same
+                    // pass -- so by the time this recomputes, _builtStates already reflects the current pass.
                     for (var i = 0; i < indices.Count; i++)
                     {
                         _builtStates.TryGetValue(indices[i], out var state);
@@ -249,25 +244,17 @@ namespace UniMob.UI.Layout
             scratch.Clear();
             for (var i = 0; i < visibleChildren.Count; i++) scratch.Add(visibleChildren[i].ChildIndex);
 
-            // Reading _visibleIndices.Value here would normally subscribe whichever atom is currently
-            // evaluating (this is invoked from inside the ScrollList's own layout computation) as a
-            // watcher of _visibleIndices -- which we're also about to write to below. That would make the
-            // layout atom depend on a value it writes itself. Keep the read inside NoWatch too.
+            // NoWatch: this runs inside the list's own layout computation, so reading _visibleIndices here would
+            // subscribe that atom to a value it's about to write -- a self-dependency.
             using (Atom.NoWatch)
             {
                 var current = _visibleIndices.Value;
-                if (IndicesEqual(current, scratch))
-                {
-                    // The visible window hasn't actually changed (e.g. a scroll delta that didn't cross
-                    // an item boundary). Skip the write entirely to avoid invalidating downstream atoms
-                    // (and the IState[] allocation that triggers) for no observable change.
-                    return;
-                }
+                // Unchanged window (a scroll delta that didn't cross an item boundary): skip the write so we don't
+                // invalidate downstream atoms (and allocate a fresh IState[]) for no observable change.
+                if (IndicesEqual(current, scratch)) return;
 
                 _visibleIndices.Value = scratch;
-
-                // The old value is now orphaned from the atom; reuse it as the next scratch buffer.
-                _visibleIndicesScratch = current;
+                _visibleIndicesScratch = current; // old value is orphaned; reuse it as the next scratch buffer
             }
         }
 
@@ -291,10 +278,9 @@ namespace UniMob.UI.Layout
             return _builtWindow.Value;
         }
 
-        // Pull body of _builtWindow. Evicts indices that fell outside the current window and (re)builds
-        // ItemBuilder's widgets for it. Reads _buildWindowRange.Value itself (rather than taking indices as
-        // parameters) so this whole method runs as tracked atom evaluation -- see _builtWindow's field doc
-        // for why that's the point.
+        // Pull body of _builtWindow: evicts indices now outside the window and (re)builds ItemBuilder's widgets
+        // for it. Reads _buildWindowRange.Value directly (not via parameters) so it runs as tracked atom
+        // evaluation -- see _builtWindow's field doc.
         private IState[] BuildWindow()
         {
             var (startIndexInclusive, endIndexExclusive) = _buildWindowRange.Value;
@@ -306,18 +292,12 @@ namespace UniMob.UI.Layout
                     _evictionScratch.Add(index);
             }
 
-            // Reconciliation (UpdateChild/DeactivateChild) asserts it isn't running inside a tracked atom scope,
-            // but this whole method runs as _builtWindow's own tracked pull -- same reason
-            // StateCollectionHolder.ComputeStates() wraps its own UpdateChildren call in NoWatch.
-            //
-            // Crucially, only the reconciliation calls go in NoWatch -- NOT Widget.ItemBuilder itself. Mirrors
-            // StateCollectionHolder.ComputeStates(), which invokes its builder outside NoWatch and only wraps
-            // UpdateChildren. ItemBuilder runs arbitrary widget-construction code (e.g. reading a ViewModel's
-            // [Atom] properties, like an "IsSelected" flag derived from some external selection state), and
-            // that read needs to be tracked as a dependency of _builtWindow specifically -- not of
-            // _buildWindowRange, and not of RenderSliverList's own layout pass -- so that a later change to
-            // that state re-runs ItemBuilder for the current window on its own merits, independent of whether
-            // the window's index range ever moves again.
+            // Only reconciliation (UpdateChild/DeactivateChild) goes in NoWatch -- it asserts it isn't inside a
+            // tracked scope, and this method IS _builtWindow's tracked pull. Widget.ItemBuilder must stay OUTSIDE
+            // NoWatch (see the build loop below): it reads arbitrary reactive state (e.g. a ViewModel [Atom]
+            // "IsSelected" flag), and that read must be tracked as a dependency of _builtWindow so a later change
+            // re-runs the current window even if its index range never moves. (This split regressed once during
+            // development -- see ScrollListWindowTests.)
             using (Atom.NoWatch)
             {
                 foreach (var index in _evictionScratch)
@@ -327,12 +307,9 @@ namespace UniMob.UI.Layout
                 }
             }
 
-            // Re-invoke ItemBuilder for every index in the window whenever this pull body actually runs, not
-            // just for newly-entering ones -- mirrors how the eager Children path already re-diffs its full
-            // list on every rebuild. UpdateChild is cheap when the widget is unchanged (returns the same
-            // State), and correctly detects when the item at a given index now represents different data (its
-            // Key/Type no longer matches), disposing and rebuilding just that slot instead of silently going
-            // stale.
+            // Re-run ItemBuilder for every index in the window each time this pull fires (not just newly-entering
+            // ones) -- like the eager Children path re-diffing its whole list. UpdateChild is cheap when unchanged
+            // (returns the same State) and rebuilds just the slots whose Key/Type no longer match.
             for (var index = startIndexInclusive; index < endIndexExclusive; index++)
             {
                 var widget = Widget.ItemBuilder(_itemBuildContext, index);

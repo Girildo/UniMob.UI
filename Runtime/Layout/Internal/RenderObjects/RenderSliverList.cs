@@ -6,6 +6,56 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
+    // ================================================================================================
+    //  Virtualized scrolling list -- architecture & pitfalls (read this before editing the lazy math)
+    // ================================================================================================
+    //
+    //  Four cooperating pieces:
+    //    * ScrollList (widget)     public config: eager `Children` XOR lazy `ItemBuilder`+`ItemCount`, an
+    //                              optional fixed `ItemExtent`, axis, spacing, cache extent.
+    //    * ScrollListState         bridges the imperative layout pass to the reactive UI: owns the lazily-built
+    //                              item States and exposes only the *visible* subset as an [Atom] for the View,
+    //                              while handing this render object the *full* logical shape (count / extent /
+    //                              scroll offset). Its own hazards are documented in ScrollList.cs.
+    //    * RenderSliverList (here) the geometry engine. Two passes per layout: PerformSizing (measure + compute
+    //                              total content size; in lazy mode also pick & build the window) then
+    //                              PerformPositioning (place + cull only the children intersecting the viewport).
+    //    * ScrollListView          the Unity ScrollRect adapter: sizes the content rect to TotalContentSize()
+    //                              and converts ScrollRect position <-> ScrollController.PixelOffset.
+    //
+    //  Eager mode (ItemCount == null): every child is measured every pass and positions are exact. Simple.
+    //
+    //  Lazy mode (ItemCount set): only a window covering [viewport +/- cacheExtent] is built and measured each
+    //  pass; everything outside it is *estimated*. Two ideas carry it -- and both historical bugs lived here:
+    //
+    //    (1) One model for "where is item N". _measuredExtents holds the exact extent of every item ever
+    //        measured (kept even after eviction); _averageExtent is an EMA estimate for the never-measured rest.
+    //        EstimateLeadingEdgeOffset(index) walks that model to give an item's leading edge, and positioning's
+    //        window anchor, TotalContentSize(), AND scroll-to all route through it. This is load-bearing: if any
+    //        one of them computes offsets differently (e.g. a uniform index*stride), it drifts from the others by
+    //        the accumulated (average - measured) error of the items before it, and at the end of the list that
+    //        pushes the final item past the scrollable range -> the View's RectMask2D clips it (opposite sign: a
+    //        gap). Route every offset through the one function.
+    //
+    //    (2) The one-settle-frame approximation. Window *selection* (which indices to build) uses a cheap uniform
+    //        stride guess from _averageExtent. After a big jump (ScrollTo into unbuilt territory, a fast fling) it
+    //        can miss the true viewport on the first pass, then self-corrects next pass as the average refines
+    //        near the new position; the cache buffer absorbs the slop. Accepting that one frame is what keeps
+    //        layout a single synchronous pass instead of an iterative re-entrant one.
+    //
+    //  Coordinate space: ScrollController.PixelOffset is absolute pixels (not a 0..1 ratio) because the total-size
+    //  estimate shifts almost every pass and an absolute offset doesn't drift under it. Since the View sizes the
+    //  content rect to TotalContentSize(), max scroll == TotalContentSize() - viewport, so positioned content
+    //  MUST end exactly there -- which is precisely why pitfall (1) bites.
+    //
+    //  When editing, keep in mind:
+    //    * _averageExtent is mutated mid-pass (during sizing); positioning and TotalContentSize() both read it
+    //      afterwards so they agree within a pass -- don't feed one a pre-update copy and the other a post-update
+    //      one.
+    //    * Lazy selection is only an estimate; never assume the built window exactly equals the visible set.
+    //    * The reactive build/dispose vs ItemBuilder NoWatch rules live in ScrollList.cs -- see the notes there.
+    // ================================================================================================
+
     // A simple struct to pair a child's original index with its final layout data.
     public struct IndexedLayoutData
     {
@@ -25,7 +75,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         float? ItemExtent { get; }
 
         Axis Axis { get; }
-        //Vector2 ViewportSize { get; }
 
         /// <summary>
         ///     Current scroll offset in pixels along the scrolling axis. An absolute value, not a 0..1 ratio --
@@ -56,41 +105,26 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private float _virtualizationCacheExtent; // this is determined after the sizing pass, based on the view port size OR the user-defined value.
                                                   // (todo: probably not too much sense in having this an absolute value, maybe it should be a percentage)
 
-        // --- Lazy mode (ItemBuilder/ItemCount) ---
-        // Every index's measured main-axis extent, kept even after the item is evicted from the build window --
-        // cheap (a float per index), and keeps TotalContentSize()/scroll-to math accurate for previously-seen
-        // items instead of degrading to the coarse average the moment they scroll off.
+        // --- Lazy mode (ItemBuilder/ItemCount) -- see the "one model for where is item N" note up top. ---
+        // Exact main-axis extent of every item ever measured, kept even after it leaves the build window (cheap,
+        // and keeps TotalContentSize()/scroll-to exact for seen items instead of falling back to the average).
         private readonly Dictionary<int, float> _measuredExtents = new();
         private const float DefaultEstimatedExtent = 100f; // fallback before anything has ever been measured
 
-        // How strongly each pass's window average pulls _averageExtent toward it: 0 = never changes, 1 =
-        // snaps straight to whatever this pass's (small) window happens to contain. See _averageExtent doc.
+        // How strongly each pass's window average pulls _averageExtent toward it (0 = never, 1 = snap).
         private const float AverageExtentSmoothing = 0.25f;
 
-        // The estimate for items that have NEVER been measured. An exponential moving average of each pass's
-        // built-window average, NOT a cumulative average since app start and NOT a straight snap to the
-        // current pass either -- mirrors the spirit of Flutter's default sliver extrapolation
-        // (_extrapolateMaxScrollOffset in widgets/sliver.dart), which always recomputes its average fresh
-        // from only the currently reified children, but damped here because our build window is much smaller
-        // and gets rebuilt from scratch every pass (Flutter's reified range instead grows incrementally and
-        // is typically much larger), so a straight snap swings hard on every pass whenever the window happens
-        // to catch or miss a heterogeneous outlier. A cumulative average, on the other hand, lets one outlier
-        // (e.g. an expanded header row) permanently skew the estimate for the rest of the session, even long
-        // after scrolling away from it, because a bounded build window may never revisit enough "normal"
-        // items to dilute it back out. The EMA sits between those two failure modes: it fully forgets a
-        // stale outlier within a few passes, without swinging to it (or away from it) in a single pass.
+        // Estimate for items never yet measured. An EMA of each pass's built-window average -- deliberately not a
+        // cumulative average (one outlier like a tall header would skew it for the whole session, since a bounded
+        // window may never revisit enough normal items to dilute it out) and not a straight snap (our small window
+        // swings hard whenever it catches/misses an outlier between passes). The EMA forgets a stale outlier
+        // within a few passes without lurching toward it in any single one.
         private float _averageExtent = DefaultEstimatedExtent;
 
-        // The exact window built+measured by the last PerformSizing() pass, reused by PerformPositioning()
-        // so it doesn't need to re-estimate or re-invoke RequestBuildWindow (which would re-run ItemBuilder).
-        // _lazyWindowScrollOffset is the scroll offset the window was *selected* for; PerformLazyPositioning
-        // culls against it (not the live offset) so the viewport it trims to matches the one the window was
-        // built to cover. The window's absolute on-screen anchor is deliberately NOT cached here -- it's
-        // re-derived in PerformLazyPositioning from the same measured-extent model as TotalContentSize()
-        // (see EstimateLeadingEdgeOffset). That shared model is what keeps the positioned content's trailing
-        // edge aligned with the content size the view sizes its content rect to; a uniform-stride anchor
-        // drifts from that size by the accumulated (average - measured) error of the items before the window,
-        // which at the bottom pushes the final item past the scrollable range and clips it.
+        // The window built+measured by the last PerformSizing() pass, reused by PerformPositioning() (so it never
+        // re-runs RequestBuildWindow / ItemBuilder). _lazyWindowScrollOffset is the offset the window was
+        // *selected* for -- positioning culls against it, not the live offset. The window's on-screen anchor is
+        // intentionally not cached: positioning re-derives it via EstimateLeadingEdgeOffset (pitfall (1) up top).
         private int _lazyWindowStart;
         private float _lazyWindowScrollOffset;
         private readonly List<Vector2> _lazyWindowSizes = new();
@@ -170,15 +204,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         /// <summary>
-        ///     Estimates which index range covers [scrollOffset - cacheExtent, scrollOffset + viewport + cacheExtent]
-        ///     using a uniform per-item stride (the fixed ItemExtent if given, else the average extent measured
-        ///     in the most recently built window), builds exactly that window, and measures it. The uniform-stride
-        ///     estimate is an approximation for indices that haven't been measured yet: right after a big jump
-        ///     (ScrollTo into unbuilt territory, or a fast scroll) it may not fully cover the real viewport on the
-        ///     first pass, but it self-corrects on the next layout pass as the average refines near the new
-        ///     position. This is the same class of approximation Flutter's own SliverList makes; accepting one
-        ///     settle-frame of imprecision is what keeps this a single synchronous pass instead of an iterative
-        ///     re-entrant layout algorithm.
+        ///     Picks the index range covering [scrollOffset - cache, scrollOffset + viewport + cache] via a uniform
+        ///     stride guess (ItemExtent if fixed, else <see cref="_averageExtent"/>), then builds and measures
+        ///     exactly that window. The guess is the one-settle-frame approximation described up top: it can
+        ///     under-cover right after a big jump and self-corrects next pass as the average refines.
         /// </summary>
         private void PerformLazySizing(LayoutConstraints constraints, bool isHorizontal, bool isVertical)
         {
@@ -266,11 +295,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 );
         }
 
+        // The scrollable content size the View sizes its content rect to -- the size of the *content* only. The
+        // virtualization cache extent must NOT be added here: it's an off-screen build/warm buffer, not scrollable
+        // space. Folding it in inflated the content rect, leaving a dead-zone of empty scroll past the last item
+        // whenever an explicit VirtualizationCacheExtent was set.
         public float TotalContentSize()
         {
             return _state.ItemCount.HasValue
-                ? EstimateLazyContentMainAxisSize() + (_state.VirtualizationCacheExtent ?? 0)
-                : EagerContentMainAxisSize() + (_state.VirtualizationCacheExtent ?? 0);
+                ? EstimateLazyContentMainAxisSize()
+                : EagerContentMainAxisSize();
         }
 
         private float EagerContentMainAxisSize()
@@ -287,41 +320,24 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         /// <summary>
-        ///     Sum of every exactly-measured extent (see <see cref="_measuredExtents"/>) plus the local window
-        ///     average (see <see cref="_averageExtent"/>) extrapolated across every item never measured. No
-        ///     cache-extent padding (see <see cref="TotalContentSize"/> for that) -- used directly by
-        ///     scroll-to-index math, which shouldn't be skewed by that slack.
+        ///     Total main-axis size of the lazy content. Derived from the exact same per-item model as positioning:
+        ///     the content ends at the leading edge of the item one past the last, minus the trailing gap that edge
+        ///     would add (the list has itemCount-1 gaps, not itemCount). Sharing <see cref="EstimateLeadingEdgeOffset"/>
+        ///     is what keeps the scrollable range and the positioned content in lockstep.
         /// </summary>
         private float EstimateLazyContentMainAxisSize()
         {
             var itemCount = _state.ItemCount!.Value;
             if (itemCount <= 0) return 0;
 
-            float totalSize;
-            if (_state.ItemExtent.HasValue)
-            {
-                totalSize = itemCount * _state.ItemExtent.Value;
-            }
-            else
-            {
-                var measuredSum = 0f;
-                foreach (var extent in _measuredExtents.Values) measuredSum += extent;
-                totalSize = measuredSum + _averageExtent * (itemCount - _measuredExtents.Count);
-            }
-
-            return totalSize + _state.Spacing * Mathf.Max(0, itemCount - 1);
+            return EstimateLeadingEdgeOffset(itemCount) - _state.Spacing;
         }
 
         /// <summary>
-        ///     Pixel offset of item <paramref name="index"/>'s leading edge along the scrolling axis, built from
-        ///     the SAME model as <see cref="EstimateLazyContentMainAxisSize"/>: the exact measured extent of
-        ///     every already-measured item before <paramref name="index"/> (see <see cref="_measuredExtents"/>),
-        ///     and the running <see cref="_averageExtent"/> for the rest. Anchoring the built window (and
-        ///     scroll-to math) here rather than at a uniform <c>index * stride</c> is what keeps positioning
-        ///     consistent with the content size the view is sized to: with a uniform anchor, items already
-        ///     measured to sizes that differ from the running average drift the window off by their accumulated
-        ///     error, which at the end of the list pushes the final item past the scrollable range (clipping it)
-        ///     or short of it (leaving a gap).
+        ///     THE single source of truth for lazy geometry (pitfall (1) up top): the pixel offset of item
+        ///     <paramref name="index"/>'s leading edge, using exact measured extents where known (see
+        ///     <see cref="_measuredExtents"/>) and the running <see cref="_averageExtent"/> otherwise. Positioning,
+        ///     <see cref="EstimateLazyContentMainAxisSize"/>, and scroll-to all route through it so they can't drift.
         /// </summary>
         private float EstimateLeadingEdgeOffset(int index)
         {
@@ -343,116 +359,70 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         /// <summary>
-        ///     POSITIONING PASS: calculates positions for ONLY the visible children.
+        ///     POSITIONING PASS: positions and culls only the children intersecting the viewport. Eager mode
+        ///     walks every measured child from offset 0; lazy mode walks just the window built this pass,
+        ///     anchored via <see cref="EstimateLeadingEdgeOffset"/> so it stays in lockstep with
+        ///     <see cref="TotalContentSize"/> (and the final item can't be pushed past the scrollable range and
+        ///     clipped). Both share <see cref="CullVisibleRun"/>; only the run they hand it differs.
         /// </summary>
         protected override void PerformPositioning()
         {
-            var visibleChildrenData = _visibleChildrenIndexed;
-            visibleChildrenData.Clear();
+            var visible = _visibleChildrenIndexed;
+            visible.Clear();
 
             if (_state.ItemCount.HasValue)
-                PerformLazyPositioning(visibleChildrenData);
+            {
+                // Lazy: only the window PerformLazySizing built this pass, anchored at its measured leading edge
+                // and culled against the offset it was selected for (not the live one).
+                if (_lazyWindowSizes.Count > 0)
+                    CullVisibleRun(_lazyWindowStart, EstimateLeadingEdgeOffset(_lazyWindowStart),
+                        _lazyWindowSizes, _lazyWindowScrollOffset, visible);
+            }
             else
-                PerformEagerPositioning(visibleChildrenData);
+            {
+                CullVisibleRun(0, 0f, _allChildrenSizes, _state.ScrollPixelOffset, visible);
+            }
 
             _visibleChildrenLayout.Clear();
-            foreach (var visibleChild in visibleChildrenData) _visibleChildrenLayout.Add(visibleChild.Layout);
+            foreach (var child in visible) _visibleChildrenLayout.Add(child.Layout);
 
-            // Push the results back to the state.
-            _state.SetVisibleChildren(visibleChildrenData);
-        }
-
-        private void PerformEagerPositioning(List<IndexedLayoutData> visibleChildrenData)
-        {
-            var cacheExtent = this._virtualizationCacheExtent; // The buffer for smooth scrolling.
-
-            var isHorizontal = _state.Axis == Axis.Horizontal;
-            var scrollOffset = _state.ScrollPixelOffset;
-            var spacing = _state.Spacing;
-            var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
-
-            var viewportStart = scrollOffset - cacheExtent;
-            var viewportEnd = scrollOffset + viewportMainAxisSize + cacheExtent;
-
-            float mainAxisPos = 0;
-            for (var i = 0; i < _allChildrenSizes.Count; i++)
-            {
-                var childSize = _allChildrenSizes[i];
-                var childMainAxisSize = isHorizontal ? childSize.x : childSize.y;
-
-                var childStart = mainAxisPos;
-                var childEnd = childStart + childMainAxisSize;
-
-                // The core culling logic: if the child intersects the viewport (plus buffer), it's visible.
-                if (childEnd > viewportStart && childStart < viewportEnd)
-                {
-                    // Calculate position relative to the viewport's top-left corner.
-                    var cornerPosition = isHorizontal
-                        ? new Vector2(mainAxisPos, 0)
-                        : new Vector2(0, mainAxisPos);
-
-                    visibleChildrenData.Add(new IndexedLayoutData
-                    {
-                        ChildIndex = i,
-                        Layout = new LayoutInfo
-                        {
-                            Size = childSize,
-                            Position = cornerPosition
-                        }
-                    });
-                }
-
-                mainAxisPos += childMainAxisSize + spacing;
-            }
+            _state.SetVisibleChildren(visible);
         }
 
         /// <summary>
-        ///     Walks just the window PerformLazySizing already built and measured this pass. The window's
-        ///     leading edge is anchored via <see cref="EstimateLeadingEdgeOffset"/> -- the same measured-extent
-        ///     model <see cref="EstimateLazyContentMainAxisSize"/> uses -- so the positioned content ends
-        ///     exactly where the view sizes its content rect, and the final item can't be pushed past the
-        ///     scrollable range and clipped. Sizes and spacing *within* the window are exact; only the leading
-        ///     edge (items before the window that haven't been measured) is an estimate. Culling uses
-        ///     _lazyWindowScrollOffset -- the offset the window was selected for -- not the live scroll offset.
+        ///     Positions a contiguous run of already-measured children -- the first at <paramref name="firstLeadingEdge"/>,
+        ///     each subsequent one a spacing gap after the previous -- and keeps only those intersecting the
+        ///     viewport plus the cache buffer, in index order. The eager and lazy passes differ only in the run
+        ///     they supply (all children from offset 0, versus the built window from its measured anchor); the
+        ///     culling and positioning are identical and live here so they can't drift apart.
         /// </summary>
-        private void PerformLazyPositioning(List<IndexedLayoutData> visibleChildrenData)
+        private void CullVisibleRun(int firstIndex, float firstLeadingEdge, List<Vector2> sizes,
+            float scrollOffset, List<IndexedLayoutData> output)
         {
-            if (_lazyWindowSizes.Count == 0) return;
-
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            var cacheExtent = this._virtualizationCacheExtent;
-            var scrollOffset = _lazyWindowScrollOffset;
             var spacing = _state.Spacing;
-            var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
+            var viewportMainAxisSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
 
-            var viewportStart = scrollOffset - cacheExtent;
-            var viewportEnd = scrollOffset + viewportMainAxisSize + cacheExtent;
+            var viewportStart = scrollOffset - _virtualizationCacheExtent;
+            var viewportEnd = scrollOffset + viewportMainAxisSize + _virtualizationCacheExtent;
 
-            var mainAxisPos = EstimateLeadingEdgeOffset(_lazyWindowStart);
-
-            for (var i = 0; i < _lazyWindowSizes.Count; i++)
+            var mainAxisPos = firstLeadingEdge;
+            for (var i = 0; i < sizes.Count; i++)
             {
-                var index = _lazyWindowStart + i;
-                var childSize = _lazyWindowSizes[i];
+                var childSize = sizes[i];
                 var childMainAxisSize = isHorizontal ? childSize.x : childSize.y;
 
-                var childStart = mainAxisPos;
-                var childEnd = childStart + childMainAxisSize;
-
-                if (childEnd > viewportStart && childStart < viewportEnd)
+                // Visible if it intersects the viewport (plus buffer) along the scrolling axis.
+                if (mainAxisPos + childMainAxisSize > viewportStart && mainAxisPos < viewportEnd)
                 {
-                    var cornerPosition = isHorizontal
-                        ? new Vector2(mainAxisPos, 0)
-                        : new Vector2(0, mainAxisPos);
-
-                    visibleChildrenData.Add(new IndexedLayoutData
+                    output.Add(new IndexedLayoutData
                     {
-                        ChildIndex = index,
+                        ChildIndex = firstIndex + i,
                         Layout = new LayoutInfo
                         {
                             Size = childSize,
-                            Position = cornerPosition
-                        }
+                            Position = isHorizontal ? new Vector2(mainAxisPos, 0) : new Vector2(0, mainAxisPos),
+                        },
                     });
                 }
 
@@ -460,54 +430,33 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
         }
 
-        // Intrinsic sizing is used to determine the total size of the scrollable content. In lazy mode this
-        // returns the same estimate TotalContentSize() is based on, rather than forcing a full eager measurement
-        // of every item -- which would defeat the point of laziness the moment any ancestor queries it.
+        // Intrinsic sizing reports the total main-axis size of the scrollable content. A list has no meaningful
+        // intrinsic size on its cross axis (it stretches to the constraint), so that axis returns 0. In lazy mode
+        // this returns the same estimate TotalContentSize() is based on rather than forcing a full measurement of
+        // every item -- which would defeat laziness the moment any ancestor queries it.
         protected override float ComputeIntrinsicHeight(float width)
-        {
-            if (_state.Axis == Axis.Horizontal) return 0; // Not meaningful for a horizontal list
-            if (_state.ItemCount.HasValue) return EstimateLazyContentMainAxisSize();
-
-            float totalHeight = 0;
-            foreach (var child in _state.AllChildren)
-            {
-                totalHeight += GetChildIntrinsicHeight(child, width);
-            }
-
-            if (_state.AllChildren.Length > 0)
-                totalHeight += _state.Spacing * (_state.AllChildren.Length - 1);
-
-
-            return totalHeight;
-        }
+            => _state.Axis == Axis.Horizontal ? 0 : ComputeIntrinsicMainAxisSize(width);
 
         protected override float ComputeIntrinsicWidth(float height)
+            => _state.Axis == Axis.Vertical ? 0 : ComputeIntrinsicMainAxisSize(height);
+
+        private float ComputeIntrinsicMainAxisSize(float crossAxisExtent)
         {
-            if (_state.Axis == Axis.Vertical) return 0; // Not meaningful for a vertical list
             if (_state.ItemCount.HasValue) return EstimateLazyContentMainAxisSize();
 
-            float totalWidth = 0;
-            foreach (var child in _state.AllChildren)
-            {
-                totalWidth += GetChildIntrinsicWidth(child, height);
-            }
+            var isHorizontal = _state.Axis == Axis.Horizontal;
+            var children = _state.AllChildren;
 
-            if (_state.AllChildren.Length > 0)
-                totalWidth += _state.Spacing * (_state.AllChildren.Length - 1);
+            var total = 0f;
+            foreach (var child in children)
+                total += isHorizontal
+                    ? child.RenderObject.GetIntrinsicWidth(crossAxisExtent)
+                    : child.RenderObject.GetIntrinsicHeight(crossAxisExtent);
 
-            return totalWidth;
-        }
+            if (children.Length > 0)
+                total += _state.Spacing * (children.Length - 1);
 
-
-
-        private static float GetChildIntrinsicWidth(IState child, float height)
-        {
-            return child.RenderObject.GetIntrinsicWidth(height);
-        }
-
-        private static float GetChildIntrinsicHeight(IState child, float width)
-        {
-            return child.RenderObject.GetIntrinsicHeight(width);
+            return total;
         }
 
         /// <summary>
@@ -525,70 +474,39 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private float CalculateEagerScrollPixelOffset(int index, ScrollToPosition position)
         {
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            var viewportSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
+            var viewportSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
 
-
-            float totalContentSize = 0;
-            var mainAxisKey = isHorizontal ? 0 : 1; // 0 for x, 1 for y
-            for (var i = 0; i < _allChildrenSizes.Count; i++)
-            {
-                totalContentSize += _allChildrenSizes[i][mainAxisKey];
-            }
-            // Add spacing
-            if (_allChildrenSizes.Count > 0)
-            {
-                totalContentSize += _state.Spacing * (_allChildrenSizes.Count - 1);
-            }
-
-            var totalScrollableDist = totalContentSize - viewportSize;
+            var totalScrollableDist = EagerContentMainAxisSize() - viewportSize;
 
             // If there's nothing to scroll (content fits in the viewport), the offset is always 0.
             if (totalScrollableDist <= 0 || index < 0 || index >= _allChildrenSizes.Count)
                 return 0;
 
-            // Get the pixel offset of the target child.
-            float childOffset = 0;
+            var childOffset = 0f;
             for (var i = 0; i < index; i++)
-            {
                 childOffset += (isHorizontal ? _allChildrenSizes[i].x : _allChildrenSizes[i].y) + _state.Spacing;
-            }
 
             var childSize = isHorizontal ? _allChildrenSizes[index].x : _allChildrenSizes[index].y;
 
-            switch (position)
-            {
-                case ScrollToPosition.Start:
-                    // childOffset remains unchanged, already at the start position.
-                    break;
-                case ScrollToPosition.Center:
-                    childOffset -= (viewportSize - childSize) / 2;
-                    break;
-                case ScrollToPosition.End:
-                    childOffset -= viewportSize - childSize;
-                    break;
-            }
-
+            childOffset = AlignToScrollPosition(childOffset, childSize, viewportSize, position);
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
 
         /// <summary>
         ///     Same shape as <see cref="CalculateEagerScrollPixelOffset"/>. The target's leading edge comes from
-        ///     <see cref="EstimateLeadingEdgeOffset"/> -- the same measured-extent model as
-        ///     <see cref="PerformLazyPositioning"/> and <see cref="EstimateLazyContentMainAxisSize"/>, so a
-        ///     scroll-to lands where the item is actually positioned -- and its size is the exact measured extent
-        ///     when the item has ever been measured (see <see cref="_measuredExtents"/>), the running average
-        ///     otherwise. Scrolling to an index in a region that hasn't been measured yet may land imprecisely on
-        ///     the first pass and settle once it's built.
+        ///     <see cref="EstimateLeadingEdgeOffset"/> -- the same measured-extent model as positioning and
+        ///     <see cref="EstimateLazyContentMainAxisSize"/>, so a scroll-to lands where the item is actually
+        ///     positioned -- and its size is the exact measured extent when the item has ever been measured (see
+        ///     <see cref="_measuredExtents"/>), the running average otherwise. Scrolling to an index in a region
+        ///     that hasn't been measured yet may land imprecisely on the first pass and settle once it's built.
         /// </summary>
         private float CalculateLazyScrollPixelOffset(int index, ScrollToPosition position)
         {
             var itemCount = _state.ItemCount!.Value;
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            var viewportSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
+            var viewportSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
 
-            var totalContentSize = EstimateLazyContentMainAxisSize();
-            var totalScrollableDist = totalContentSize - viewportSize;
-
+            var totalScrollableDist = EstimateLazyContentMainAxisSize() - viewportSize;
             if (totalScrollableDist <= 0 || index < 0 || index >= itemCount)
                 return 0;
 
@@ -599,19 +517,21 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     ? exact
                     : _averageExtent;
 
-            switch (position)
-            {
-                case ScrollToPosition.Start:
-                    break;
-                case ScrollToPosition.Center:
-                    childOffset -= (viewportSize - childSize) / 2;
-                    break;
-                case ScrollToPosition.End:
-                    childOffset -= viewportSize - childSize;
-                    break;
-            }
-
+            childOffset = AlignToScrollPosition(childOffset, childSize, viewportSize, position);
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
+        }
+
+        // Shifts a child's leading-edge offset to the requested spot in the viewport: Start keeps the leading
+        // edge; Center/End pull it back by the appropriate slice of the leftover viewport space.
+        private static float AlignToScrollPosition(float leadingEdge, float childSize, float viewportSize,
+            ScrollToPosition position)
+        {
+            return position switch
+            {
+                ScrollToPosition.Center => leadingEdge - (viewportSize - childSize) / 2f,
+                ScrollToPosition.End => leadingEdge - (viewportSize - childSize),
+                _ => leadingEdge,
+            };
         }
     }
 }
