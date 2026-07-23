@@ -137,7 +137,7 @@ namespace UniMob.UI.Layout.Internal.Views
 
         protected override void Render()
         {
-            if (State.RenderObject is not RenderSliverList renderObject) return;
+            if (State.RenderObject is not IScrollableRenderObject renderObject) return;
 
             if (rectMask != null) rectMask.enabled = State.UseMask;
 
@@ -224,7 +224,7 @@ namespace UniMob.UI.Layout.Internal.Views
 
         public bool ScrollTo(int index, float duration, ScrollToPosition scrollToPosition, Easing easing) // this should be moved to the controller
         {
-            if (State?.RenderObject is not RenderSliverList renderSliver) return false;
+            if (State?.RenderObject is not IScrollableRenderObject renderSliver) return false;
 
             var targetPixelOffset = renderSliver.CalculateScrollPixelOffset(index, scrollToPosition);
 

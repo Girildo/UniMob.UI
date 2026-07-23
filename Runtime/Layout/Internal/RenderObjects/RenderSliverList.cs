@@ -94,7 +94,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive);
     }
 
-    public class RenderSliverList : RenderObject, IMultiChildrenRenderObject
+    public class RenderSliverList : RenderObject, IScrollableRenderObject
     {
         // Caches the measured sizes of all children to avoid re-calculating every frame. Eager mode only.
         private readonly List<Vector2> _allChildrenSizes = new();
@@ -193,12 +193,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // Give children unconstrained space along the main scrolling axis
             // but constrain them to the viewport's size on the cross axis. (stretching them horizontally)
-            var childConstraints = MakeChildConstraints(constraints, isHorizontal, mainAxisExtent: null);
+            var childConstraints = SliverLayoutMath.MakeChildConstraints(constraints, isHorizontal, mainAxisExtent: null);
 
             foreach (var child in _state.AllChildren)
             {
                 var childSize = LayoutChild(child, childConstraints);
-                ThrowIfUnconstrainedMainAxis(childSize, isHorizontal, isVertical);
+                SliverLayoutMath.ThrowIfUnconstrainedMainAxis(childSize, isHorizontal, isVertical);
                 _allChildrenSizes.Add(childSize);
             }
         }
@@ -233,7 +233,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var endIndex = Mathf.Clamp(Mathf.CeilToInt((scrollOffset + viewportMainAxisSize + cacheExtent) / stride),
                 startIndex + 1, itemCount);
 
-            var childConstraints = MakeChildConstraints(constraints, isHorizontal, mainAxisExtent: itemExtent);
+            var childConstraints = SliverLayoutMath.MakeChildConstraints(constraints, isHorizontal, mainAxisExtent: itemExtent);
             var builtStates = _state.RequestBuildWindow(startIndex, endIndex);
 
             var hadPriorMeasurement = _measuredExtents.Count > 0;
@@ -243,7 +243,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 var index = startIndex + i;
                 var childSize = LayoutChild(builtStates[i], childConstraints);
-                ThrowIfUnconstrainedMainAxis(childSize, isHorizontal, isVertical);
+                SliverLayoutMath.ThrowIfUnconstrainedMainAxis(childSize, isHorizontal, isVertical);
 
                 var extent = isHorizontal ? childSize.x : childSize.y;
                 _measuredExtents[index] = extent;
@@ -267,32 +267,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             _lazyWindowStart = startIndex;
             _lazyWindowScrollOffset = scrollOffset;
-        }
-
-        private static LayoutConstraints MakeChildConstraints(LayoutConstraints constraints, bool isHorizontal, float? mainAxisExtent)
-        {
-            var mainAxisMax = mainAxisExtent ?? float.PositiveInfinity;
-            var mainAxisMin = mainAxisExtent ?? 0f;
-
-            return isHorizontal
-                // For a horizontal list, height is tight, width is loose (or tight to ItemExtent, if given).
-                ? new LayoutConstraints(mainAxisMin, constraints.MaxHeight, mainAxisMax, constraints.MaxHeight)
-                // For a vertical list, width is tight, height is loose (or tight to ItemExtent, if given).
-                : new LayoutConstraints(constraints.MaxWidth, mainAxisMin, constraints.MaxWidth, mainAxisMax);
-        }
-
-        private static void ThrowIfUnconstrainedMainAxis(Vector2 childSize, bool isHorizontal, bool isVertical)
-        {
-            if (childSize.x == float.PositiveInfinity && isHorizontal)
-                throw new InvalidOperationException(
-                    "Child of a horizontal ScrollingList cannot have an unconstrained width." +
-                    "Make sure the child is not trying to expand infinitely (e.g. by being inside a Row without an Expanded)."
-                );
-            if (childSize.y == float.PositiveInfinity && isVertical)
-                throw new InvalidOperationException(
-                    "Child of a vertical ScrollingList cannot have an unconstrained height." +
-                    "Make sure the child is not trying to expand infinitely (e.g. by being inside a Column without an Expanded)."
-                );
         }
 
         // The scrollable content size the View sizes its content rect to -- the size of the *content* only. The
@@ -488,7 +462,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var childSize = isHorizontal ? _allChildrenSizes[index].x : _allChildrenSizes[index].y;
 
-            childOffset = AlignToScrollPosition(childOffset, childSize, viewportSize, position);
+            childOffset = SliverLayoutMath.AlignToScrollPosition(childOffset, childSize, viewportSize, position);
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
 
@@ -517,21 +491,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     ? exact
                     : _averageExtent;
 
-            childOffset = AlignToScrollPosition(childOffset, childSize, viewportSize, position);
+            childOffset = SliverLayoutMath.AlignToScrollPosition(childOffset, childSize, viewportSize, position);
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
-        }
-
-        // Shifts a child's leading-edge offset to the requested spot in the viewport: Start keeps the leading
-        // edge; Center/End pull it back by the appropriate slice of the leftover viewport space.
-        private static float AlignToScrollPosition(float leadingEdge, float childSize, float viewportSize,
-            ScrollToPosition position)
-        {
-            return position switch
-            {
-                ScrollToPosition.Center => leadingEdge - (viewportSize - childSize) / 2f,
-                ScrollToPosition.End => leadingEdge - (viewportSize - childSize),
-                _ => leadingEdge,
-            };
         }
     }
 }
