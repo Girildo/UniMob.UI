@@ -5,9 +5,10 @@ namespace UniMob.UI.Widgets
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using JetBrains.Annotations;
+    using UniMob.UI.Layout.Internal.Views;
     using UnityEngine;
 
-    public class NavigatorState : ViewState<Navigator>, INavigatorState
+    public class NavigatorState : ViewState<Navigator>, INavigatorState, IMultiChildLayoutState
     {
         private readonly StateCollectionHolder _states;
         private readonly NavigatorStack _stack;
@@ -30,6 +31,8 @@ namespace UniMob.UI.Widgets
 
         [Atom]
         public IState[] Screens => _states.Value;
+
+        IState[] IMultiChildLayoutState.Children => Screens;
 
         [Atom]
         public IReadOnlyCollection<Route> NavigationStack => _stack.Routes;

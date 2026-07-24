@@ -25,39 +25,8 @@ namespace UniMob.UI.Widgets
 
         public override State CreateState() => new NavigatorState();
 
-        //private class AdaptedState : Layout.ISingleChildLayoutState
-        //{
-        //    private readonly NavigatorState _state;
-
-        //    public AdaptedState(NavigatorState state)
-        //    {
-        //        _state = state;
-        //    }
-
-        //    public IState Child => throw new NotImplementedException();
-
-        //    public Key Key => this._state.Key;
-
-        //    public Widget RawWidget => this._state.RawWidget;
-
-        //    public RenderObject RenderObject => this._state.RenderObject;
-
-        //    public LayoutConstraints Constraints => this._state.Constraints;
-
-        //    public BuildContext Context => this._state.Context;
-        //    public IViewState InnerViewState => this._state.InnerViewState;
-
-        //    public WidgetSize Size => this._state.Size;
-
-        //    public Lifetime StateLifetime => this._state.StateLifetime;
-
-        //    public void UpdateConstraints(LayoutConstraints constraints)
-        //    {
-        //        this._state.UpdateConstraints(constraints);
-        //    }
-
-
-        //}
+        public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
+            new RenderNavigator((INavigatorState) state);
 
         public static NavigatorState Of(
             BuildContext context,
