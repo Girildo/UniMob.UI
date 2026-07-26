@@ -21,7 +21,7 @@ namespace UniMob.UI.Layout
         }
     }
 
-    public class AlignState : SingleChildLayoutState<Align>, IPositionedBoxState
+    internal class AlignState : SingleChildLayoutState<Align>, IPositionedBoxState
     {
         public float? WidthFactor => Widget.WidthFactor;
 

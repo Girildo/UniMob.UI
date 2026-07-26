@@ -19,7 +19,7 @@ namespace UniMob.UI.Layout
     }
 
 
-    public class ConstrainedBoxState : SingleChildLayoutState<ConstrainedBox>, IConstrainedBoxState
+    internal class ConstrainedBoxState : SingleChildLayoutState<ConstrainedBox>, IConstrainedBoxState
     {
         public LayoutConstraints BoxConstraints => Widget.BoxConstraints;
     }
