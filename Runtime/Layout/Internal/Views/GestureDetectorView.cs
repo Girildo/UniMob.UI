@@ -272,7 +272,7 @@ namespace UniMob.UI.Layout.Internal.Views
         }
     }
 
-    public interface IGestureDetectorState : IConstrainedBoxState
+    public interface IGestureDetectorState : ISingleChildLayoutState
     {
         Action<TapDetails>? OnTap { get; }
         Action<PointerDetails>? OnPointerDown { get; }
