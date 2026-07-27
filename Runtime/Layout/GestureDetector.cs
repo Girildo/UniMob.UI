@@ -52,25 +52,14 @@ namespace UniMob.UI.Layout
         public Action<PointerDetails>? OnPointerUp { get; set; }
         public Action<PointerDetails>? OnPointerMove { get; set; }
         public Action<DragDetails>? OnDragUpdate { get; set; }
-        public HitTestBehavior Behavior { get; set; } = HitTestBehavior.DeferToChild;
 
         public override State CreateState() => new GestureDetectorState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderConstrainedBox((GestureDetectorState) state);
+            return new RenderProxy((GestureDetectorState) state);
         }
     }
-
-    public enum HitTestBehavior
-    {
-        // Sizes exactly to the child's mathematical bounds
-        DeferToChild,
-        // Expands to fill all available space in its parent
-        Opaque
-    }
-
-
 
     public class GestureDetectorState : SingleChildLayoutState<GestureDetector>, IGestureDetectorState
     {
@@ -83,21 +72,5 @@ namespace UniMob.UI.Layout
         public Action<DragDetails>? OnDragUpdate => Widget.OnDragUpdate;
 
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.GestureDetector");
-
-        [Atom]
-        public LayoutConstraints BoxConstraints
-        {
-            get
-            {
-                if (this.Widget.Behavior == HitTestBehavior.Opaque)
-                {
-                    return LayoutConstraints.Expanded();
-                }
-                else
-                {
-                    return LayoutConstraints.Unbounded();
-                }
-            }
-        }
     }
 }
