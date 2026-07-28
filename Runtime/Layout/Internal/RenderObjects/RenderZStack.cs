@@ -99,6 +99,24 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var childSize = LayoutChild(child, childConstraints);
 
+            // ResolveOffset, rather than ToAnchor, because this position is y-DOWN from the stack's
+            // top edge -- the same space LayoutNonPositionedChild resolves into. ToAnchor is the
+            // y-up canvas convention and would invert the vertical shift.
+            if (pos.ChildAnchor is { } childAnchor)
+            {
+                var shift = childAnchor.ResolveOffset(childSize, Vector2.zero);
+
+                if (x != null)
+                {
+                    x -= shift.x;
+                }
+
+                if (y != null)
+                {
+                    y -= shift.y;
+                }
+            }
+
             if (x == null)
             {
                 x = Size.x - childSize.x - (pos.Right ?? 0);
