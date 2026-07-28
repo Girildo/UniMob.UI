@@ -171,10 +171,19 @@ namespace UniMob.UI
             return new StateCollectionHolder(lifetime, context, builder);
         }
 
+        /// <summary>
+        /// Schedules a callback to be invoked on the next frame, after atom updates.
+        /// The callback will only be invoked if the state is still alive.
+        /// </summary>
         protected void AddPostFrameCallback(Action callback)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            Zone.Current.NextFrame(callback);
+            Zone.Current.NextFrame(()=>
+                {
+                    if(!this.StateLifetime.IsDisposed)
+                        callback();
+                }
+            );
         }
 
         public virtual string GetDiagnosticInfo() => null;
