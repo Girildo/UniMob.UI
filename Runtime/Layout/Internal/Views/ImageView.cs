@@ -27,9 +27,7 @@ namespace UniMob.UI.Layout.Internal.Views
             if (_rawImage == null) return;
             if (State.Texture == null) return;
 
-            _rawImage.raycastTarget = State.IsRaycastTarget;
             _rawImage.color = State.Color;
-
             _rawImage.texture = State.Texture;
 
             // Sizing: The RenderImage already calculated our RectTransform size.

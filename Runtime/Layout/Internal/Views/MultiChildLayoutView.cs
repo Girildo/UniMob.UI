@@ -117,7 +117,7 @@ namespace UniMob.UI.Layout.Internal.Views
 
 #if UNITY_EDITOR
         private static Sprite _stripeSprite;
-        private readonly List<Image> _warningPool = new();
+        private readonly List<UnityEngine.UI.Image> _warningPool = new();
         private int _warningsUsed;
 
         private static Sprite StripeSprite
@@ -145,7 +145,7 @@ namespace UniMob.UI.Layout.Internal.Views
 
         private void PaintLayoutWarning(RectTransform childRect)
         {
-            Image overlay;
+            UnityEngine.UI.Image overlay;
             if (_warningsUsed < _warningPool.Count)
             {
                 overlay = _warningPool[_warningsUsed];
@@ -153,13 +153,13 @@ namespace UniMob.UI.Layout.Internal.Views
             }
             else
             {
-                var go = new GameObject("LayoutWarning", typeof(RectTransform), typeof(Image))
+                var go = new GameObject("LayoutWarning", typeof(RectTransform), typeof(UnityEngine.UI.Image))
                 {
                     hideFlags = HideFlags.DontSave
                 };
-                overlay = go.GetComponent<Image>();
+                overlay = go.GetComponent<UnityEngine.UI.Image>();
                 overlay.sprite = StripeSprite;
-                overlay.type = Image.Type.Tiled;
+                overlay.type = UnityEngine.UI.Image.Type.Tiled;
                 overlay.raycastTarget = false;
                 _warningPool.Add(overlay);
             }

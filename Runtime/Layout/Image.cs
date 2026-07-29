@@ -5,7 +5,7 @@ using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
 {
-   public enum ImageFit
+    public enum ImageFit
     {
         /// <summary>
         /// Fill the target box by distorting the image's aspect ratio.
@@ -37,19 +37,18 @@ namespace UniMob.UI.Layout
         ScaleDown
     }
 
-    public class UniMobImage : StatefulWidget
+    public class Image : StatefulWidget
     {
         public Texture? Texture { get; set; }
         public Color Color { get; set; } = Color.white;
         public ImageFit Fit { get; set; } = ImageFit.Contain;
         public Alignment Alignment { get; set; } = Alignment.Center;
-        //public bool IsRaycastTarget { get; set; }
 
         public override State CreateState() => new ImageState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderImage((ImageState)state);
+            return new RenderImage((ImageState) state);
         }
     }
 
@@ -59,19 +58,14 @@ namespace UniMob.UI.Layout
         Color Color { get; }
         ImageFit Fit { get; }
         Alignment Alignment { get; }
-        
-        bool IsRaycastTarget { get; }
     }
 
-    public class ImageState : ViewState<UniMobImage>, IImageState
+    public class ImageState : ViewState<Image>, IImageState
     {
         public Texture? Texture => Widget.Texture;
         public Color Color => Widget.Color;
         public ImageFit Fit => Widget.Fit;
         public Alignment Alignment => Widget.Alignment;
-
-        public bool IsRaycastTarget => true; // Widget.IsRaycastTarget;
-
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.ImageView");
     }
 }
