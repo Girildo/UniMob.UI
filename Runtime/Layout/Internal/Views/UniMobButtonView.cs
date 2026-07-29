@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace UniMob.UI.Layout.Internal.Views
 {
     [RequireComponent(typeof(RectTransform), typeof(Button))]
-    internal class UniMobButtonView : SingleChildLayoutView<IUniMobButtonState>
+    internal class UniMobButtonView : SingleChildLayoutView<IRawButtonState>
     {
         private Button _button;
         protected override void Awake()

@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
@@ -6,7 +7,7 @@ namespace UniMob.UI.Layout
     /// <summary>
     /// A widget that detects click interactions.
     /// </summary>
-    public class UniMobButton : SingleChildLayoutWidget
+    public class RawButton : SingleChildLayoutWidget
     {
         public bool Interactable { get; set; } = true;
         public Action? OnClick { get; set; }
@@ -19,14 +20,14 @@ namespace UniMob.UI.Layout
         }
     }
 
-    internal interface IUniMobButtonState : ISingleChildLayoutState
+    internal interface IRawButtonState : ISingleChildLayoutState
     {
         bool Interactable { get; }
         void OnClick();
     }
 
-    internal class UniMobButtonState : SingleChildLayoutState<UniMobButton>,
-        IUniMobButtonState
+    internal class UniMobButtonState : SingleChildLayoutState<RawButton>,
+        IRawButtonState
     {
         public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.UniMobButtonView");
         public bool Interactable => Widget.Interactable;
