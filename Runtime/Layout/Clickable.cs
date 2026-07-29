@@ -5,31 +5,31 @@ using UniMob.UI.Layout.Internal.RenderObjects;
 namespace UniMob.UI.Layout
 {
     /// <summary>
-    /// A widget that detects click interactions.
+    /// A widget that detects click interactions. Backed by a Unity Button component.
     /// </summary>
-    public class RawButton : SingleChildLayoutWidget
+    public class Clickable : SingleChildLayoutWidget
     {
         public bool Interactable { get; set; } = true;
         public Action? OnClick { get; set; }
 
-        public override State CreateState() => new UniMobButtonState();
+        public override State CreateState() => new ClickableState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderProxy((UniMobButtonState) state);
+            return new RenderProxy((ClickableState) state);
         }
     }
 
-    internal interface IRawButtonState : ISingleChildLayoutState
+    internal interface IClickableState : ISingleChildLayoutState
     {
         bool Interactable { get; }
         void OnClick();
     }
 
-    internal class UniMobButtonState : SingleChildLayoutState<RawButton>,
-        IRawButtonState
+    internal class ClickableState : SingleChildLayoutState<Clickable>,
+        IClickableState
     {
-        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.UniMobButtonView");
+        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.ClickableView");
         public bool Interactable => Widget.Interactable;
         
         public void OnClick()

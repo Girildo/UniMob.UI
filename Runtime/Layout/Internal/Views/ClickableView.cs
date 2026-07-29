@@ -2,13 +2,13 @@ using UniMob.UI.Internal;
 using UnityEngine;
 using UnityEngine.UI;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.UniMobButtonView",
-    typeof(UniMob.UI.Layout.Internal.Views.UniMobButtonView))]
+[assembly: RegisterComponentViewFactory("$$_Layout.ClickableView",
+    typeof(UniMob.UI.Layout.Internal.Views.ClickableView))]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
     [RequireComponent(typeof(RectTransform), typeof(Button))]
-    internal class UniMobButtonView : SingleChildLayoutView<IRawButtonState>
+    internal class ClickableView : SingleChildLayoutView<IClickableState>
     {
         private Button _button;
         protected override void Awake()
