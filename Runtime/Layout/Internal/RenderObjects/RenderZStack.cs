@@ -80,11 +80,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             float? x = pos.Left;
             float? y = pos.Top;
 
+            // The stack is the child's upper bound on any axis it does not size itself. Flutter puts
+            // infinity here, but it can afford to: this system's children include text and flex rows
+            // that TREAT an unbounded axis as an error rather than as "take your intrinsic size", so
+            // infinity turns an anchored overlay into a layout exception instead of a clip. The
+            // stack's own size is the space that actually exists, so it is the honest maximum.
             var childConstraints = new LayoutConstraints(
                 pos.Width ?? 0,
                 pos.Height ?? 0,
-                pos.Width ?? float.PositiveInfinity,
-                pos.Height ?? float.PositiveInfinity
+                pos.Width ?? Size.x,
+                pos.Height ?? Size.y
             );
 
             if (pos.Left != null && pos.Right != null)
@@ -98,24 +103,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
 
             var childSize = LayoutChild(child, childConstraints);
-
-            // ResolveOffset, rather than ToAnchor, because this position is y-DOWN from the stack's
-            // top edge -- the same space LayoutNonPositionedChild resolves into. ToAnchor is the
-            // y-up canvas convention and would invert the vertical shift.
-            if (pos.ChildAnchor is { } childAnchor)
-            {
-                var shift = childAnchor.ResolveOffset(childSize, Vector2.zero);
-
-                if (x != null)
-                {
-                    x -= shift.x;
-                }
-
-                if (y != null)
-                {
-                    y -= shift.y;
-                }
-            }
 
             if (x == null)
             {
