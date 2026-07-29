@@ -20,7 +20,9 @@ namespace UniMob.UI.Layout.Internal.Views
             if (text == null) return;
 
             text.text = State.Value;
-            text.color = State.Color;
+            // Sampled here rather than in Build: AnimationController.Value is an atom and Render is a
+            // reactive scope, so a tick re-runs only this method and writes one colour.
+            text.color = State.AnimatedColor.Value;
             text.fontSize = State.FontSize;
             text.fontWeight = State.FontWeight;
             text.textStyle = State.Style;

@@ -26,6 +26,18 @@ namespace UniMob.UI.Layout
 
         public string Value { get; set; } = string.Empty;
         public Color? Color { get; set; }
+
+        /// <summary>
+        ///     Animates the text's colour, overriding <see cref="Color"/> while set.
+        /// </summary>
+        /// <remarks>
+        ///     Colour is the one animation that cannot be a wrapper effect: <see cref="CompositeTransition"/>
+        ///     covers opacity, position, scale and rotation because each is a single CanvasGroup or Transform
+        ///     operation on a subtree, whereas a tint has to be written onto every Graphic. So it belongs on
+        ///     the leaf that owns the graphic, which is this widget. It is sampled in the view's render scope,
+        ///     so a tick repaints without rebuilding or re-laying out anything.
+        /// </remarks>
+        public IAnimation<Color>? AnimatedColor { get; set; }
         public int? FontSize { get; set; }
         public string? StyleName { get; set; }
 
@@ -62,6 +74,9 @@ namespace UniMob.UI.Layout
         // Exposing all properties for the View, resolving defaults from context.
         public string Value => Widget.Value;
         public Color Color => Widget.Color ?? Color.white;
+
+        public IAnimation<Color> AnimatedColor =>
+            Widget.AnimatedColor ?? new ConstAnimation<Color>(Color);
         public int FontSize => Widget.FontSize ?? 14;
         
         public float? FixedSize => Widget.FixedSize;
@@ -97,7 +112,10 @@ namespace UniMob.UI.Layout
     {
         string Value { get; }
         Color Color { get; }
-        
+
+        /// <summary>The colour to paint, as an animation; a constant one when nothing animates it.</summary>
+        IAnimation<Color> AnimatedColor { get; }
+
         int FontSize { get; }
         
         TMP_Style Style { get; }
