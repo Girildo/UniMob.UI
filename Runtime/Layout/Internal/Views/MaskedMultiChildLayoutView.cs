@@ -7,9 +7,10 @@ using UnityEngine.UI;
 // PAINTING, not layout, so it needs no render object and no view class of its own -- only one more
 // component on the object the factory builds.
 //
-// It is a second registration rather than a flag on the first because the factory builds from a fixed
-// component set. A widget that wants the mask chooses it by switching its View reference, which is a
-// reactive read, so the choice can still change at runtime.
+// It has to be a second registration rather than a toggle on the first, because a factory builds from
+// a fixed component set, and MultiChildLayoutView is shared with Column/Row/ZStack -- putting a mask
+// there would hang one off every column in the app. A widget asks for whichever of the two it needs.
+// Tabs is currently the only one that needs this one, and needs it unconditionally.
 [assembly: RegisterComponentViewFactory("$$_Layout.MaskedMultiChildLayoutView",
     typeof(RectTransform),
     typeof(RectMask2D),

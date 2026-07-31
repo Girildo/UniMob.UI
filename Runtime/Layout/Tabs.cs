@@ -31,12 +31,6 @@ namespace UniMob.UI.Layout
         /// <summary>One page each, in tab order.</summary>
         public List<Widget> Children { get; set; } = new();
 
-        /// <summary>
-        ///     Clips the pages to the viewport. On by default, because the pages either side of the current
-        ///     one are laid out just outside it and would otherwise paint over whatever surrounds the tabs.
-        /// </summary>
-        public bool UseMask { get; set; } = true;
-
         public override State CreateState() => new TabsState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
@@ -58,11 +52,10 @@ namespace UniMob.UI.Layout
 
         public TabController TabController => Widget.TabController;
 
-        // The mask is a component on the view, so switching it means switching views. Reactive, so
-        // UseMask can change at runtime.
-        [Atom]
-        public override WidgetViewReference View => Widget.UseMask
-            ? WidgetViewReference.Resource("$$_Layout.MaskedMultiChildLayoutView")
-            : WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+        // The masked variant of the layout view every multi-child layout shares, and not a choice:
+        // the pages either side of the current one are always laid out just outside the viewport, so
+        // an unmasked Tabs is not a different look, it is one that paints over its surroundings.
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("$$_Layout.MaskedMultiChildLayoutView");
     }
 }
