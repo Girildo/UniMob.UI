@@ -1,16 +1,25 @@
 using System.Collections.Generic;
+using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
 {
     /// <summary>
-    /// Horizontally paged tabs driven by a <see cref="TabController"/>, with an optional edge mask and
-    /// drag-to-switch. Modern-layout facade over the legacy <c>UniMob.UI.Widgets.Tabs</c>, whose interactive
-    /// view (mask, drag, paging) lives in a Unity prefab; this exposes it to modern trees via the legacy
-    /// interop bridge, mirroring how the modern <see cref="AnimatedSwitcher"/> wraps its legacy counterpart.
-    /// Coexists with the legacy widget; told apart by namespace. For a fixed size, wrap it in a modern
-    /// <see cref="SizedBox"/>/<see cref="ConstrainedBox"/> rather than exposing a legacy <c>WidgetSize</c>.
+    ///     Horizontally paged tabs driven by a <see cref="TabController"/>: every child is one page the size
+    ///     of the viewport, and the run of them slides as the controller moves.
     /// </summary>
-    public class Tabs : StatefulWidget
+    /// <remarks>
+    ///     A real modern layout, not a wrapper around the legacy widget: children are laid out by
+    ///     <see cref="RenderTabs"/> against real constraints, so a modern subtree is a valid page. The legacy
+    ///     <c>UniMob.UI.Widgets.Tabs</c> sized itself by intrinsic-walking its children, which made a modern
+    ///     child of it a layout error.
+    ///     <para>
+    ///     Swipe-to-switch is deliberately not implemented. The legacy widget carried it in its view, along
+    ///     with the rule that routes a mostly-vertical drag to the parent so a scrollable page still scrolls.
+    ///     No caller uses it. If one needs it, wrap this in a <see cref="GestureDetector"/> and drive the
+    ///     controller from <c>OnDragUpdate</c>, rather than rebuilding gesture handling in the view.
+    ///     </para>
+    /// </remarks>
+    public class Tabs : StatefulWidget, IMultiChildLayoutWidget
     {
         public Tabs(TabController tabController)
         {
@@ -18,27 +27,42 @@ namespace UniMob.UI.Layout
         }
 
         public TabController TabController { get; }
+
+        /// <summary>One page each, in tab order.</summary>
         public List<Widget> Children { get; set; } = new();
+
+        /// <summary>
+        ///     Clips the pages to the viewport. On by default, because the pages either side of the current
+        ///     one are laid out just outside it and would otherwise paint over whatever surrounds the tabs.
+        /// </summary>
         public bool UseMask { get; set; } = true;
-        public bool Draggable { get; set; } = true;
-        public AxisSize CrossAxisSize { get; set; } = AxisSize.Min;
-        public AxisSize MainAxisSize { get; set; } = AxisSize.Min;
 
         public override State CreateState() => new TabsState();
+
+        public override RenderObject CreateRenderObject(BuildContext context, IState state)
+        {
+            return new RenderTabs((ITabsLayoutState) state);
+        }
     }
 
-    internal class TabsState : HocState<Tabs>
+    internal class TabsState : ViewState<Tabs>, ITabsLayoutState
     {
-        public override Widget Build(BuildContext context)
+        private readonly StateCollectionHolder _children;
+
+        public TabsState()
         {
-            return new UniMob.UI.Widgets.Tabs(Widget.TabController)
-            {
-                Children = Widget.Children,
-                UseMask = Widget.UseMask,
-                Draggable = Widget.Draggable,
-                CrossAxisSize = Widget.CrossAxisSize,
-                MainAxisSize = Widget.MainAxisSize,
-            };
+            _children = CreateChildren(context => Widget.Children);
         }
+
+        public IState[] Children => _children.Value;
+
+        public TabController TabController => Widget.TabController;
+
+        // The mask is a component on the view, so switching it means switching views. Reactive, so
+        // UseMask can change at runtime.
+        [Atom]
+        public override WidgetViewReference View => Widget.UseMask
+            ? WidgetViewReference.Resource("$$_Layout.MaskedMultiChildLayoutView")
+            : WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
     }
 }
