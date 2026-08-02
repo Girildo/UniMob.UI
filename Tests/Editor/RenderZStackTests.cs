@@ -101,12 +101,18 @@ namespace UniMob.UI.Tests
             );
             Assert.AreEqual(new Vector2(40, 5), render.ChildrenLayout[1].Position);
 
-            // Clamped to the stack, not free at its requested 20x20: on any axis a positioned child
-            // does not size itself, the stack's own size is its upper bound. This is a deliberate
-            // divergence from Flutter, which passes unbounded constraints here -- it can afford to,
-            // because its children treat an unbounded axis as "take your intrinsic size". Here text
-            // and flex rows treat it as an error, so infinity would turn an anchored overlay into a
-            // layout exception instead of a clip. The stack's size is the space that actually exists.
+            // Clamped to the stack rather than free at its requested 20x20: on an axis a positioned
+            // child does not size itself, the stack's size is its upper bound. Loose, not tight, so a
+            // smaller child still stays smaller.
+            //
+            // Flutter passes fully unbounded constraints here instead (BoxConstraints.tightFor with
+            // both dimensions null, since width is only pinned when left AND right are given), so the
+            // same child would keep its 20x20. The divergence is deliberate, but not because Flutter's
+            // children tolerate an unbounded axis -- a Flutter Column errors on one exactly as
+            // RenderFlex does here. It is the failure path that differs: Flutter reports the error and
+            // expects the Positioned to be constrained, while bounding to the stack lets an anchored
+            // overlay clip instead of erroring. The price is that a positioned child can never exceed
+            // its stack, so an overlay larger than the box it is anchored to is silently cut off.
             Assert.AreEqual(new Vector2(10, 10), render.ChildrenLayout[1].Size);
         }
 
