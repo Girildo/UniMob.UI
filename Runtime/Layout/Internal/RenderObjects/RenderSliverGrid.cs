@@ -107,7 +107,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _state = state;
         }
 
-        public IReadOnlyList<LayoutInfo> ChildrenLayout => _visibleChildrenLayout;
+        public IReadOnlyList<LayoutInfo> ChildrenLayout
+        {
+            get
+            {
+                // Pulls layout before handing the list out. The list is only valid immediately after a
+                // pass, and nothing used to enforce that: a view that forgot the pull silently stamped
+                // stale positions onto RectTransforms.
+                WatchLayout();
+                return _visibleChildrenLayout;
+            }
+        }
 
         private float ComputeVirtualizationCacheExtent()
         {

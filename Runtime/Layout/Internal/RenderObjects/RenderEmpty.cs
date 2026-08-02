@@ -4,12 +4,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     public class RenderEmpty : LeafRenderObject
     {
-        public static readonly RenderEmpty Shared = new RenderEmpty();
-
-        public RenderEmpty() : base(Lifetime.Eternal)
-        {
-
-        }
+        // Deliberately not a shared singleton. A render object owns its constraints and its memoized
+        // pass, so one instance behind every Empty in the app would mean each parent's layout write
+        // invalidating every other parent's. Being stateless was what made sharing look free.
+        public RenderEmpty(IState state)
+            : base(state.StateLifetime) { }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {

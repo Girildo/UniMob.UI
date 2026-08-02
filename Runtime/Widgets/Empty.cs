@@ -8,7 +8,7 @@ namespace UniMob.UI.Widgets
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return RenderEmpty.Shared;
+            return new RenderEmpty(state);
         }
     }
 

@@ -55,6 +55,12 @@ namespace UniMob.UI.Layout
         public WidgetGeometry GlobalGeometry => View?.GlobalGeometry ?? WidgetGeometry.Empty;
 
         /// <summary><b>[Atom]</b> The keyed widget's own size in logical pixels, or <c>null</c> while unmounted.</summary>
-        public Vector2? LocalSize => UntypedCurrentState?.RenderObject?.Size;
+        /// <remarks>
+        /// Observes with the equality cutoff, so a reaction on this fires when the box actually changes
+        /// size and not merely when its contents were laid out again. That is what lets "tell me when
+        /// my box changes" be answered from outside layout, on the scheduler, instead of by handing a
+        /// callback to a render object to invoke mid-sizing.
+        /// </remarks>
+        public Vector2? LocalSize => UntypedCurrentState?.RenderObject?.WatchedSize();
     }
 }

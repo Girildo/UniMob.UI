@@ -14,7 +14,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly INavigatorState _state;
 
         private readonly List<LayoutInfo> _childrenLayout = new();
-        public IReadOnlyList<LayoutInfo> ChildrenLayout => _childrenLayout;
+        public IReadOnlyList<LayoutInfo> ChildrenLayout
+        {
+            get
+            {
+                // Pulls layout before handing the list out. The list is only valid immediately after a
+                // pass, and nothing used to enforce that: a view that forgot the pull silently stamped
+                // stale positions onto RectTransforms.
+                WatchLayout();
+                return _childrenLayout;
+            }
+        }
 
         public RenderNavigator(INavigatorState state) : base(state.StateLifetime)
         {

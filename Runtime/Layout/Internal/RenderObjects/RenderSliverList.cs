@@ -147,7 +147,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return viewportSize;
         }
 
-        public IReadOnlyList<LayoutInfo> ChildrenLayout => _visibleChildrenLayout;
+        public IReadOnlyList<LayoutInfo> ChildrenLayout
+        {
+            get
+            {
+                // Pulls layout before handing the list out. The list is only valid immediately after a
+                // pass, and nothing used to enforce that: a view that forgot the pull silently stamped
+                // stale positions onto RectTransforms.
+                WatchLayout();
+                return _visibleChildrenLayout;
+            }
+        }
 
         /// <summary>
         ///     SIZING PASS: measures children to determine the total scrollable content size. In eager mode,
