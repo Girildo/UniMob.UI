@@ -162,6 +162,35 @@ namespace UniMob.UI.Tests
         // Box layout is idempotent, which is the only reason this has stayed invisible; a render
         // object that accumulates across passes instead of recomputing applies its update twice.
 
+        /// <summary>
+        ///     "Fill the slot" needs no access to the slot's measurements: an infinite requested size
+        ///     is clamped to whatever the parent allows. Pins that, because reading constraints in
+        ///     order to fill is a habit worth not having.
+        /// </summary>
+        [Test]
+        public void ExpandFillsLooseConstraints_WithoutReadingThem()
+        {
+            var root = TestHarness.Mount(
+                UniMob.UI.Layout.SizedBox.Expand(new CountingBox { BoxSize = new Vector2(5, 5) })
+            );
+
+            var size = TestHarness.DriveLayout(root, LayoutConstraints.Loose(200, 100));
+
+            Assert.AreEqual(new Vector2(200, 100), size);
+        }
+
+        [Test]
+        public void ExpandFillsTightConstraints_WithoutReadingThem()
+        {
+            var root = TestHarness.Mount(
+                UniMob.UI.Layout.SizedBox.Expand(new CountingBox { BoxSize = new Vector2(5, 5) })
+            );
+
+            var size = TestHarness.DriveLayout(root, LayoutConstraints.Tight(80, 60));
+
+            Assert.AreEqual(new Vector2(80, 60), size);
+        }
+
         [Test]
         public void SizingRunsOncePerFrame_Bare()
         {
