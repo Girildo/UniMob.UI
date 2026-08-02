@@ -19,9 +19,17 @@ namespace UniMob.UI.Tests
             public Alignment Alignment { get; set; } = Alignment.Center;
         }
 
-        private static RenderZStack Layout(IState[] children, LayoutConstraints constraints, Alignment? alignment = null)
+        private static RenderZStack Layout(
+            IState[] children,
+            LayoutConstraints constraints,
+            Alignment? alignment = null
+        )
         {
-            var state = new FakeZStackState { Children = children, Alignment = alignment ?? Alignment.Center };
+            var state = new FakeZStackState
+            {
+                Children = children,
+                Alignment = alignment ?? Alignment.Center,
+            };
             var render = new RenderZStack(state);
             render.Layout(constraints);
             return render;
@@ -44,7 +52,10 @@ namespace UniMob.UI.Tests
         [Test]
         public void NonPositionedChild_FollowsAlignment_BottomRight()
         {
-            var children = new[] { TestHarness.Mount(new FixedSizeBox { Size = new Vector2(20, 20) }) };
+            var children = new[]
+            {
+                TestHarness.Mount(new FixedSizeBox { Size = new Vector2(20, 20) }),
+            };
 
             var render = Layout(children, LayoutConstraints.Tight(100, 100), Alignment.BottomRight);
 
@@ -54,7 +65,10 @@ namespace UniMob.UI.Tests
         [Test]
         public void NonPositionedChild_FollowsAlignment_Center()
         {
-            var children = new[] { TestHarness.Mount(new FixedSizeBox { Size = new Vector2(20, 20) }) };
+            var children = new[]
+            {
+                TestHarness.Mount(new FixedSizeBox { Size = new Vector2(20, 20) }),
+            };
 
             var render = Layout(children, LayoutConstraints.Tight(100, 100), Alignment.Center);
 
@@ -68,20 +82,32 @@ namespace UniMob.UI.Tests
             {
                 // Gives the stack a real (non-positioned-derived) size to assert against.
                 TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 10) }),
-                TestHarness.Mount(new Positioned
-                {
-                    Left = 40,
-                    Top = 5,
-                    Child = new FixedSizeBox { Size = new Vector2(20, 20) },
-                }),
+                TestHarness.Mount(
+                    new Positioned
+                    {
+                        Left = 40,
+                        Top = 5,
+                        Child = new FixedSizeBox { Size = new Vector2(20, 20) },
+                    }
+                ),
             };
 
             var render = Layout(children, LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(10, 10), render.Size,
-                "positioned children must not contribute to the stack's own size");
+            Assert.AreEqual(
+                new Vector2(10, 10),
+                render.Size,
+                "positioned children must not contribute to the stack's own size"
+            );
             Assert.AreEqual(new Vector2(40, 5), render.ChildrenLayout[1].Position);
-            Assert.AreEqual(new Vector2(20, 20), render.ChildrenLayout[1].Size);
+
+            // Clamped to the stack, not free at its requested 20x20: on any axis a positioned child
+            // does not size itself, the stack's own size is its upper bound. This is a deliberate
+            // divergence from Flutter, which passes unbounded constraints here -- it can afford to,
+            // because its children treat an unbounded axis as "take your intrinsic size". Here text
+            // and flex rows treat it as an error, so infinity would turn an anchored overlay into a
+            // layout exception instead of a clip. The stack's size is the space that actually exists.
+            Assert.AreEqual(new Vector2(10, 10), render.ChildrenLayout[1].Size);
         }
 
         [Test]
@@ -90,14 +116,16 @@ namespace UniMob.UI.Tests
             var children = new[]
             {
                 TestHarness.Mount(new FixedSizeBox { Size = new Vector2(100, 100) }),
-                TestHarness.Mount(new Positioned
-                {
-                    Left = 10,
-                    Right = 20,
-                    Top = 0,
-                    // Deliberately huge natural width -- must be ignored in favor of the derived one.
-                    Child = new FixedSizeBox { Size = new Vector2(9999, 30) },
-                }),
+                TestHarness.Mount(
+                    new Positioned
+                    {
+                        Left = 10,
+                        Right = 20,
+                        Top = 0,
+                        // Deliberately huge natural width -- must be ignored in favor of the derived one.
+                        Child = new FixedSizeBox { Size = new Vector2(9999, 30) },
+                    }
+                ),
             };
 
             var render = Layout(children, LayoutConstraints.Loose(200, 200));
@@ -112,12 +140,14 @@ namespace UniMob.UI.Tests
             var children = new[]
             {
                 TestHarness.Mount(new FixedSizeBox { Size = new Vector2(30, 40) }),
-                TestHarness.Mount(new Positioned
-                {
-                    Left = 0,
-                    Top = 0,
-                    Child = new FixedSizeBox { Size = new Vector2(500, 500) },
-                }),
+                TestHarness.Mount(
+                    new Positioned
+                    {
+                        Left = 0,
+                        Top = 0,
+                        Child = new FixedSizeBox { Size = new Vector2(500, 500) },
+                    }
+                ),
             };
 
             var state = new FakeZStackState { Children = children };
