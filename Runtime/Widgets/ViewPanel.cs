@@ -24,10 +24,9 @@ namespace UniMob.UI.Widgets
             _layoutConstraints ??= CreateLayoutConstraints();
             _layoutRoot = state;
 
-            // Lay out from the outer state, which owns the top of this panel's layout chain. This used
-            // to write constraints to the outer state and then drive layout from InnerViewState, which
-            // only lined up because wrappers forwarded constraints down the chain to it. They no longer
-            // do -- each state owns its own render object -- so the push has to go where the chain
+            // Lay out from the outer state, which owns the top of this panel's layout chain. Pushing
+            // to one state and driving from another only lines up when something forwards constraints
+            // between them; each state owns its own render object, so the push belongs where the chain
             // starts. InnerViewState is passed on purely for view mapping.
             state.RenderObject.Layout(_layoutConstraints.Get());
 

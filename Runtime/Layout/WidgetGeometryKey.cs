@@ -19,11 +19,10 @@ namespace UniMob.UI.Layout
     {
         // Resolved through the tree links rather than by casting the keyed state to a geometry
         // interface. A build-only wrapper (a HocState, a StatelessWidget) owns no view of its own, so
-        // the cast failed and the key silently reported Empty -- even though InflateWidget binds a
-        // GlobalKey unconditionally, so attaching one there looked like it had worked. A wrapper does
-        // render exactly one subtree, and InnerViewState already recurses to the view at the top of it,
-        // so the key now measures the box the widget actually renders whatever state type backs it.
-        // For ViewState-backed widgets this resolves to the same object as before.
+        // a cast to a view-shaped interface fails on it and yields Empty -- while InflateWidget binds
+        // a GlobalKey unconditionally, so attaching one there still looks like it worked. A wrapper
+        // renders exactly one subtree and InnerViewState recurses to the view at the top of it, so
+        // this measures the box the widget actually renders whatever state type backs it.
         private IViewState View => UntypedCurrentState?.InnerViewState;
 
         public override bool Equals(Key other) => ReferenceEquals(this, other);

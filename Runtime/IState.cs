@@ -25,11 +25,10 @@ namespace UniMob.UI
 
         Lifetime StateLifetime { get; }
 
-        // Layout used to be reached through here: UpdateConstraints to push, WatchedPerformLayout and
-        // WatchedSize to observe, Constraints to read back. All four moved to RenderObject, which is
-        // the thing being laid out. Asking a state to answer them meant several states could answer
-        // for one render object, and meant a state could be asked for constraints before anything had
-        // laid it out -- a question with no answer, which the old accessor papered over.
+        // Layout is reached through RenderObject, not through here. A state is an element: it owns a
+        // widget, builds children and reconciles. Answering for a render object's constraints or size
+        // as well would let several states answer for one render object, and would invite the question
+        // "how big am I" before anything has laid this out -- which has no answer.
 
         /// <summary>
         /// Gets diagnostics info useful for debugging and locating the state in the tree.

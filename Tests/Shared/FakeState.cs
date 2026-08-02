@@ -26,12 +26,8 @@ namespace UniMob.UI.Tests
 
         public virtual string GetDiagnosticInfo() => null;
 
-        // UpdateConstraints/WatchedPerformLayout/WatchedSize/Constraints used to be stubbed here. They
-        // are RenderObject's now, so a state fake owes nothing about layout beyond naming the render
-        // object it owns.
-
-        // The layout state interfaces used to bundle rendered geometry, so this fake had to stub four
-        // members no render object under test ever reads. Local geometry now comes off the render
-        // object and on-screen geometry belongs to IViewState, so a layout state owes neither.
+        // A state fake owes nothing about layout beyond naming the render object it owns. Pushing
+        // constraints, observing size and reading constraints back all belong to RenderObject, and
+        // geometry to either the render object (local) or IViewState (on-screen).
     }
 }

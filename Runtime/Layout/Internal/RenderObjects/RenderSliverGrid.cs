@@ -111,9 +111,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             get
             {
-                // Pulls layout before handing the list out. The list is only valid immediately after a
-                // pass, and nothing used to enforce that: a view that forgot the pull silently stamped
-                // stale positions onto RectTransforms.
+                // Pulls layout before handing the list out. The list is only valid immediately
+                // after a pass, so a caller that reads it without one stamps stale positions onto
+                // live RectTransforms -- silently, and only while something else happens to move.
                 WatchLayout();
                 return _visibleChildrenLayout;
             }

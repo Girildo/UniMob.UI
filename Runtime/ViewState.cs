@@ -50,9 +50,8 @@ namespace UniMob.UI
             _mountLifetimeController?.Dispose();
         }
 
-        // LocalSize/LocalRect used to live here, forwarding to the state's tracked size. They are
-        // render-tree truth and are now read directly off RenderObject (Size / a rect at origin), which
-        // any state can answer without an interface.
+        // Local geometry is render-tree truth, so it is read off RenderObject (Size, or a rect at
+        // origin) rather than mirrored here. Any state can answer it without an interface.
 
         /// <summary>
         /// Reads this widget's current on-screen box in canvas space. Returns <c>false</c> (and

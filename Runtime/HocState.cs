@@ -25,11 +25,11 @@ namespace UniMob.UI
         public IState Child => _child.Value;
 
         // A higher order state builds a child but paints nothing itself, so it owns a proxy over that
-        // child rather than exposing the child's own render object. Exposing it made one render object
-        // reachable from two states, both of which then drove it. A proxy also fixes the ordering:
-        // resolving a forwarded RenderObject *was* the build, so constraints could only be written
-        // after it, whereas a proxy is a plain field set at InitRenderObject and the build happens
-        // later, when the proxy's sizing pass pulls Child.
+        // child rather than exposing the child's render object. Exposing it would make one render
+        // object reachable from two states, and both would drive it. The proxy also fixes the
+        // ordering: it is a plain field set at InitRenderObject, so a parent can write constraints
+        // without forcing a build, and the build happens afterwards when the proxy's sizing pass pulls
+        // Child. Resolving a forwarded render object would itself be the build, inverting that.
         internal sealed override RenderObject CreateOwnRenderObject() => new RenderProxy(this);
 
         protected HocState()
