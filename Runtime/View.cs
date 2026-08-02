@@ -258,7 +258,10 @@ namespace UniMob.UI
                 // receive a fully up-to-date RenderObject and can use its properties, even non-reactive ones.
                 //
                 // Also we MUST do a DoRender() if the layout is recomputed, so subscribe to it.
-                currentState.WatchedPerformLayout();
+                //
+                // WatchLayout and not WatchedSize: a view writes both size and position, so a pass that
+                // only moved children still has to re-run it.
+                currentState.RenderObject.WatchLayout();
             }
             catch (Exception ex)
             {

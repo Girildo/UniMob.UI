@@ -121,6 +121,19 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return _trackedLayout.Get().size;
         }
 
+        /// <summary>
+        ///     Forces the next layout call to recompute rather than serve the memo.
+        /// </summary>
+        /// <remarks>
+        ///     Needed because not every input to a sizing pass is an atom: a state's widget is reached
+        ///     through plain accessors, so replacing the widget changes the answer without invalidating
+        ///     anything. State.Update calls this.
+        /// </remarks>
+        public void InvalidateLayout()
+        {
+            _trackedLayout.Invalidate();
+        }
+
         private (Vector2 size, int version) PerformLayout()
         {
             if (this.Lifetime.IsDisposed)
@@ -194,14 +207,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (child is null)
                 return Vector2.zero;
 
-            child.UpdateConstraints(constraints);
-
-            // WatchedSize (not WatchedPerformLayout) deliberately: we only care about the child's
-            // resulting Size here, not about being re-run whenever the child's subtree merely
-            // repositions itself internally (e.g. a nested ScrollList scrolling). See IState.WatchedSize.
-            var childSize = child.WatchedSize();
-
-            return childSize;
+            // Layout, not WatchLayout: this returns the child's size with the equality cutoff, so a
+            // parent's sizing pass is not dragged into re-running every time the child's subtree merely
+            // repositions itself internally (a nested ScrollList scrolling, say).
+            return child.RenderObject.Layout(constraints);
         }
 
         /// <summary>

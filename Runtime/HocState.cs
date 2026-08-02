@@ -10,7 +10,7 @@ namespace UniMob.UI
     {
     }
 
-    public abstract class HocState<TWidget> : State, IHocState
+    public abstract class HocState<TWidget> : State, IHocState, ISingleChildLayoutState
         where TWidget : Widget
     {
         private readonly StateHolder _child;
@@ -24,11 +24,13 @@ namespace UniMob.UI
 
         public IState Child => _child.Value;
 
-        internal sealed override void InitRenderObject()
-        {
-            // A higher order state does not have a render object -- it forwards the accessor to its child.
-        }
-        public sealed override RenderObject RenderObject => _child.Value?.RenderObject;
+        // A higher order state builds a child but paints nothing itself, so it owns a proxy over that
+        // child rather than exposing the child's own render object. Exposing it made one render object
+        // reachable from two states, both of which then drove it. A proxy also fixes the ordering:
+        // resolving a forwarded RenderObject *was* the build, so constraints could only be written
+        // after it, whereas a proxy is a plain field set at InitRenderObject and the build happens
+        // later, when the proxy's sizing pass pulls Child.
+        internal sealed override RenderObject CreateOwnRenderObject() => new RenderProxy(this);
 
         protected HocState()
         {
@@ -57,12 +59,6 @@ namespace UniMob.UI
         }
 
         
-
-        internal sealed override void UpdateConstraints(LayoutConstraints constraints)
-        {
-            base.UpdateConstraints(constraints); // Keep HocState's own atoms happy
-            Child?.UpdateConstraints(constraints);
-        }
 
         public abstract Widget Build(BuildContext context);
 

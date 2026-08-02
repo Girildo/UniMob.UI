@@ -20,19 +20,15 @@ namespace UniMob.UI.Tests
         public virtual Key Key => throw new NotImplementedException();
         public virtual Widget RawWidget => throw new NotImplementedException();
         public virtual RenderObject RenderObject => throw new NotImplementedException();
-        public virtual LayoutConstraints Constraints => throw new NotImplementedException();
         public virtual BuildContext Context => throw new NotImplementedException();
         public virtual IViewState InnerViewState => throw new NotImplementedException();
         public virtual WidgetSize Size => throw new NotImplementedException();
 
-        public virtual void UpdateConstraints(LayoutConstraints constraints) =>
-            throw new NotImplementedException();
-
-        public virtual Vector2 WatchedPerformLayout() => throw new NotImplementedException();
-
-        public virtual Vector2 WatchedSize() => throw new NotImplementedException();
-
         public virtual string GetDiagnosticInfo() => null;
+
+        // UpdateConstraints/WatchedPerformLayout/WatchedSize/Constraints used to be stubbed here. They
+        // are RenderObject's now, so a state fake owes nothing about layout beyond naming the render
+        // object it owns.
 
         // The layout state interfaces used to bundle rendered geometry, so this fake had to stub four
         // members no render object under test ever reads. Local geometry now comes off the render

@@ -18,7 +18,9 @@ public static class DiagnosticsExtensions
             sbuilder.Clear();
             var prettyName = GetPrettyName(current);
             var indent = new string(' ', maxLevels * 2);
-            var constraints = current.Constraints;
+            // Nullable, and printed as such: "unset" and Tight(0,0) used to be indistinguishable here,
+            // which hid "nothing has laid this out" behind a plausible-looking box.
+            var constraints = current.RenderObject?.Constraints;
             var diagnosticInfo = current.GetDiagnosticInfo();
             sbuilder.Append(indent);
             sbuilder.Append("<color=yellow>");

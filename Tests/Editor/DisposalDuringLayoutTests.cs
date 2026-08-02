@@ -32,8 +32,9 @@ namespace UniMob.UI.Tests
     {
         private static readonly LayoutConstraints Constraints = LayoutConstraints.Loose(100, 100);
 
+        // The leaf's render object, below whatever proxies the build-only wrappers own.
         private static RenderCountingBox RenderOf(State root) =>
-            (RenderCountingBox)root.RenderObject;
+            (RenderCountingBox)root.InnerViewState.RenderObject;
 
         /// <summary>
         ///     Runs <paramref name="action"/> and returns any errors Unity logged during it.

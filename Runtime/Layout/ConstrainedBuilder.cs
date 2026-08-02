@@ -24,7 +24,13 @@ namespace UniMob.UI.Layout
 
         public ConstrainedBuilderState()
         {
-            _child = CreateChild(context => Widget.Builder?.Invoke(context, Constraints));
+            // RenderObject is an eagerly-created RenderProxy, so its constraints are a plain field
+            // written by the parent's LayoutChild before the proxy's sizing pass pulls this child.
+            // Write-then-build is therefore guaranteed, which is what makes reading constraints during
+            // a build legitimate here and nowhere else.
+            _child = CreateChild(context =>
+                Widget.Builder?.Invoke(context, RenderObject.Constraints ?? default)
+            );
         }
 
         // Fulfill the ISingleChildLayoutState interface

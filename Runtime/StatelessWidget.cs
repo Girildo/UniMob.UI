@@ -19,10 +19,12 @@ namespace UniMob.UI
         public abstract Widget Build(BuildContext context);
 
 
-        public RenderObject CreateRenderObject(BuildContext context, IState state)
-        {
-            return state.InnerViewState.RenderObject;
-        }
+        // Unreachable: StatelessElement owns a proxy over the widget it builds and never asks the
+        // widget for a render object. Present only because Widget declares it.
+        public RenderObject CreateRenderObject(BuildContext context, IState state) =>
+            throw new System.NotSupportedException(
+                "A StatelessWidget's render object is the proxy owned by its StatelessElement."
+            );
 
         public virtual string? GetDiagnosticsInfo() => null;
 
@@ -37,19 +39,18 @@ namespace UniMob.UI
     }
 
 
-    internal sealed class StatelessElement : State
+    internal sealed class StatelessElement : State, ISingleChildLayoutState
     {
         private readonly StateHolder _stateHolder;
         private readonly MutableAtom<StatelessWidget> _widget = Atom.Value(default(StatelessWidget));
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
         public override WidgetSize Size => _stateHolder.Value.Size;
-        internal sealed override void InitRenderObject()
-        {
-            
-        }
+        public IState Child => _stateHolder.Value;
 
-        public sealed override RenderObject RenderObject => _stateHolder.Value?.RenderObject;
+        // Owns a proxy over the widget it builds, rather than exposing that widget's own render
+        // object. See HocState.CreateOwnRenderObject for why forwarding had to go.
+        internal sealed override RenderObject CreateOwnRenderObject() => new RenderProxy(this);
 
         public StatelessElement(StatelessWidget widget)
         {
@@ -67,12 +68,6 @@ namespace UniMob.UI
             // Reads _widget.Value, establishing a reactive dependency.
             // When the widget is replaced in Update(), this computed re-runs.
             return _widget.Value.Build(context);
-        }
-
-        internal sealed override void UpdateConstraints(LayoutConstraints constraints)
-        {
-            base.UpdateConstraints(constraints);
-            _stateHolder.Value.UpdateConstraints(constraints);
         }
 
         internal override void Update(Widget widget)

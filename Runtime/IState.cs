@@ -11,9 +11,11 @@ namespace UniMob.UI
 
         Widget RawWidget { get; }
 
+        /// <summary>
+        /// The render object this state owns. Every state owns exactly one, so this is total: layout
+        /// is reached through here, and the reactive layout members live on it rather than here.
+        /// </summary>
         RenderObject RenderObject { get; }
-
-        LayoutConstraints Constraints { get; }
 
         BuildContext Context { get; }
 
@@ -23,39 +25,11 @@ namespace UniMob.UI
 
         Lifetime StateLifetime { get; }
 
-        void UpdateConstraints(LayoutConstraints constraints);
-        
-        
-        /// <summary>
-        /// <b>[Atom]</b> Performs re-layout on RenderObject if necessary (e.g. constraints or dependencies have changed)
-        /// and subscribes to future re-layouts via the UniMob's reactivity system.
-        /// </summary>
-        /// <remarks>
-        /// This method can be safely called multiple times because
-        /// it will not cause the layout to be recalculated every time.
-        /// <para>
-        /// Every call re-subscribes to <i>any</i> change produced by the layout pass, including changes
-        /// that only reposition this widget's own children (e.g. a ScrollList's contents shifting as it
-        /// scrolls) without altering this widget's own <see cref="Size"/>. Prefer <see cref="WatchedSize"/>
-        /// when only the size is needed -- using this method for that purpose makes the caller re-run on
-        /// every purely-internal reposition of the child's subtree, which can cascade up an entire
-        /// ancestor chain on something as routine as a nested list scrolling.
-        /// </para>
-        /// </remarks>
-        /// <returns>Final render size of the widget.</returns>
-        Vector2 WatchedPerformLayout();
-
-        /// <summary>
-        /// <b>[Atom]</b> Performs re-layout on RenderObject if necessary, like <see cref="WatchedPerformLayout"/>,
-        /// but only invalidates subscribers when the resulting <see cref="Size"/> actually changes.
-        /// </summary>
-        /// <remarks>
-        /// Use this instead of <see cref="WatchedPerformLayout"/> when measuring a child purely to learn its
-        /// size (e.g. from <c>RenderObject.LayoutChild</c>). This decouples a parent's sizing pass from a
-        /// child's internal repositioning (scrolling, etc.) that doesn't affect the child's own size.
-        /// </remarks>
-        /// <returns>Final render size of the widget.</returns>
-        Vector2 WatchedSize();
+        // Layout used to be reached through here: UpdateConstraints to push, WatchedPerformLayout and
+        // WatchedSize to observe, Constraints to read back. All four moved to RenderObject, which is
+        // the thing being laid out. Asking a state to answer them meant several states could answer
+        // for one render object, and meant a state could be asked for constraints before anything had
+        // laid it out -- a question with no answer, which the old accessor papered over.
 
         /// <summary>
         /// Gets diagnostics info useful for debugging and locating the state in the tree.

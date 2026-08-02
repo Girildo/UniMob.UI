@@ -46,8 +46,7 @@ namespace UniMob.UI.Tests
 
         public static Vector2 Layout(State state, LayoutConstraints constraints)
         {
-            state.RenderObject.Layout(constraints);
-            return state.RenderObject.Size;
+            return state.RenderObject.Layout(constraints);
         }
 
         public static Vector2 MountAndLayout(Widget widget, LayoutConstraints constraints)
@@ -72,9 +71,7 @@ namespace UniMob.UI.Tests
         /// </summary>
         public static Vector2 DriveLayout(State state, LayoutConstraints constraints)
         {
-            var target = (IState)state;
-            target.UpdateConstraints(constraints);
-            return target.WatchedSize();
+            return state.RenderObject.Layout(constraints);
         }
 
         /// <summary>
@@ -82,7 +79,7 @@ namespace UniMob.UI.Tests
         /// </summary>
         public static void DriveViewPass(State state)
         {
-            state.InnerViewState.WatchedPerformLayout();
+            state.InnerViewState.RenderObject.WatchLayout();
         }
 
         /// <summary>

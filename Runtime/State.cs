@@ -15,25 +15,16 @@ namespace UniMob.UI
     [System.Diagnostics.DebuggerDisplay("{ToDiagnosticString()}")]
     public abstract class State : IState, IDisposable, ILifetimeScope
     {
-        private readonly MutableAtom<LayoutConstraints?> _explicitConstraints = Atom.Value(default(LayoutConstraints?));
-        private readonly Atom<(Vector2 renderSize, int version)> _trackedLayoutPerformer;
-        private readonly Atom<Vector2> _trackedSize;
-
         private readonly MutableBuildContext _context;
 
         private LifetimeController _stateLifetimeController;
         private RenderObject _renderObject;
 
-        private int _renderVersion = int.MinValue;
-
-        public virtual RenderObject RenderObject => _renderObject;
+        public RenderObject RenderObject => _renderObject;
         public BuildContext Context => _context;
 
         internal Widget RawWidget { get; private set; }
         Widget IState.RawWidget => RawWidget;
-
-        public LayoutConstraints Constraints =>
-            _explicitConstraints.Value ?? _context.Parent?.State?.Constraints ?? default;
 
         public abstract IViewState InnerViewState { get; }
 
@@ -59,24 +50,16 @@ namespace UniMob.UI
         protected State()
         {
             _context = new MutableBuildContext(this, null);
-            _trackedLayoutPerformer = CreateTrackedLayout();
-            _trackedSize = CreateTrackedSize();
         }
 
         internal virtual void Update(Widget widget)
         {
             RawWidget = widget;
 
-            // Force recompute layout on Widget modifications.
-            _trackedLayoutPerformer.Invalidate();
-        }
-
-        internal virtual void UpdateConstraints(LayoutConstraints constraints)
-        {
-            using (Atom.NoWatch)
-            {
-                _explicitConstraints.Value = constraints;
-            }
+            // Widget properties are reached through plain accessors during sizing, so a replacement
+            // widget instance is not something the layout pass can observe on its own. Say so
+            // explicitly. Null before InitRenderObject, which runs later in InflateWidget.
+            _renderObject?.InvalidateLayout();
         }
 
         internal void Mount(BuildContext context)
@@ -87,10 +70,22 @@ namespace UniMob.UI
             _context.SetParent(context);
         }
 
-        
-        internal virtual void InitRenderObject()
+        internal void InitRenderObject()
         {
-            _renderObject = RawWidget.CreateRenderObject(Context, this);
+            _renderObject = CreateOwnRenderObject();
+        }
+
+        /// <summary>
+        ///     Builds the render object this state owns. Every state owns exactly one.
+        /// </summary>
+        /// <remarks>
+        ///     Build-only states override this: they have no widget-supplied render object, but they do
+        ///     have a child, so they own a proxy over it. That is what makes them an ordinary link in
+        ///     the layout chain rather than a second driver of somebody else's render object.
+        /// </remarks>
+        internal virtual RenderObject CreateOwnRenderObject()
+        {
+            return RawWidget.CreateRenderObject(Context, this);
         }
 
         public virtual void InitState()
@@ -100,56 +95,6 @@ namespace UniMob.UI
         public virtual void Dispose()
         {
             _stateLifetimeController?.Dispose();
-        }
-
-        void IState.UpdateConstraints(LayoutConstraints constraints) => UpdateConstraints(constraints);
-
-        Vector2 IState.WatchedPerformLayout()
-        {
-            if(this.StateLifetime.IsDisposed)
-                return Vector2.zero;
-            var renderData = _trackedLayoutPerformer.Get();
-            return renderData.renderSize;
-        }
-
-        Vector2 IState.WatchedSize()
-        {
-            if (this.StateLifetime.IsDisposed)
-                return Vector2.zero;
-            return _trackedSize.Get();
-        }
-
-        private Atom<(Vector2 renderSize, int version)> CreateTrackedLayout()
-        {
-            return Atom.Computed(StateLifetime, () =>
-            {
-                if(StateLifetime.IsDisposed)
-                    return (Vector2.zero, _renderVersion);
-
-                // PerformLayout() implicitly uses many [Atom] so trackedLayoutPerformer will be auto recomputed.
-                RenderObject.Layout(Constraints);
-
-                // Also recompute layout on Constraints modifications.
-                _ = Constraints;
-
-                var renderSize = RenderObject.Size;
-
-                // The PerformLayout() was done and we need all subscribers to be invalidated,
-                // so we always return a new number.
-                return (renderSize, _renderVersion = ((_renderVersion + 1) % int.MaxValue));
-            });
-        }
-
-        // Mirrors _trackedLayoutPerformer's renderSize, but as a plain Vector2-valued computed atom.
-        // Unlike _trackedLayoutPerformer (which always bumps a version number so View-layer consumers
-        // refresh on every layout pass, including pure repositioning), this atom goes through UniMob's
-        // normal equality-based propagation cutoff: a subscriber here only gets invalidated when the
-        // Size itself actually changes. Used by RenderObject.LayoutChild so a parent's sizing pass
-        // doesn't get dragged into re-running every time a child's subtree merely repositions itself
-        // (e.g. a nested ScrollList scrolling).
-        private Atom<Vector2> CreateTrackedSize()
-        {
-            return Atom.Computed(StateLifetime, () => _trackedLayoutPerformer.Get().renderSize);
         }
 
         internal static StateHolder<TState> Create<TWidget, TState>(

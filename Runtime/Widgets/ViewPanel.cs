@@ -10,6 +10,11 @@ namespace UniMob.UI.Widgets
     {
         private Atom<LayoutConstraints> _layoutConstraints;
 
+        // The state this panel roots its layout chain at. Distinct from State, which is that state's
+        // InnerViewState: a panel wrapping a build-only widget has an outer state that owns the chain
+        // and an inner one that owns the view, and they are not the same object.
+        private IState _layoutRoot;
+
         private ViewMapperBase _mapper;
 
         internal override bool TriggerViewMountEvents => false;
@@ -17,10 +22,14 @@ namespace UniMob.UI.Widgets
         public void Render(IState state, bool link = false)
         {
             _layoutConstraints ??= CreateLayoutConstraints();
+            _layoutRoot = state;
 
-            // Update the layout constraints. It is required to be here because
-            // in the base View.DoRender() we do PerformLayout() and constraints musts be valid.
-            state.UpdateConstraints(_layoutConstraints.Get());
+            // Lay out from the outer state, which owns the top of this panel's layout chain. This used
+            // to write constraints to the outer state and then drive layout from InnerViewState, which
+            // only lined up because wrappers forwarded constraints down the chain to it. They no longer
+            // do -- each state owns its own render object -- so the push has to go where the chain
+            // starts. InnerViewState is passed on purely for view mapping.
+            state.RenderObject.Layout(_layoutConstraints.Get());
 
             base.Render(state.InnerViewState, link);
         }
@@ -39,7 +48,7 @@ namespace UniMob.UI.Widgets
             {
                 var child = State;
 
-                var finalSize = child.WatchedPerformLayout();
+                var finalSize = (_layoutRoot ?? child).RenderObject.WatchLayout();
 
                 var childView = render.RenderItem(child);
 

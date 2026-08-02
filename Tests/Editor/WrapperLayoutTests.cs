@@ -38,8 +38,11 @@ namespace UniMob.UI.Tests
 
         private static CountingBox Leaf() => new CountingBox { BoxSize = LeafSize };
 
+        // A build-only wrapper owns a proxy over its child, so the leaf's render object sits at the
+        // bottom of the chain rather than at the root. InnerViewState already walks to the widget that
+        // actually renders, which is the counting box in every tree here.
         private static RenderCountingBox RenderOf(State root) =>
-            (RenderCountingBox)root.RenderObject;
+            (RenderCountingBox)root.InnerViewState.RenderObject;
 
         // == Tranche 1: passes today, must still pass ==============================================
         //
@@ -116,7 +119,8 @@ namespace UniMob.UI.Tests
             var constraints = LayoutConstraints.Tight(80, 60);
 
             TestHarness.DriveFrame(root, constraints);
-            var firstRenderObject = root.RenderObject;
+            // The wrapper's own proxy survives a child rebuild, so the check looks at the leaf.
+            var firstRenderObject = root.InnerViewState.RenderObject;
 
             // A new Key makes the child irreconcilable, so it is discarded and rebuilt from scratch.
             childKey.Value = Key.Of("second");
@@ -124,7 +128,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreNotSame(
                 firstRenderObject,
-                root.RenderObject,
+                root.InnerViewState.RenderObject,
                 "The child should have been rebuilt."
             );
             Assert.AreEqual(constraints, RenderOf(root).LastConstraints);
