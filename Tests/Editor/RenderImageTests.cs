@@ -18,8 +18,17 @@ namespace UniMob.UI.Tests
             public Alignment Alignment => throw new NotImplementedException();
             public bool IsRaycastTarget => throw new NotImplementedException();
             public WidgetViewReference View => throw new NotImplementedException();
+
             public void DidViewMount(IView view) => throw new NotImplementedException();
+
             public void DidViewUnmount(IView view) => throw new NotImplementedException();
+
+            // On-screen geometry is a Unity-boundary query owned by IViewState. A render object under
+            // test never asks for it, so it throws like the rest of this fake.
+            public bool TryGetGlobalGeometry(out WidgetGeometry geometry) =>
+                throw new NotImplementedException();
+
+            public WidgetGeometry GlobalGeometry => throw new NotImplementedException();
         }
 
         // 2:1 aspect ratio texture, reused read-only across cases.

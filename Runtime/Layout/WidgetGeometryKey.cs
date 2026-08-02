@@ -17,7 +17,14 @@ namespace UniMob.UI.Layout
     /// </summary>
     public sealed class WidgetGeometryKey : GlobalKey
     {
-        private ILayoutMetricsState State => UntypedCurrentState as ILayoutMetricsState;
+        // Resolved through the tree links rather than by casting the keyed state to a geometry
+        // interface. A build-only wrapper (a HocState, a StatelessWidget) owns no view of its own, so
+        // the cast failed and the key silently reported Empty -- even though InflateWidget binds a
+        // GlobalKey unconditionally, so attaching one there looked like it had worked. A wrapper does
+        // render exactly one subtree, and InnerViewState already recurses to the view at the top of it,
+        // so the key now measures the box the widget actually renders whatever state type backs it.
+        // For ViewState-backed widgets this resolves to the same object as before.
+        private IViewState View => UntypedCurrentState?.InnerViewState;
 
         public override bool Equals(Key other) => ReferenceEquals(this, other);
 
@@ -31,7 +38,7 @@ namespace UniMob.UI.Layout
         /// </summary>
         public bool TryGetGlobalGeometry(out WidgetGeometry geometry)
         {
-            var state = State;
+            var state = View;
             if (state == null)
             {
                 geometry = WidgetGeometry.Empty;
@@ -45,9 +52,9 @@ namespace UniMob.UI.Layout
         /// <b>[Atom]</b> The keyed widget's on-screen box in canvas space, tracking movement while
         /// observed; <see cref="WidgetGeometry.Empty"/> while the widget is unmounted or the key is unbound.
         /// </summary>
-        public WidgetGeometry GlobalGeometry => State?.GlobalGeometry ?? WidgetGeometry.Empty;
+        public WidgetGeometry GlobalGeometry => View?.GlobalGeometry ?? WidgetGeometry.Empty;
 
         /// <summary><b>[Atom]</b> The keyed widget's own size in logical pixels, or <c>null</c> while unmounted.</summary>
-        public Vector2? LocalSize => State?.LocalSize;
+        public Vector2? LocalSize => UntypedCurrentState?.RenderObject?.Size;
     }
 }

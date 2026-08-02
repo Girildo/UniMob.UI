@@ -25,17 +25,17 @@ namespace UniMob.UI.Tests
         public virtual IViewState InnerViewState => throw new NotImplementedException();
         public virtual WidgetSize Size => throw new NotImplementedException();
 
-        public virtual void UpdateConstraints(LayoutConstraints constraints) => throw new NotImplementedException();
+        public virtual void UpdateConstraints(LayoutConstraints constraints) =>
+            throw new NotImplementedException();
+
         public virtual Vector2 WatchedPerformLayout() => throw new NotImplementedException();
+
         public virtual Vector2 WatchedSize() => throw new NotImplementedException();
+
         public virtual string GetDiagnosticInfo() => null;
 
-        // ILayoutMetricsState members (the single-/multi-child layout state interfaces now extend it).
-        // A RenderObject under test never reads a widget's rendered geometry, so -- like the rest of this
-        // fake -- these throw unless a subclass deliberately overrides them.
-        public virtual Vector2 LocalSize => throw new NotImplementedException();
-        public virtual Rect LocalRect => throw new NotImplementedException();
-        public virtual bool TryGetGlobalGeometry(out WidgetGeometry geometry) => throw new NotImplementedException();
-        public virtual WidgetGeometry GlobalGeometry => throw new NotImplementedException();
+        // The layout state interfaces used to bundle rendered geometry, so this fake had to stub four
+        // members no render object under test ever reads. Local geometry now comes off the render
+        // object and on-screen geometry belongs to IViewState, so a layout state owes neither.
     }
 }

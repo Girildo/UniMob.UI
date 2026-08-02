@@ -50,11 +50,9 @@ namespace UniMob.UI
             _mountLifetimeController?.Dispose();
         }
 
-        /// <summary><b>[Atom]</b> This widget's own size in logical pixels (reactive; no polling).</summary>
-        public Vector2 LocalSize => ((IState) this).WatchedSize();
-
-        /// <summary><b>[Atom]</b> This widget's local box (origin zero) in logical pixels (reactive; no polling).</summary>
-        public Rect LocalRect => new Rect(Vector2.zero, ((IState) this).WatchedSize());
+        // LocalSize/LocalRect used to live here, forwarding to the state's tracked size. They are
+        // render-tree truth and are now read directly off RenderObject (Size / a rect at origin), which
+        // any state can answer without an interface.
 
         /// <summary>
         /// Reads this widget's current on-screen box in canvas space. Returns <c>false</c> (and

@@ -24,6 +24,13 @@ namespace UniMob.UI.Tests
             public void DidViewMount(IView view) => throw new System.NotImplementedException();
 
             public void DidViewUnmount(IView view) => throw new System.NotImplementedException();
+
+            // On-screen geometry is a Unity-boundary query owned by IViewState. A render object under
+            // test never asks for it, so it throws like the rest of this fake.
+            public bool TryGetGlobalGeometry(out WidgetGeometry geometry) =>
+                throw new System.NotImplementedException();
+
+            public WidgetGeometry GlobalGeometry => throw new System.NotImplementedException();
         }
 
         [Test]

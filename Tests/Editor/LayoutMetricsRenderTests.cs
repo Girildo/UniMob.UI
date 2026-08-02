@@ -29,7 +29,7 @@ namespace UniMob.UI.Tests
         private RectTransform MakeRect(Vector2 size)
         {
             var go = new GameObject("Rect", typeof(RectTransform));
-            var rt = (RectTransform) go.transform;
+            var rt = (RectTransform)go.transform;
             rt.SetParent(_canvasGo.transform, false);
             rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
             rt.pivot = new Vector2(0, 0);
@@ -41,14 +41,25 @@ namespace UniMob.UI.Tests
         [Test]
         public void TryGetGlobalGeometry_TracksMountAndUnmount()
         {
-            var state = (ILayoutMetricsState) TestHarness.Mount(
-                new SizedBox { Width = 100, Height = 50, Child = new FixedSizeBox { Size = new Vector2(10, 10) } });
+            var state = TestHarness
+                .Mount(
+                    new SizedBox
+                    {
+                        Width = 100,
+                        Height = 50,
+                        Child = new FixedSizeBox { Size = new Vector2(10, 10) },
+                    }
+                )
+                .InnerViewState;
 
-            Assert.IsFalse(state.TryGetGlobalGeometry(out _), "an unmounted state reports no geometry");
+            Assert.IsFalse(
+                state.TryGetGlobalGeometry(out _),
+                "an unmounted state reports no geometry"
+            );
 
             var rt = MakeRect(new Vector2(100, 50));
             var view = new FakeView(rt);
-            ((IViewState) state).DidViewMount(view);
+            ((IViewState)state).DidViewMount(view);
 
             Assert.IsTrue(state.TryGetGlobalGeometry(out var geo));
             Assert.That(geo.Size.x, Is.EqualTo(100f).Within(0.01f));
@@ -63,25 +74,33 @@ namespace UniMob.UI.Tests
             Assert.That(geo.CanvasSpace.TopRight.x, Is.EqualTo(corners[2].x).Within(0.01f));
             Assert.That(geo.CanvasSpace.TopRight.y, Is.EqualTo(corners[2].y).Within(0.01f));
 
-            ((IViewState) state).DidViewUnmount(view);
-            Assert.IsFalse(state.TryGetGlobalGeometry(out _), "geometry is gone once the view unmounts");
+            ((IViewState)state).DidViewUnmount(view);
+            Assert.IsFalse(
+                state.TryGetGlobalGeometry(out _),
+                "geometry is gone once the view unmounts"
+            );
         }
 
         [Test]
         public void LocalSize_ReflectsLaidOutSize()
         {
-            var state = (ILayoutMetricsState) TestHarness.Mount(
-                new SizedBox { Width = 120, Height = 80, Child = new FixedSizeBox { Size = new Vector2(10, 10) } });
+            var state = TestHarness.Mount(
+                new SizedBox
+                {
+                    Width = 120,
+                    Height = 80,
+                    Child = new FixedSizeBox { Size = new Vector2(10, 10) },
+                }
+            );
 
-            // The root harness supplies no constraints (they default to zero), so set loose ones the
-            // SizedBox can size itself within.
-            ((IState) state).UpdateConstraints(LayoutConstraints.Loose(1000, 1000));
+            // The root harness supplies no constraints, so give the SizedBox loose ones to size within.
+            var size = TestHarness.Layout(state, LayoutConstraints.Loose(1000, 1000));
 
-            Assert.That(state.LocalSize.x, Is.EqualTo(120f).Within(0.01f));
-            Assert.That(state.LocalSize.y, Is.EqualTo(80f).Within(0.01f));
-            Assert.AreEqual(Vector2.zero, state.LocalRect.position);
-            Assert.That(state.LocalRect.width, Is.EqualTo(120f).Within(0.01f));
-            Assert.That(state.LocalRect.height, Is.EqualTo(80f).Within(0.01f));
+            // Local geometry is render-tree truth, read straight off the render object rather than
+            // through a geometry interface the state has to implement.
+            Assert.That(size.x, Is.EqualTo(120f).Within(0.01f));
+            Assert.That(size.y, Is.EqualTo(80f).Within(0.01f));
+            Assert.AreEqual(size, state.RenderObject.Size);
         }
 
         // Minimal IView carrying a real RectTransform, so we can drive DidViewMount without the full
@@ -95,7 +114,9 @@ namespace UniMob.UI.Tests
             public GameObject gameObject => _rectTransform.gameObject;
             public RectTransform rectTransform => _rectTransform;
             public bool IsDestroyed => _rectTransform == null;
+
             public void SetSource(IState source, bool link) { }
+
             public void ResetSource() { }
         }
     }
