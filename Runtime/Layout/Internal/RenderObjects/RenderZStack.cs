@@ -90,27 +90,26 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             float? x = pos.Left;
             float? y = pos.Top;
 
-            // The stack is the child's upper bound on any axis it does not size itself. Flutter puts
-            // infinity here, but it can afford to: this system's children include text and flex rows
-            // that TREAT an unbounded axis as an error rather than as "take your intrinsic size", so
-            // infinity turns an anchored overlay into a layout exception instead of a clip. The
-            // stack's own size is the space that actually exists, so it is the honest maximum.
-            var childConstraints = new LayoutConstraints(
-                pos.Width ?? 0,
-                pos.Height ?? 0,
-                pos.Width ?? Size.x,
-                pos.Height ?? Size.y
+            // An axis is tight where the child pins it -- an explicit extent, or both edges, which
+            // together state a width -- and unbounded where it does not. Leaving the unpinned axis
+            // unbounded is what lets a positioned child take its intrinsic size, so an overlay can be
+            // larger than the box it is anchored to; bounding it to the stack instead would silently
+            // clip exactly that case. A child that cannot size itself on an unbounded axis reports so
+            // (see RenderFlex), which names the fix: pin the axis on the Positioned.
+            var width =
+                pos.Left != null && pos.Right != null
+                    ? Size.x - pos.Left.Value - pos.Right.Value
+                    : pos.Width;
+
+            var height =
+                pos.Top != null && pos.Bottom != null
+                    ? Size.y - pos.Top.Value - pos.Bottom.Value
+                    : pos.Height;
+
+            var childConstraints = LayoutConstraints.TightFor(
+                width: width.HasValue ? Mathf.Max(0f, width.Value) : null,
+                height: height.HasValue ? Mathf.Max(0f, height.Value) : null
             );
-
-            if (pos.Left != null && pos.Right != null)
-            {
-                childConstraints = childConstraints.Tighten(width: Size.x - pos.Left - pos.Right);
-            }
-
-            if (pos.Top != null && pos.Bottom != null)
-            {
-                childConstraints = childConstraints.Tighten(height: Size.y - pos.Top - pos.Bottom);
-            }
 
             var childSize = LayoutChild(child, childConstraints);
 

@@ -3,8 +3,10 @@ using UnityEngine;
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     /// <summary>
-    ///     A pure C# object that handles all layout calculation for a LayoutWidget.
-    ///     It is decoupled from MonoBehaviour and the Unity rendering pipeline.
+    ///     Performs all layout calculation for a LayoutWidget, and owns the reactive state driving it:
+    ///     the constraints it was last given, and a memoized pass over them. Independent of
+    ///     MonoBehaviour and of Unity's rendering pipeline, but not of UniMob -- it holds atoms on a
+    ///     <see cref="Lifetime"/>, so it is neither stateless nor free to construct against a dead one.
     /// </summary>
     /// <remarks>
     ///     A render object owns its own layout: the constraints it was last given, and a memoized pass

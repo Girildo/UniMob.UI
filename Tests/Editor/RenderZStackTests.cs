@@ -101,19 +101,10 @@ namespace UniMob.UI.Tests
             );
             Assert.AreEqual(new Vector2(40, 5), render.ChildrenLayout[1].Position);
 
-            // Clamped to the stack rather than free at its requested 20x20: on an axis a positioned
-            // child does not size itself, the stack's size is its upper bound. Loose, not tight, so a
-            // smaller child still stays smaller.
-            //
-            // Flutter passes fully unbounded constraints here instead (BoxConstraints.tightFor with
-            // both dimensions null, since width is only pinned when left AND right are given), so the
-            // same child would keep its 20x20. The divergence is deliberate, but not because Flutter's
-            // children tolerate an unbounded axis -- a Flutter Column errors on one exactly as
-            // RenderFlex does here. It is the failure path that differs: Flutter reports the error and
-            // expects the Positioned to be constrained, while bounding to the stack lets an anchored
-            // overlay clip instead of erroring. The price is that a positioned child can never exceed
-            // its stack, so an overlay larger than the box it is anchored to is silently cut off.
-            Assert.AreEqual(new Vector2(10, 10), render.ChildrenLayout[1].Size);
+            // Left and Top pin neither axis, so the child is laid out unbounded and keeps its own
+            // size -- larger than the stack it sits in. An overlay is routinely bigger than the thing
+            // it is anchored to, so the stack's size is not a ceiling on it.
+            Assert.AreEqual(new Vector2(20, 20), render.ChildrenLayout[1].Size);
         }
 
         [Test]
@@ -138,6 +129,62 @@ namespace UniMob.UI.Tests
 
             // stack size is 100 (from the non-positioned child) => positioned width = 100 - 10 - 20 = 70.
             Assert.AreEqual(70f, render.ChildrenLayout[1].Size.x, 0.01f);
+        }
+
+        /// <summary>
+        ///     The shape PictureGallery's full-screen footer is built from: an edge-to-edge strip
+        ///     anchored to the bottom, wrapping content that aligns itself within it.
+        /// </summary>
+        /// <remarks>
+        ///     The two axes are asymmetric here and that is the whole point. Left and Right together
+        ///     state a width, so the strip spans the stack. Bottom alone states no height, so the
+        ///     strip takes its content's -- and an Align under an unbounded axis hugs its child rather
+        ///     than expanding to fill.
+        ///     <para>
+        ///         Bounding the unpinned axis to the stack instead is not a clip here, it is a
+        ///         misplacement: the Align would fill the stack's full height and centre its child
+        ///         vertically on screen, while <c>Bottom</c> asked for it near the bottom edge. The
+        ///         positioning arithmetic then compounds it, resolving the child's corner to a
+        ///         negative y. That was the shipped behaviour, and nothing failed on it.
+        ///     </para>
+        /// </remarks>
+        [Test]
+        public void PositionedChild_BottomWithBothSideEdges_HugsItsContentAndSitsAboveTheBottomEdge()
+        {
+            var children = new[]
+            {
+                // Gives the stack a 300x200 box for the strip to be measured against.
+                TestHarness.Mount(new FixedSizeBox { Size = new Vector2(300, 200) }),
+                TestHarness.Mount(
+                    new Positioned
+                    {
+                        Bottom = 24,
+                        Left = 24,
+                        Right = 24,
+                        Child = new Align
+                        {
+                            Alignment = Alignment.CenterRight,
+                            Child = new FixedSizeBox { Size = new Vector2(80, 40) },
+                        },
+                    }
+                ),
+            };
+
+            var render = Layout(children, LayoutConstraints.Loose(400, 400));
+
+            var strip = render.ChildrenLayout[1];
+
+            Assert.AreEqual(
+                new Vector2(252, 40),
+                strip.Size,
+                "Left and Right state a width (300 - 24 - 24), while Bottom alone leaves the height "
+                    + "to the content, so the strip is as tall as the 40pt box inside it."
+            );
+            Assert.AreEqual(
+                new Vector2(24, 136),
+                strip.Position,
+                "Bottom 24 measured from the stack's bottom edge: 200 - 40 - 24."
+            );
         }
 
         [Test]
