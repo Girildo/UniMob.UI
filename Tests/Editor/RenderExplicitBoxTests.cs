@@ -13,7 +13,7 @@ namespace UniMob.UI.Tests
         {
             var box = new RenderExplicitBox(LayoutConstraints.Loose(50, 30), AxisSize.Min);
 
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            box.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(0, 0), box.Size);
         }
@@ -23,7 +23,7 @@ namespace UniMob.UI.Tests
         {
             var box = new RenderExplicitBox(LayoutConstraints.Tight(50, 30), AxisSize.Max);
 
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            box.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(50, 30), box.Size);
         }

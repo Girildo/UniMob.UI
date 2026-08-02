@@ -21,7 +21,7 @@ namespace UniMob.UI.Tests
             var state = new FakePositionedBoxState { Child = child };
 
             var box = new RenderPositionedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Unbounded());
+            box.Layout(LayoutConstraints.Unbounded());
 
             Assert.AreEqual(new Vector2(30, 40), box.Size);
         }
@@ -33,7 +33,7 @@ namespace UniMob.UI.Tests
             var state = new FakePositionedBoxState { Child = child };
 
             var box = new RenderPositionedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Tight(200, 150));
+            box.Layout(LayoutConstraints.Tight(200, 150));
 
             Assert.AreEqual(new Vector2(200, 150), box.Size);
         }
@@ -45,7 +45,7 @@ namespace UniMob.UI.Tests
             var state = new FakePositionedBoxState { Child = child, WidthFactor = 2f };
 
             var box = new RenderPositionedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            box.Layout(LayoutConstraints.Loose(1000, 1000));
 
             // Width is shrink-wrapped via the factor (20 * 2); height has no factor and the incoming
             // constraints are bounded, so it expands to fill instead of shrink-wrapping.
@@ -59,7 +59,7 @@ namespace UniMob.UI.Tests
             var state = new FakePositionedBoxState { Child = child, Alignment = Alignment.BottomRight };
 
             var box = new RenderPositionedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Tight(100, 100));
+            box.Layout(LayoutConstraints.Tight(100, 100));
 
             Assert.AreEqual(new Vector2(80, 80), box.ChildPosition);
         }
@@ -70,7 +70,7 @@ namespace UniMob.UI.Tests
             var state = new FakePositionedBoxState { Child = null, WidthFactor = 2f };
 
             var box = new RenderPositionedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            box.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(0f, box.Size.x);
             Assert.AreEqual(Vector2.zero, box.ChildPosition);

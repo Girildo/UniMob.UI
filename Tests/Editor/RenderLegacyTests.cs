@@ -20,7 +20,9 @@ namespace UniMob.UI.Tests
             public override Lifetime StateLifetime => FakeLifetime ?? Lifetime.Eternal;
 
             public WidgetViewReference View => throw new System.NotImplementedException();
+
             public void DidViewMount(IView view) => throw new System.NotImplementedException();
+
             public void DidViewUnmount(IView view) => throw new System.NotImplementedException();
         }
 
@@ -30,10 +32,10 @@ namespace UniMob.UI.Tests
             var state = new FakeLegacyState { FakeSize = WidgetSize.Fixed(50, 30) };
             var legacy = new RenderLegacy(state);
 
-            legacy.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            legacy.Layout(LayoutConstraints.Loose(1000, 1000));
             Assert.AreEqual(new Vector2(50, 30), legacy.Size);
 
-            legacy.PerformLayoutImmediate(new LayoutConstraints(0, 0, 10, 10));
+            legacy.Layout(new LayoutConstraints(0, 0, 10, 10));
             Assert.AreEqual(new Vector2(10, 10), legacy.Size);
         }
 
@@ -51,7 +53,6 @@ namespace UniMob.UI.Tests
         public void DisposedLifetime_ShortCircuitsToZero()
         {
             var controller = new LifetimeController();
-            controller.Dispose();
 
             var state = new FakeLegacyState
             {
@@ -60,7 +61,11 @@ namespace UniMob.UI.Tests
             };
             var legacy = new RenderLegacy(state);
 
-            legacy.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            // Disposed after construction, not before: a render object registers atoms on its lifetime,
+            // and is only ever built from InflateWidget on a freshly mounted state.
+            controller.Dispose();
+
+            legacy.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(Vector2.zero, legacy.Size);
         }

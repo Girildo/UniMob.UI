@@ -23,7 +23,7 @@ namespace UniMob.UI.Tests
         {
             var state = new FakeZStackState { Children = children, Alignment = alignment ?? Alignment.Center };
             var render = new RenderZStack(state);
-            render.PerformLayoutImmediate(constraints);
+            render.Layout(constraints);
             return render;
         }
 

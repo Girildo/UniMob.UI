@@ -32,7 +32,7 @@ namespace UniMob.UI.Tests
         public void NullTexture_CollapsesToZero()
         {
             var render = Build(ImageFit.Contain, texture: null);
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             Assert.AreEqual(Vector2.zero, render.Size);
             Assert.AreEqual(0f, render.GetIntrinsicWidth(100f));
@@ -43,7 +43,7 @@ namespace UniMob.UI.Tests
         public void TightConstraints_BypassesFitMode_SizesToConstraints()
         {
             var render = Build(ImageFit.Contain, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Tight(30, 30));
+            render.Layout(LayoutConstraints.Tight(30, 30));
 
             Assert.AreEqual(new Vector2(30, 30), render.Size);
         }
@@ -52,7 +52,7 @@ namespace UniMob.UI.Tests
         public void Fill_StretchesToFillAvailableSpace()
         {
             var render = Build(ImageFit.Fill, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             Assert.AreEqual(new Vector2(200, 200), render.Size);
         }
@@ -63,7 +63,7 @@ namespace UniMob.UI.Tests
             // Documents current behavior: Fill and Cover share the same switch case, so Cover also
             // stretches to fill exactly rather than cropping while preserving aspect ratio.
             var render = Build(ImageFit.Cover, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             Assert.AreEqual(new Vector2(200, 200), render.Size);
         }
@@ -72,7 +72,7 @@ namespace UniMob.UI.Tests
         public void Contain_ScalesUniformly_ToFitInsideConstraints()
         {
             var render = Build(ImageFit.Contain, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             // scale = min(200/100, 200/50) = 2 => (100,50) * 2
             Assert.AreEqual(new Vector2(200, 100), render.Size);
@@ -82,7 +82,7 @@ namespace UniMob.UI.Tests
         public void ScaleDown_DoesNotUpscale_WhenConstraintsAreLarger()
         {
             var render = Build(ImageFit.ScaleDown, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             Assert.AreEqual(new Vector2(100, 50), render.Size);
         }
@@ -91,7 +91,7 @@ namespace UniMob.UI.Tests
         public void ScaleDown_DoesScaleDown_WhenConstraintsAreSmaller()
         {
             var render = Build(ImageFit.ScaleDown, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(40, 40));
+            render.Layout(LayoutConstraints.Loose(40, 40));
 
             // scale = min(40/100, 40/50) = 0.4 => (100,50) * 0.4
             Assert.AreEqual(new Vector2(40, 20), render.Size);
@@ -101,7 +101,7 @@ namespace UniMob.UI.Tests
         public void FitWidth_MatchesMaxWidth_DerivesHeightFromAspectRatio()
         {
             var render = Build(ImageFit.FitWidth, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             Assert.AreEqual(new Vector2(200, 100), render.Size);
         }
@@ -110,7 +110,7 @@ namespace UniMob.UI.Tests
         public void None_UsesIntrinsicTextureSize()
         {
             var render = Build(ImageFit.None, MakeTexture());
-            render.PerformLayoutImmediate(LayoutConstraints.Loose(200, 200));
+            render.Layout(LayoutConstraints.Loose(200, 200));
 
             Assert.AreEqual(new Vector2(100, 50), render.Size);
         }

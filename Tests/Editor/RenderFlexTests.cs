@@ -33,7 +33,7 @@ namespace UniMob.UI.Tests
             };
 
             var flex = new RenderFlex(state, Axis.Horizontal);
-            flex.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            flex.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(10 + 30 + 5 + 4 * 2, 25), flex.Size);
             Assert.AreEqual(0f, flex.ChildrenLayout[0].Position.x);
@@ -51,7 +51,7 @@ namespace UniMob.UI.Tests
             };
 
             var flex = new RenderFlex(state, Axis.Horizontal);
-            flex.PerformLayoutImmediate(LayoutConstraints.Tight(100, 10));
+            flex.Layout(LayoutConstraints.Tight(100, 10));
 
             // free space = 100 - 20 = 80, centered => 40 leading offset
             Assert.AreEqual(40f, flex.ChildrenLayout[0].Position.x, 0.01f);
@@ -68,7 +68,7 @@ namespace UniMob.UI.Tests
             };
 
             var flex = new RenderFlex(state, Axis.Horizontal);
-            flex.PerformLayoutImmediate(LayoutConstraints.Tight(100, 10));
+            flex.Layout(LayoutConstraints.Tight(100, 10));
 
             // free space = 100 - 30 = 70, split across 2 gaps => 35 each
             Assert.AreEqual(0f, flex.ChildrenLayout[0].Position.x, 0.01f);
@@ -86,7 +86,7 @@ namespace UniMob.UI.Tests
             };
 
             var flex = new RenderFlex(state, Axis.Horizontal);
-            flex.PerformLayoutImmediate(LayoutConstraints.Loose(100, 40));
+            flex.Layout(LayoutConstraints.Loose(100, 40));
 
             Assert.AreEqual(40f, flex.ChildrenLayout[0].Size.y, 0.01f);
         }
@@ -112,7 +112,7 @@ namespace UniMob.UI.Tests
             };
 
             var flex = new RenderFlex(state, Axis.Horizontal);
-            flex.PerformLayoutImmediate(LayoutConstraints.Tight(400, 50));
+            flex.Layout(LayoutConstraints.Tight(400, 50));
 
             // free space = 400 - 100 = 300, split 1:2 => 100 and 200
             Assert.AreEqual(100f, flex.ChildrenLayout[1].Size.x, 0.01f);
@@ -131,7 +131,7 @@ namespace UniMob.UI.Tests
 
             LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("overflowed"));
 
-            Assert.DoesNotThrow(() => flex.PerformLayoutImmediate(LayoutConstraints.Tight(100, 10)));
+            Assert.DoesNotThrow(() => flex.Layout(LayoutConstraints.Tight(100, 10)));
         }
 
         [Test]

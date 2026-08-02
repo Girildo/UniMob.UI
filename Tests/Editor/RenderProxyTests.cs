@@ -14,7 +14,7 @@ namespace UniMob.UI.Tests
             var state = new FakeSingleChildLayoutState { Child = child };
 
             var proxy = new RenderProxy(state);
-            proxy.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100));
+            proxy.Layout(LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(new Vector2(30, 40), proxy.Size);
             Assert.AreEqual(Vector2.zero, proxy.ChildPosition);
@@ -26,7 +26,7 @@ namespace UniMob.UI.Tests
             var state = new FakeSingleChildLayoutState { Child = null };
 
             var proxy = new RenderProxy(state);
-            proxy.PerformLayoutImmediate(new LayoutConstraints(10, 20, 100, 100));
+            proxy.Layout(new LayoutConstraints(10, 20, 100, 100));
 
             Assert.AreEqual(new Vector2(10, 20), proxy.Size);
         }

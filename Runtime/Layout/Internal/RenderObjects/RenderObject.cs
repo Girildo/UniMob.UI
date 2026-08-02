@@ -6,19 +6,52 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     ///     A pure C# object that handles all layout calculation for a LayoutWidget.
     ///     It is decoupled from MonoBehaviour and the Unity rendering pipeline.
     /// </summary>
+    /// <remarks>
+    ///     A render object owns its own layout: the constraints it was last given, and a memoized pass
+    ///     over <see cref="PerformSizing"/> plus <see cref="PerformPositioning"/>. Because the memo
+    ///     lives here rather than on whatever state happens to reach this object, a render object is
+    ///     laid out once per set of constraints no matter how many states can see it.
+    ///     <para>
+    ///         Layout is a push, and is named as one. A child's constraints are an output of the
+    ///         parent's algorithm -- <c>RenderFlex</c> has to measure its inflexible children before it
+    ///         can constrain the flexible ones -- so there is no cheap per-child constraints getter that
+    ///         could be pulled instead. The atoms memoize the result of that push; they do not reverse
+    ///         its direction.
+    ///     </para>
+    /// </remarks>
     public abstract class RenderObject
     {
+        private readonly MutableAtom<LayoutConstraints?> _constraints = Atom.Value(
+            default(LayoutConstraints?)
+        );
+
+        private readonly Atom<(Vector2 size, int version)> _trackedLayout;
+        private readonly Atom<Vector2> _trackedSize;
+
+        private int _layoutVersion = int.MinValue;
+
         protected Lifetime Lifetime { get; }
 
         protected RenderObject(Lifetime lifetime)
         {
             this.Lifetime = lifetime;
+
+            _trackedLayout = Atom.Computed(lifetime, PerformLayout);
+            _trackedSize = Atom.Computed(lifetime, () => _trackedLayout.Get().size);
         }
 
-        public Vector2 Size { get; private set; } // The final size after layout
+        /// <summary>The final size after layout.</summary>
+        public Vector2 Size { get; private set; }
 
         /// <summary>
-        ///     Performs the layout calculation for this widget and its children.
+        ///     The constraints this render object was last laid out against, or <c>null</c> if it has
+        ///     never been laid out. Read-only: constraints are written only by <see cref="Layout"/>.
+        /// </summary>
+        public LayoutConstraints? Constraints => _constraints.Value;
+
+        /// <summary>
+        ///     Lays this render object out under <paramref name="constraints"/> and returns the
+        ///     resulting size.
         /// </summary>
         /// <remarks>
         ///     <list type="bullet">
@@ -34,16 +67,84 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///             relative to the parent's top-left corner
         ///         </item>
         ///     </list>
+        ///     <para>
+        ///         Repeating the call with unchanged constraints is free: the write is dropped by the
+        ///         atom's equality check and the memoized size is returned without re-running the pass.
+        ///     </para>
         /// </remarks>
-        public void PerformLayoutImmediate(LayoutConstraints constraints)
+        public Vector2 Layout(LayoutConstraints constraints)
         {
-            if(this.Lifetime.IsDisposed)
-                return;
+            if (this.Lifetime.IsDisposed)
+                return Vector2.zero;
+
+            // The write is a mutation performed from inside whatever computation is laying this object
+            // out, so it must not register as a dependency of that computation, nor be reported as an
+            // invalidation from within a tracked scope.
+            using (Atom.NoWatch)
+            {
+                _constraints.Value = constraints;
+            }
+
+            return _trackedSize.Get();
+        }
+
+        /// <summary>
+        ///     <b>[Atom]</b> Observes this object's size, invalidating subscribers only when the size
+        ///     actually changes.
+        /// </summary>
+        /// <remarks>
+        ///     Use this when measuring something purely to learn how big it is. It decouples the caller
+        ///     from a subtree that merely repositions its own contents without changing its own size,
+        ///     which would otherwise cascade a relayout up the whole ancestor chain on something as
+        ///     routine as a nested list scrolling.
+        /// </remarks>
+        public Vector2 WatchedSize()
+        {
+            if (this.Lifetime.IsDisposed)
+                return Vector2.zero;
+            return _trackedSize.Get();
+        }
+
+        /// <summary>
+        ///     <b>[Atom]</b> Observes layout activity, invalidating subscribers on <i>every</i> pass
+        ///     even when the size is unchanged.
+        /// </summary>
+        /// <remarks>
+        ///     This is what views need: they write both size and position, so a pass that only moved
+        ///     children still has to re-run them. Prefer <see cref="WatchedSize"/> anywhere the size is
+        ///     the only thing that matters.
+        /// </remarks>
+        public Vector2 WatchLayout()
+        {
+            if (this.Lifetime.IsDisposed)
+                return Vector2.zero;
+            return _trackedLayout.Get().size;
+        }
+
+        private (Vector2 size, int version) PerformLayout()
+        {
+            if (this.Lifetime.IsDisposed)
+            {
+                return (Size, _layoutVersion);
+            }
+
+            var constraints = _constraints.Value;
+            if (!constraints.HasValue)
+            {
+                // Never laid out. Nothing can be computed yet, and inventing a value here would be
+                // indistinguishable from having been laid out at that size.
+                return (Size, _layoutVersion);
+            }
+
             // Phase 1: Perform this widget's own size.
-            Size = PerformSizing(constraints);
+            Size = PerformSizing(constraints.Value);
 
             // Phase 2: Perform layout for children.
             PerformPositioning();
+
+            // A pass ran, and subscribers to WatchLayout must re-run even if the size is unchanged,
+            // so the version always moves.
+            return (Size, _layoutVersion = (_layoutVersion + 1) % int.MaxValue);
         }
 
         /// <summary>
@@ -88,11 +189,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <returns>The final size of the child after layout.</returns>
         protected Vector2 LayoutChild(IState child, LayoutConstraints constraints)
         {
-            if(this.Lifetime.IsDisposed)
+            if (this.Lifetime.IsDisposed)
                 return Vector2.zero;
             if (child is null)
                 return Vector2.zero;
-            
 
             child.UpdateConstraints(constraints);
 
@@ -103,7 +203,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             return childSize;
         }
-
 
         /// <summary>
         ///     Calculates the widget's preferred width given a specific height.

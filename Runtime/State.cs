@@ -127,7 +127,7 @@ namespace UniMob.UI
                     return (Vector2.zero, _renderVersion);
 
                 // PerformLayout() implicitly uses many [Atom] so trackedLayoutPerformer will be auto recomputed.
-                RenderObject.PerformLayoutImmediate(Constraints);
+                RenderObject.Layout(Constraints);
 
                 // Also recompute layout on Constraints modifications.
                 _ = Constraints;

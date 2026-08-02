@@ -31,7 +31,7 @@ namespace UniMob.UI.Tests
             };
 
             var wrap = new RenderWrap(state);
-            wrap.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 1000));
+            wrap.Layout(new LayoutConstraints(0, 0, 100, 1000));
 
             // First two fit in one row (80 <= 100); the third overflows into a second row.
             Assert.AreEqual(new Vector2(80, 40), wrap.Size);
@@ -52,7 +52,7 @@ namespace UniMob.UI.Tests
             };
 
             var wrap = new RenderWrap(state);
-            wrap.PerformLayoutImmediate(LayoutConstraints.Tight(200, 100));
+            wrap.Layout(LayoutConstraints.Tight(200, 100));
 
             // Total run cross size is 30 (3 runs x 10), leaving 70 free to split across 2 gaps (35 each).
             Assert.AreEqual(0f, wrap.ChildrenLayout[0].Position.y, 0.01f);
@@ -66,7 +66,7 @@ namespace UniMob.UI.Tests
             var state = new FakeWrapState { Children = new[] { Box(30, 10), Box(30, 10) }, Spacing = 5 };
 
             var wrap = new RenderWrap(state);
-            wrap.PerformLayoutImmediate(new LayoutConstraints(0, 0, 1000, 1000));
+            wrap.Layout(new LayoutConstraints(0, 0, 1000, 1000));
 
             Assert.AreEqual(65f, wrap.Size.x, 0.01f);
             Assert.AreEqual(35f, wrap.ChildrenLayout[1].Position.x, 0.01f);
@@ -82,7 +82,7 @@ namespace UniMob.UI.Tests
             };
 
             var wrap = new RenderWrap(state);
-            wrap.PerformLayoutImmediate(new LayoutConstraints(0, 0, 1000, 1000));
+            wrap.Layout(new LayoutConstraints(0, 0, 1000, 1000));
 
             Assert.AreEqual(30f, wrap.ChildrenLayout[1].Size.y, 0.01f);
         }

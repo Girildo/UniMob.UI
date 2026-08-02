@@ -19,7 +19,7 @@ namespace UniMob.UI.Tests
             var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Tight(50, 50), Child = child };
 
             var box = new RenderConstrainedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            box.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(50, 50), box.Size);
         }
@@ -31,7 +31,7 @@ namespace UniMob.UI.Tests
             var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Tight(200, 200), Child = child };
 
             var box = new RenderConstrainedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100));
+            box.Layout(LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(new Vector2(100, 100), box.Size);
         }
@@ -46,7 +46,7 @@ namespace UniMob.UI.Tests
             };
 
             var box = new RenderConstrainedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            box.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(20, 30), box.Size);
         }
@@ -57,7 +57,7 @@ namespace UniMob.UI.Tests
             var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Expanded(), Child = null };
 
             var box = new RenderConstrainedBox(state);
-            box.PerformLayoutImmediate(LayoutConstraints.Unbounded());
+            box.Layout(LayoutConstraints.Unbounded());
 
             Assert.AreEqual(Vector2.zero, box.Size);
         }

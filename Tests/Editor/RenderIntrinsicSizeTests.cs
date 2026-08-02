@@ -22,7 +22,7 @@ namespace UniMob.UI.Tests
             var state = new FakeIntrinsicSizeState { Axis = Axis.Horizontal, Child = child };
 
             var render = new RenderIntrinsicSize(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 1000, 77));
+            render.Layout(new LayoutConstraints(0, 0, 1000, 77));
 
             // Width got tightened to the child's intrinsic width (measured at the bounded height, 77);
             // height was left loose, so the child collapsed to its own minimum (0).
@@ -41,7 +41,7 @@ namespace UniMob.UI.Tests
             var state = new FakeIntrinsicSizeState { Axis = Axis.Vertical, Child = child };
 
             var render = new RenderIntrinsicSize(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 77, 1000));
+            render.Layout(new LayoutConstraints(0, 0, 77, 1000));
 
             Assert.AreEqual(new Vector2(0, 77), render.Size);
         }

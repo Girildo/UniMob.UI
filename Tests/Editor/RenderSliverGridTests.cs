@@ -19,7 +19,17 @@ namespace UniMob.UI.Tests
             public IState[] AllChildren { get; set; } = Array.Empty<IState>();
             public int? ItemCount { get; set; }
             public Axis Axis { get; set; } = Axis.Vertical;
-            public float ScrollPixelOffset { get; set; }
+
+            // Atom-backed, matching ScrollGrid's [Atom] ScrollPixelOffset. A plain field would be read
+            // during sizing without registering as a dependency, so a scroll would not invalidate the
+            // memoized layout and the fixture would silently stop converging.
+            private readonly MutableAtom<float> _scrollPixelOffset = Atom.Value(0f);
+
+            public float ScrollPixelOffset
+            {
+                get => _scrollPixelOffset.Value;
+                set => _scrollPixelOffset.Value = value;
+            }
             public float? VirtualizationCacheExtent { get; set; } = 0f;
             public SliverGridDelegate GridDelegate { get; set; }
             public RectPadding Padding { get; set; }
@@ -36,7 +46,8 @@ namespace UniMob.UI.Tests
             public IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive)
             {
                 LastRequestedWindow = (startIndexInclusive, endIndexExclusive);
-                return BuildWindow?.Invoke(startIndexInclusive, endIndexExclusive) ?? Array.Empty<IState>();
+                return BuildWindow?.Invoke(startIndexInclusive, endIndexExclusive)
+                    ?? Array.Empty<IState>();
             }
         }
 
@@ -65,12 +76,16 @@ namespace UniMob.UI.Tests
             var state = new FakeSliverGridState
             {
                 // 2 columns, 50px tall cells, 10px between rows.
-                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(2, mainAxisSpacing: 10f, mainAxisExtent: 50f),
+                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(
+                    2,
+                    mainAxisSpacing: 10f,
+                    mainAxisExtent: 50f
+                ),
                 AllChildren = Enumerable.Range(0, 5).Select(_ => VCell(0)).ToArray(),
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 200)); // cellCross = 100
+            render.Layout(new LayoutConstraints(0, 0, 200, 200)); // cellCross = 100
 
             CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4 }, VisibleIndices(state));
 
@@ -91,13 +106,17 @@ namespace UniMob.UI.Tests
         {
             var state = new FakeSliverGridState
             {
-                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(2, mainAxisSpacing: 10f, mainAxisExtent: 50f),
+                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(
+                    2,
+                    mainAxisSpacing: 10f,
+                    mainAxisExtent: 50f
+                ),
                 AllChildren = Enumerable.Range(0, 5).Select(_ => VCell(0)).ToArray(),
                 ScrollPixelOffset = 65,
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 50)); // viewport main = [65, 115)
+            render.Layout(new LayoutConstraints(0, 0, 200, 50)); // viewport main = [65, 115)
 
             // row 0 @ [0,50), row 1 @ [60,110), row 2 @ [120,170) -> only row 1 (items 2,3) intersects.
             CollectionAssert.AreEqual(new[] { 2, 3 }, VisibleIndices(state));
@@ -109,12 +128,15 @@ namespace UniMob.UI.Tests
             var state = new FakeSliverGridState
             {
                 // 250 / 100 -> 3 columns.
-                GridDelegate = new SliverGridDelegateWithMaxCrossAxisExtent(100f, mainAxisExtent: 50f),
+                GridDelegate = new SliverGridDelegateWithMaxCrossAxisExtent(
+                    100f,
+                    mainAxisExtent: 50f
+                ),
                 AllChildren = Enumerable.Range(0, 4).Select(_ => VCell(0)).ToArray(),
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 250, 400));
+            render.Layout(new LayoutConstraints(0, 0, 250, 400));
 
             // With 3 columns, items 0..2 share row 0 (main 0); item 3 wraps to row 1 (main > 0).
             Assert.AreEqual(0f, PositionOf(state, 0).y, 0.01f);
@@ -129,17 +151,21 @@ namespace UniMob.UI.Tests
             var state = new FakeSliverGridState
             {
                 Axis = Axis.Horizontal,
-                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(2, mainAxisSpacing: 10f, mainAxisExtent: 50f),
+                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(
+                    2,
+                    mainAxisSpacing: 10f,
+                    mainAxisExtent: 50f
+                ),
                 AllChildren = Enumerable.Range(0, 4).Select(_ => HCell(0)).ToArray(),
             };
 
             var render = new RenderSliverGrid(state);
             // Horizontal grid: width is the main axis, height is the cross axis -> cellCross = 100.
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 200));
+            render.Layout(new LayoutConstraints(0, 0, 200, 200));
 
             Assert.AreEqual(new Vector2(0, 0), PositionOf(state, 0));
             Assert.AreEqual(new Vector2(0, 100), PositionOf(state, 1)); // second column stacks along y
-            Assert.AreEqual(new Vector2(60, 0), PositionOf(state, 2));  // second row advances along x
+            Assert.AreEqual(new Vector2(60, 0), PositionOf(state, 2)); // second row advances along x
             Assert.AreEqual(new Vector2(60, 100), PositionOf(state, 3));
 
             Assert.AreEqual(new Vector2(50, 100), SizeOf(state, 0)); // (mainExtent, cellCross)
@@ -153,15 +179,19 @@ namespace UniMob.UI.Tests
         {
             var state = new FakeSliverGridState
             {
-                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(2, mainAxisExtent: 50f),
+                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(
+                    2,
+                    mainAxisExtent: 50f
+                ),
                 ItemCount = 100,
                 ScrollPixelOffset = 120,
                 VirtualizationCacheExtent = 0,
-                BuildWindow = (start, end) => Enumerable.Range(start, end - start).Select(_ => VCell(0)).ToArray(),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => VCell(0)).ToArray(),
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 200)); // viewport main = [120, 320)
+            render.Layout(new LayoutConstraints(0, 0, 200, 200)); // viewport main = [120, 320)
 
             // rowStride = 50; startRow = floor(120/50) = 2; endRow = ceil(320/50) = 7.
             // 2 columns -> item window [4, 14).
@@ -185,13 +215,13 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 50));
+            render.Layout(new LayoutConstraints(0, 0, 200, 50));
 
             Assert.AreEqual(new Vector2(0, 0), PositionOf(state, 0));
             Assert.AreEqual(new Vector2(100, 0), PositionOf(state, 1));
-            Assert.AreEqual(new Vector2(0, 20), PositionOf(state, 2));  // row 1 starts after row 0's height (20)
-            Assert.AreEqual(new Vector2(0, 60), PositionOf(state, 4));  // row 2 starts after 20 + 40
-            Assert.AreEqual(new Vector2(100, 40), SizeOf(state, 3));    // cell keeps its own measured height (40)
+            Assert.AreEqual(new Vector2(0, 20), PositionOf(state, 2)); // row 1 starts after row 0's height (20)
+            Assert.AreEqual(new Vector2(0, 60), PositionOf(state, 4)); // row 2 starts after 20 + 40
+            Assert.AreEqual(new Vector2(100, 40), SizeOf(state, 3)); // cell keeps its own measured height (40)
 
             // rows: 20 + 40 + 60 = 120.
             Assert.AreEqual(120f, render.TotalContentSize(), 0.01f);
@@ -218,23 +248,34 @@ namespace UniMob.UI.Tests
             var viewport = new LayoutConstraints(0, 0, 200, 200);
 
             state.ScrollPixelOffset = 0f;
-            render.PerformLayoutImmediate(viewport);
+            render.Layout(viewport);
 
             for (var pass = 0; pass < 80; pass++)
             {
                 state.ScrollPixelOffset = Mathf.Max(0f, render.TotalContentSize() - 200f);
-                render.PerformLayoutImmediate(viewport);
+                render.Layout(viewport);
             }
 
             var visible = state.LastVisibleChildren;
-            Assert.IsNotEmpty(visible, "the bottom of the grid must have visible cells once the estimate settles");
+            Assert.IsNotEmpty(
+                visible,
+                "the bottom of the grid must have visible cells once the estimate settles"
+            );
 
             var last = visible[visible.Count - 1];
-            Assert.AreEqual(49, last.ChildIndex, "the final item must be in the window when scrolled to the bottom");
+            Assert.AreEqual(
+                49,
+                last.ChildIndex,
+                "the final item must be in the window when scrolled to the bottom"
+            );
 
             var trailingEdge = last.Layout.Position.y + last.Layout.Size.y;
-            Assert.AreEqual(render.TotalContentSize(), trailingEdge, 1f,
-                "the final row's trailing edge must coincide with the content size the view is sized to");
+            Assert.AreEqual(
+                render.TotalContentSize(),
+                trailingEdge,
+                1f,
+                "the final row's trailing edge must coincide with the content size the view is sized to"
+            );
         }
 
         // --- Scroll-to ---
@@ -244,16 +285,27 @@ namespace UniMob.UI.Tests
         {
             var state = new FakeSliverGridState
             {
-                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(2, mainAxisExtent: 50f),
+                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(
+                    2,
+                    mainAxisExtent: 50f
+                ),
                 AllChildren = Enumerable.Range(0, 10).Select(_ => VCell(0)).ToArray(),
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 100)); // viewport main = 100
+            render.Layout(new LayoutConstraints(0, 0, 200, 100)); // viewport main = 100
 
             // item 4 -> row 2 -> leading edge 100. content = 5 rows * 50 = 250, scrollable = 150.
-            Assert.AreEqual(100f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Start), 0.01f);
-            Assert.AreEqual(75f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Center), 0.01f);
+            Assert.AreEqual(
+                100f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                75f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.Center),
+                0.01f
+            );
             Assert.AreEqual(50f, render.CalculateScrollPixelOffset(4, ScrollToPosition.End), 0.01f);
         }
 
@@ -272,12 +324,20 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverGrid(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 200, 40)); // viewport main = 40
+            render.Layout(new LayoutConstraints(0, 0, 200, 40)); // viewport main = 40
 
             // row 2 (items 4,5) leading edge = 20 + 40 = 60; row 2 height = 60. content = 120, scrollable = 80.
-            Assert.AreEqual(60f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Start), 0.01f);
-            Assert.AreEqual(70f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Center), 0.01f); // 60 - (40-60)/2 = 70
-            Assert.AreEqual(80f, render.CalculateScrollPixelOffset(4, ScrollToPosition.End), 0.01f);     // 60 - (40-60) = 80
+            Assert.AreEqual(
+                60f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                70f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.Center),
+                0.01f
+            ); // 60 - (40-60)/2 = 70
+            Assert.AreEqual(80f, render.CalculateScrollPixelOffset(4, ScrollToPosition.End), 0.01f); // 60 - (40-60) = 80
         }
     }
 }

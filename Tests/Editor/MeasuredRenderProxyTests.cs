@@ -17,8 +17,8 @@ namespace UniMob.UI.Tests
 
             var proxy = new MeasuredRenderProxy(state, reported.Add);
 
-            proxy.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100));
-            proxy.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100)); // same resolved size again
+            proxy.Layout(LayoutConstraints.Loose(100, 100));
+            proxy.Layout(LayoutConstraints.Loose(100, 100)); // same resolved size again
 
             CollectionAssert.AreEqual(new[] { new Vector2(30, 40) }, reported);
         }
@@ -32,9 +32,9 @@ namespace UniMob.UI.Tests
 
             var proxy = new MeasuredRenderProxy(state, reported.Add);
 
-            proxy.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100));
+            proxy.Layout(LayoutConstraints.Loose(100, 100));
             // Tighten the box below the child's natural size so the resolved size actually shrinks.
-            proxy.PerformLayoutImmediate(new LayoutConstraints(0, 0, 10, 10));
+            proxy.Layout(new LayoutConstraints(0, 0, 10, 10));
 
             CollectionAssert.AreEqual(new[] { new Vector2(30, 40), new Vector2(10, 10) }, reported);
         }

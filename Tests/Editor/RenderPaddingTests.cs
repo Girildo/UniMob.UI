@@ -19,7 +19,7 @@ namespace UniMob.UI.Tests
             var state = new FakePaddingState { Padding = RectPadding.All(10), Child = child };
 
             var padding = new RenderPadding(state);
-            padding.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            padding.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(50, 60), padding.Size);
             Assert.AreEqual(new Vector2(10, 10), padding.ChildPosition);
@@ -31,7 +31,7 @@ namespace UniMob.UI.Tests
             var state = new FakePaddingState { Padding = RectPadding.All(15), Child = null };
 
             var padding = new RenderPadding(state);
-            padding.PerformLayoutImmediate(LayoutConstraints.Loose(1000, 1000));
+            padding.Layout(LayoutConstraints.Loose(1000, 1000));
 
             Assert.AreEqual(new Vector2(30, 30), padding.Size);
         }

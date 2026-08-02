@@ -18,9 +18,17 @@ namespace UniMob.UI.Tests
         // is needed to mount a widget tree purely for layout testing.
         private static readonly BuildContext Root = new BuildContext(null, null);
 
+        // Atom.NoWatch mirrors StateCollectionHolder.ComputeStates: reconciling a widget into a state
+        // is a mutation, not a dependency, so it must not register against whatever computation happens
+        // to be running. Load-bearing when a test mounts children from inside a sizing pass, as the
+        // virtualized sliver fixtures do -- sizing now runs inside a tracked scope, and StateUtilities
+        // asserts it is never reconciling within one.
         public static State Mount(Widget widget)
         {
-            return StateUtilities.UpdateChild(Root, null, widget);
+            using (Atom.NoWatch)
+            {
+                return StateUtilities.UpdateChild(Root, null, widget);
+            }
         }
 
         // State.Update(Widget) is internal, so tests can't call it directly even on a State subclass
@@ -30,12 +38,15 @@ namespace UniMob.UI.Tests
         // that path (see StateUtilities.UpdateChild), so reusing Root here is safe.
         public static State Update(State existing, Widget newWidget)
         {
-            return StateUtilities.UpdateChild(Root, existing, newWidget);
+            using (Atom.NoWatch)
+            {
+                return StateUtilities.UpdateChild(Root, existing, newWidget);
+            }
         }
 
         public static Vector2 Layout(State state, LayoutConstraints constraints)
         {
-            state.RenderObject.PerformLayoutImmediate(constraints);
+            state.RenderObject.Layout(constraints);
             return state.RenderObject.Size;
         }
 

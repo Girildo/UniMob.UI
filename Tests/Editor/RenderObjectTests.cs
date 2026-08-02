@@ -15,9 +15,8 @@ namespace UniMob.UI.Tests
             public int SizingCalls;
             public int PositioningCalls;
 
-            public CountingRenderObject(Lifetime lifetime) : base(lifetime)
-            {
-            }
+            public CountingRenderObject(Lifetime lifetime)
+                : base(lifetime) { }
 
             protected override Vector2 PerformSizing(LayoutConstraints constraints)
             {
@@ -26,18 +25,24 @@ namespace UniMob.UI.Tests
             }
 
             protected override void PerformPositioning() => PositioningCalls++;
+
             protected override float ComputeIntrinsicWidth(float height) => 0f;
+
             protected override float ComputeIntrinsicHeight(float width) => 0f;
         }
 
+        // A render object owns atoms registered on its lifetime, so it can only be built while that
+        // lifetime is alive -- which is also the only way it happens, since CreateRenderObject runs
+        // from InflateWidget on a freshly mounted state. The case worth covering is therefore death
+        // *after* construction, not construction against something already dead.
         [Test]
-        public void PerformLayoutImmediate_SkipsSizingAndPositioning_WhenLifetimeIsDisposed()
+        public void Layout_SkipsSizingAndPositioning_WhenLifetimeIsDisposed()
         {
             var controller = new LifetimeController();
-            controller.Dispose();
-
             var renderObject = new CountingRenderObject(controller.Lifetime);
-            renderObject.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100));
+
+            controller.Dispose();
+            renderObject.Layout(LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(0, renderObject.SizingCalls);
             Assert.AreEqual(0, renderObject.PositioningCalls);
@@ -45,10 +50,47 @@ namespace UniMob.UI.Tests
         }
 
         [Test]
-        public void PerformLayoutImmediate_RunsSizingThenPositioning_WhenLifetimeIsAlive()
+        public void Layout_IsMemoized_AcrossRepeatedCallsWithTheSameConstraints()
         {
             var renderObject = new CountingRenderObject(Lifetime.Eternal);
-            renderObject.PerformLayoutImmediate(LayoutConstraints.Loose(100, 100));
+            var constraints = LayoutConstraints.Loose(100, 100);
+
+            renderObject.Layout(constraints);
+            renderObject.Layout(constraints);
+            renderObject.Layout(constraints);
+
+            Assert.AreEqual(1, renderObject.SizingCalls);
+            Assert.AreEqual(1, renderObject.PositioningCalls);
+        }
+
+        [Test]
+        public void Layout_RunsAgain_WhenConstraintsChange()
+        {
+            var renderObject = new CountingRenderObject(Lifetime.Eternal);
+
+            renderObject.Layout(LayoutConstraints.Loose(100, 100));
+            renderObject.Layout(LayoutConstraints.Loose(50, 50));
+
+            Assert.AreEqual(2, renderObject.SizingCalls);
+            Assert.AreEqual(2, renderObject.PositioningCalls);
+        }
+
+        [Test]
+        public void Constraints_ReportUnsetUntilLaidOut()
+        {
+            var renderObject = new CountingRenderObject(Lifetime.Eternal);
+            Assert.IsNull(renderObject.Constraints);
+
+            renderObject.Layout(LayoutConstraints.Tight(20, 30));
+
+            Assert.AreEqual(LayoutConstraints.Tight(20, 30), renderObject.Constraints);
+        }
+
+        [Test]
+        public void Layout_RunsSizingThenPositioning_WhenLifetimeIsAlive()
+        {
+            var renderObject = new CountingRenderObject(Lifetime.Eternal);
+            renderObject.Layout(LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(1, renderObject.SizingCalls);
             Assert.AreEqual(1, renderObject.PositioningCalls);

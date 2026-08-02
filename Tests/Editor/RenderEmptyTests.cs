@@ -10,7 +10,7 @@ namespace UniMob.UI.Tests
         [Test]
         public void AlwaysSizesToZero_RegardlessOfConstraints()
         {
-            RenderEmpty.Shared.PerformLayoutImmediate(new LayoutConstraints(20, 30, 100, 100));
+            RenderEmpty.Shared.Layout(new LayoutConstraints(20, 30, 100, 100));
 
             // Documents actual behavior: PerformSizing returns Vector2.zero unconditionally, without
             // running it through constraints.Constrain() -- so a nonzero MinWidth/MinHeight is not honored.

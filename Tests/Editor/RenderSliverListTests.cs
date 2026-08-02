@@ -21,7 +21,17 @@ namespace UniMob.UI.Tests
             public int? ItemCount { get; set; }
             public float? ItemExtent { get; set; }
             public Axis Axis { get; set; } = Axis.Vertical;
-            public float ScrollPixelOffset { get; set; }
+
+            // Atom-backed, matching ScrollList's [Atom] ScrollPixelOffset. A plain field would be read
+            // during sizing without registering as a dependency, so a scroll would not invalidate the
+            // memoized layout and the fixture would silently stop converging.
+            private readonly MutableAtom<float> _scrollPixelOffset = Atom.Value(0f);
+
+            public float ScrollPixelOffset
+            {
+                get => _scrollPixelOffset.Value;
+                set => _scrollPixelOffset.Value = value;
+            }
             public float? VirtualizationCacheExtent { get; set; } = 0f;
             public float Spacing { get; set; }
 
@@ -37,14 +47,17 @@ namespace UniMob.UI.Tests
             public IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive)
             {
                 LastRequestedWindow = (startIndexInclusive, endIndexExclusive);
-                return BuildWindow?.Invoke(startIndexInclusive, endIndexExclusive) ?? Array.Empty<IState>();
+                return BuildWindow?.Invoke(startIndexInclusive, endIndexExclusive)
+                    ?? Array.Empty<IState>();
             }
         }
 
-        private static IState Box(float mainAxisSize) => TestHarness.Mount(new FixedSizeBox { Size = new Vector2(0, mainAxisSize) });
+        private static IState Box(float mainAxisSize) =>
+            TestHarness.Mount(new FixedSizeBox { Size = new Vector2(0, mainAxisSize) });
 
         // Horizontal-axis box: main-axis size on x (the cross axis y gets stretched to the viewport by the list).
-        private static IState HBox(float mainAxisSize) => TestHarness.Mount(new FixedSizeBox { Size = new Vector2(mainAxisSize, 0) });
+        private static IState HBox(float mainAxisSize) =>
+            TestHarness.Mount(new FixedSizeBox { Size = new Vector2(mainAxisSize, 0) });
 
         [Test]
         public void Eager_TotalContentSize_SumsChildrenPlusSpacing()
@@ -56,7 +69,7 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 1000));
+            render.Layout(new LayoutConstraints(0, 0, 100, 1000));
 
             Assert.AreEqual(70f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2
         }
@@ -75,7 +88,7 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 1000));
+            render.Layout(new LayoutConstraints(0, 0, 100, 1000));
 
             Assert.AreEqual(70f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2 -- and crucially NOT + 500
         }
@@ -91,7 +104,7 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 20)); // viewport = [15, 35)
+            render.Layout(new LayoutConstraints(0, 0, 100, 20)); // viewport = [15, 35)
 
             var visibleIndices = state.LastVisibleChildren.Select(v => v.ChildIndex).ToArray();
             CollectionAssert.AreEquivalent(new[] { 1, 2 }, visibleIndices);
@@ -106,11 +119,12 @@ namespace UniMob.UI.Tests
                 ItemExtent = 50,
                 ScrollPixelOffset = 120,
                 VirtualizationCacheExtent = 0,
-                BuildWindow = (start, end) => Enumerable.Range(start, end - start).Select(_ => Box(999)).ToArray(),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => Box(999)).ToArray(),
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 200)); // viewport = [120, 320)
+            render.Layout(new LayoutConstraints(0, 0, 100, 200)); // viewport = [120, 320)
 
             // stride = 50; startIndex = floor(120/50) = 2; endIndex = ceil(320/50) = 7.
             Assert.AreEqual((2, 7), state.LastRequestedWindow);
@@ -125,10 +139,18 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 100)); // viewport main axis = 100
+            render.Layout(new LayoutConstraints(0, 0, 100, 100)); // viewport main axis = 100
 
-            Assert.AreEqual(100f, render.CalculateScrollPixelOffset(2, ScrollToPosition.Start), 0.01f);
-            Assert.AreEqual(75f, render.CalculateScrollPixelOffset(2, ScrollToPosition.Center), 0.01f);
+            Assert.AreEqual(
+                100f,
+                render.CalculateScrollPixelOffset(2, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                75f,
+                render.CalculateScrollPixelOffset(2, ScrollToPosition.Center),
+                0.01f
+            );
             Assert.AreEqual(50f, render.CalculateScrollPixelOffset(2, ScrollToPosition.End), 0.01f);
         }
 
@@ -158,7 +180,7 @@ namespace UniMob.UI.Tests
             // First lay out at the top so the header (and a couple of small items) get measured, seeding the
             // average well above the 50px that dominates the rest of the list.
             state.ScrollPixelOffset = 0f;
-            render.PerformLayoutImmediate(viewport);
+            render.Layout(viewport);
 
             // Then hold at the bottom -- clamping to the current content size exactly as the ScrollRect does --
             // until the estimate settles. The estimate starts biased high (from the header) and relaxes toward
@@ -166,19 +188,30 @@ namespace UniMob.UI.Tests
             for (var pass = 0; pass < 80; pass++)
             {
                 state.ScrollPixelOffset = Mathf.Max(0f, render.TotalContentSize() - 200f);
-                render.PerformLayoutImmediate(viewport);
+                render.Layout(viewport);
             }
 
             var visible = state.LastVisibleChildren;
-            Assert.IsNotEmpty(visible, "the bottom of the list must have visible items once the estimate settles");
+            Assert.IsNotEmpty(
+                visible,
+                "the bottom of the list must have visible items once the estimate settles"
+            );
 
             var last = visible[visible.Count - 1];
-            Assert.AreEqual(49, last.ChildIndex, "the final item must be in the window when scrolled to the bottom");
+            Assert.AreEqual(
+                49,
+                last.ChildIndex,
+                "the final item must be in the window when scrolled to the bottom"
+            );
 
             var trailingEdge = last.Layout.Position.y + last.Layout.Size.y;
-            Assert.AreEqual(render.TotalContentSize(), trailingEdge, 1f,
-                "the final item's trailing edge must coincide with the content size the view is sized to, " +
-                "otherwise it renders past the mask and is clipped");
+            Assert.AreEqual(
+                render.TotalContentSize(),
+                trailingEdge,
+                1f,
+                "the final item's trailing edge must coincide with the content size the view is sized to, "
+                    + "otherwise it renders past the mask and is clipped"
+            );
         }
 
         [Test]
@@ -188,15 +221,28 @@ namespace UniMob.UI.Tests
             {
                 ItemCount = 10,
                 ItemExtent = 50,
-                BuildWindow = (start, end) => Enumerable.Range(start, end - start).Select(_ => Box(50)).ToArray(),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => Box(50)).ToArray(),
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 100));
+            render.Layout(new LayoutConstraints(0, 0, 100, 100));
 
-            Assert.AreEqual(200f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Start), 0.01f);
-            Assert.AreEqual(175f, render.CalculateScrollPixelOffset(4, ScrollToPosition.Center), 0.01f);
-            Assert.AreEqual(150f, render.CalculateScrollPixelOffset(4, ScrollToPosition.End), 0.01f);
+            Assert.AreEqual(
+                200f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                175f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.Center),
+                0.01f
+            );
+            Assert.AreEqual(
+                150f,
+                render.CalculateScrollPixelOffset(4, ScrollToPosition.End),
+                0.01f
+            );
         }
 
         // --- Horizontal axis: every branch above is axis-conditional (constraints, culling, positioning,
@@ -215,7 +261,7 @@ namespace UniMob.UI.Tests
 
             var render = new RenderSliverList(state);
             // A horizontal list must have a bounded width; width == viewport main axis == 20 -> viewport x [15, 35).
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 20, 100));
+            render.Layout(new LayoutConstraints(0, 0, 20, 100));
 
             var visible = state.LastVisibleChildren;
             CollectionAssert.AreEqual(new[] { 1, 2 }, visible.Select(v => v.ChildIndex).ToArray());
@@ -237,7 +283,7 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 1000, 100));
+            render.Layout(new LayoutConstraints(0, 0, 1000, 100));
 
             Assert.AreEqual(70f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2, summed on the x-axis
         }
@@ -252,10 +298,18 @@ namespace UniMob.UI.Tests
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 100)); // viewport main axis (width) = 100
+            render.Layout(new LayoutConstraints(0, 0, 100, 100)); // viewport main axis (width) = 100
 
-            Assert.AreEqual(100f, render.CalculateScrollPixelOffset(2, ScrollToPosition.Start), 0.01f);
-            Assert.AreEqual(75f, render.CalculateScrollPixelOffset(2, ScrollToPosition.Center), 0.01f);
+            Assert.AreEqual(
+                100f,
+                render.CalculateScrollPixelOffset(2, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                75f,
+                render.CalculateScrollPixelOffset(2, ScrollToPosition.Center),
+                0.01f
+            );
             Assert.AreEqual(50f, render.CalculateScrollPixelOffset(2, ScrollToPosition.End), 0.01f);
         }
 
@@ -271,17 +325,26 @@ namespace UniMob.UI.Tests
             {
                 ItemCount = sizes.Length,
                 VirtualizationCacheExtent = 10000,
-                BuildWindow = (start, end) => Enumerable.Range(start, end - start).Select(i => Box(sizes[i])).ToArray(),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(i => Box(sizes[i])).ToArray(),
             };
 
             var render = new RenderSliverList(state);
-            render.PerformLayoutImmediate(new LayoutConstraints(0, 0, 100, 50)); // viewport main axis = 50
+            render.Layout(new LayoutConstraints(0, 0, 100, 50)); // viewport main axis = 50
 
             // Item 3's exact leading edge is 10+20+30 = 60 (a uniform average would give 3*30 = 90); extent 40.
             // Content = 150, viewport = 50 -> scrollable = 100, so none of these clamp.
-            Assert.AreEqual(60f, render.CalculateScrollPixelOffset(3, ScrollToPosition.Start), 0.01f);
-            Assert.AreEqual(55f, render.CalculateScrollPixelOffset(3, ScrollToPosition.Center), 0.01f); // 60 - (50-40)/2
-            Assert.AreEqual(50f, render.CalculateScrollPixelOffset(3, ScrollToPosition.End), 0.01f);    // 60 - (50-40)
+            Assert.AreEqual(
+                60f,
+                render.CalculateScrollPixelOffset(3, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                55f,
+                render.CalculateScrollPixelOffset(3, ScrollToPosition.Center),
+                0.01f
+            ); // 60 - (50-40)/2
+            Assert.AreEqual(50f, render.CalculateScrollPixelOffset(3, ScrollToPosition.End), 0.01f); // 60 - (50-40)
         }
     }
 }
