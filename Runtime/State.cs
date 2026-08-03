@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -145,6 +146,39 @@ namespace UniMob.UI
         ///     </para>
         /// </remarks>
         public virtual string GetDiagnosticInfo() => RawWidget?.GetDiagnosticInfo();
+
+        /// <summary>
+        ///     What a debugger shows for this state: the node, then the constraints it was laid out
+        ///     against and the size it answered with.
+        /// </summary>
+        /// <remarks>
+        ///     Named by the DebuggerDisplay attribute on this class since it was written, and never
+        ///     implemented, so the watch window has been showing an evaluation error where the widget's
+        ///     identity should be.
+        ///     <para>
+        ///         Reads no atoms. A debugger evaluates expressions wherever execution happens to be
+        ///         paused, which for this class is most often inside a layout computation, and a watch
+        ///         window that quietly adds dependencies to the graph it is inspecting is worse than no
+        ///         watch window.
+        ///     </para>
+        /// </remarks>
+        public string ToDiagnosticString()
+        {
+            using (Atom.NoWatch)
+            {
+                var node = DiagnosticNode.Describe(this);
+
+                if (_renderObject == null)
+                {
+                    return node;
+                }
+
+                var constraints = _renderObject.Constraints;
+                return constraints.HasValue
+                    ? $"{node}  {constraints.Value}  ->  {_renderObject.Size}"
+                    : $"{node}  <not laid out>";
+            }
+        }
     }
 
     public class StateCollectionHolder

@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
+using UnityEngine;
 
 namespace UniMob.UI.Tests
 {
@@ -114,6 +115,29 @@ namespace UniMob.UI.Tests
         public void Describe_RendersNothing_AsNull()
         {
             Assert.AreEqual("<null>", DiagnosticNode.Describe(null));
+        }
+
+        // What the DebuggerDisplay attribute on State has named since it was written. It resolves to
+        // a real method now, so the watch window shows the widget instead of an evaluation error.
+        [Test]
+        public void ToDiagnosticString_AddsGeometry_ToTheNode()
+        {
+            var state = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 20) });
+            TestHarness.Layout(state, LayoutConstraints.Loose(100, 100));
+
+            var described = state.ToDiagnosticString();
+
+            StringAssert.StartsWith("FixedSizeBox ", described);
+            StringAssert.Contains("Constraints(w:[0-100], h:[0-100])", described);
+            StringAssert.Contains("(10.00, 20.00)", described);
+        }
+
+        [Test]
+        public void ToDiagnosticString_SaysSo_WhenNothingHasLaidTheStateOut()
+        {
+            var state = TestHarness.Mount(new FixedSizeBox());
+
+            StringAssert.EndsWith("<not laid out>", state.ToDiagnosticString());
         }
     }
 }
