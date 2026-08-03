@@ -41,11 +41,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private int _layoutVersion = int.MinValue;
 
-        // Plain field, not derived from the constraints atom: this is read from a diagnostic that
-        // must not register a dependency on anything.
-        private bool _everLaidOut;
-
 #if UNITY_EDITOR
+        // Plain fields, not derived from the constraints atom: these are read from a diagnostic that
+        // must not register a dependency on anything. Compiled out entirely rather than left as a
+        // dead store, because their one reader is, and Layout() is the hottest method in the system.
+        private bool _everLaidOut;
         private bool _reportedNeverLaidOut;
 #endif
 
@@ -143,7 +143,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 _constraints.Value = constraints;
             }
 
+#if UNITY_EDITOR
             _everLaidOut = true;
+#endif
 
             return _trackedSize.Get();
         }
