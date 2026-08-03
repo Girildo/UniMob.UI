@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
@@ -157,22 +158,25 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var isVertical = !isHorizontal;
 
-            if (isHorizontal && !constraints.HasBoundedWidth)
-                throw new InvalidOperationException(
-                    "A horizontal ScrollingList must have a bounded width." +
-                    "This usually means it is being placed inside another horizontal scrollable or a Row without an Expanded widget."
-                );
+            // A scrollable is defined by having a bounded viewport to scroll content through, so an
+            // unbounded scroll axis is a misconfiguration rather than a case to handle. Reported and
+            // materialised to zero rather than thrown: a throw from inside a sizing pass is caught by
+            // the view layer and turned into a LogException with no widget path, no context object and
+            // no remedy, which is the worst channel available for the most fixable fault there is.
+            var unboundedScrollAxis =
+                isHorizontal && !constraints.HasBoundedWidth ? LayoutAxes.Horizontal
+                : isVertical && !constraints.HasBoundedHeight ? LayoutAxes.Vertical
+                : LayoutAxes.None;
 
-            if (isVertical && !constraints.HasBoundedHeight)
-                throw new InvalidOperationException(
-                    "A vertical ScrollingList must have a bounded height." +
-                    "This usually means it is being placed inside another vertical scrollable or a Column without an Expanded widget."
-                );
+            if (unboundedScrollAxis != LayoutAxes.None)
+            {
+                ReportUnboundedConstraint(unboundedScrollAxis, constraints, BoundTheScrollAxis);
+            }
 
             // The RenderObject's own size is simply the size of the viewport, as dictated by the parent's
             // constraints -- computed up front since the lazy path needs it (for its build-window estimate)
             // before any children are measured.
-            this._viewportSize = constraints.Largest;
+            this._viewportSize = constraints.Largest.ZeroOn(unboundedScrollAxis);
             if (_state.VirtualizationCacheExtent.HasValue && _state.VirtualizationCacheExtent.Value < 0)
                 throw new InvalidOperationException("VirtualizationCacheExtent cannot be negative.");
             this._virtualizationCacheExtent = _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
@@ -492,5 +496,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             childOffset = SliverLayoutMath.AlignToScrollPosition(childOffset, childSize, viewportSize, position);
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
+
+        private const string BoundTheScrollAxis =
+            "A scrollable needs a bounded viewport on its scroll axis. Wrap it in Expanded, give an "
+            + "ancestor a fixed size, or take it out of the enclosing scrollable on the same axis.";
     }
 }

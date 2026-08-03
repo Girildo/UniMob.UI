@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout.Internal.Views;
 using UnityEngine;
 
@@ -129,26 +130,36 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var isHorizontal = axis == Axis.Horizontal;
             var isVertical = !isHorizontal;
 
+            // A grid needs both axes bounded, and for different reasons: the scroll axis to have a
+            // viewport to scroll through, the cross axis to divide into columns at all. Reported and
+            // materialised to zero rather than thrown -- a throw from inside a sizing pass reaches the
+            // developer as a LogException with no widget path, no context object and no remedy.
+            var unbounded = LayoutAxes.None;
+
             if (isHorizontal && !constraints.HasBoundedWidth)
-                throw new InvalidOperationException(
-                    "A horizontal ScrollGrid must have a bounded width. " +
-                    "This usually means it is being placed inside another horizontal scrollable or a Row without an Expanded widget."
-                );
+            {
+                unbounded |= LayoutAxes.Horizontal;
+            }
 
             if (isVertical && !constraints.HasBoundedHeight)
-                throw new InvalidOperationException(
-                    "A vertical ScrollGrid must have a bounded height. " +
-                    "This usually means it is being placed inside another vertical scrollable or a Column without an Expanded widget."
-                );
+            {
+                unbounded |= LayoutAxes.Vertical;
+            }
 
             var crossAxis = isHorizontal ? Axis.Vertical : Axis.Horizontal;
             if (!float.IsFinite(constraints.MaxAlongAxis(crossAxis)))
-                throw new InvalidOperationException(
-                    "A ScrollGrid must have a bounded cross axis to compute its column count. " +
-                    "Give it a finite width (vertical grid) or height (horizontal grid)."
-                );
+            {
+                unbounded |= crossAxis == Axis.Horizontal
+                    ? LayoutAxes.Horizontal
+                    : LayoutAxes.Vertical;
+            }
 
-            _viewportSize = constraints.Largest;
+            if (unbounded != LayoutAxes.None)
+            {
+                ReportUnboundedConstraint(unbounded, constraints, BoundBothAxes);
+            }
+
+            _viewportSize = constraints.Largest.ZeroOn(unbounded);
 
             if (_state.VirtualizationCacheExtent.HasValue && _state.VirtualizationCacheExtent.Value < 0)
                 throw new InvalidOperationException("VirtualizationCacheExtent cannot be negative.");
@@ -423,5 +434,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override float ComputeIntrinsicWidth(float height)
             => _state.Axis == Axis.Vertical ? 0 : TotalContentSize();
+
+        private const string BoundBothAxes =
+            "A ScrollGrid needs a bounded viewport on its scroll axis and a bounded cross axis to "
+            + "divide into columns. Wrap it in Expanded or give an ancestor a fixed size on that axis.";
+
     }
 }

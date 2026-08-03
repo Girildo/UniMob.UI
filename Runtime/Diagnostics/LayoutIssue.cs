@@ -34,6 +34,45 @@ namespace UniMob.UI.Diagnostics
     }
 
     /// <summary>
+    ///     The repair policy, as the two operations every site that applies it needs.
+    /// </summary>
+    /// <remarks>
+    ///     Written once because it is one rule: a non-finite axis is clamped to zero, on that axis alone,
+    ///     at the point of detection, in every build. Four sites apply it -- both halves of a flex, the
+    ///     multi-child paint, and the scrollable slivers -- and four hand-rolled copies is how they came
+    ///     to disagree in the first place.
+    /// </remarks>
+    public static class LayoutAxesExtensions
+    {
+        /// <summary>The axes on which <paramref name="size"/> is infinite or NaN.</summary>
+        public static LayoutAxes NonFiniteAxes(this Vector2 size)
+        {
+            var axes = LayoutAxes.None;
+
+            if (!float.IsFinite(size.x))
+            {
+                axes |= LayoutAxes.Horizontal;
+            }
+
+            if (!float.IsFinite(size.y))
+            {
+                axes |= LayoutAxes.Vertical;
+            }
+
+            return axes;
+        }
+
+        /// <summary><paramref name="size"/> with the named axes zeroed and the others untouched.</summary>
+        public static Vector2 ZeroOn(this Vector2 size, LayoutAxes axes) =>
+            axes == LayoutAxes.None
+                ? size
+                : new Vector2(
+                    (axes & LayoutAxes.Horizontal) != 0 ? 0f : size.x,
+                    (axes & LayoutAxes.Vertical) != 0 ? 0f : size.y
+                );
+    }
+
+    /// <summary>
     ///     One layout fault, as data. Composed only once a latch has decided this is worth saying, and
     ///     carries no formatted text: a reporter that writes to a console formats one way and one that
     ///     writes to a structured log formats another.

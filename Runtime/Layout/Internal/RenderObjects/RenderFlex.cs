@@ -90,7 +90,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 if (childIsNonFinite)
                 {
-                    childSize = ZeroMainAxis(childSize, isHorizontal);
+                    childSize = childSize.ZeroOn(MainAxis);
                 }
 
                 // Written before the report, which marks this entry for the in-scene overlay.
@@ -159,7 +159,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                     if (childIsNonFinite)
                     {
-                        childSize = ZeroMainAxis(childSize, isHorizontal);
+                        childSize = childSize.ZeroOn(MainAxis);
                     }
 
                     ChildrenLayoutBuffer[i] = new LayoutInfo { Size = childSize };
@@ -391,20 +391,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             return child.RenderObject.GetIntrinsicHeight(width);
         }
-
-        /// <summary>
-        ///     The repair for a child that answered with a non-finite main axis: that axis alone,
-        ///     zeroed, in every build.
-        /// </summary>
-        /// <remarks>
-        ///     Zero rather than the available extent, because the available extent is exactly what is
-        ///     missing in the case that causes this -- the fault originates in an unbounded constraint,
-        ///     where the maximum <i>is</i> infinity. Honest only because it is paired with a marker in
-        ///     the scene and a report naming the widget, the axis and the fix: a zero-sized widget is
-        ///     otherwise indistinguishable from an intentionally empty one.
-        /// </remarks>
-        private static Vector2 ZeroMainAxis(Vector2 size, bool isHorizontal) =>
-            isHorizontal ? new Vector2(0, size.y) : new Vector2(size.x, 0);
 
         /// <summary>
         ///     The inflexible child taking the most room on the main axis, or -1 if there are none.

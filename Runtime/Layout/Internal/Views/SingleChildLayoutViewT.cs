@@ -1,4 +1,5 @@
 using System;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.Diagnostics;
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -37,9 +38,14 @@ namespace UniMob.UI.Layout.Internal.Views
 
             if (State.RenderObject is not ISingleChildRenderObject renderObject)
             {
-                throw new System.InvalidOperationException
-                    ($"{typeof(SingleChildLayoutView).Name} expects the state to return a {nameof(ISingleChildRenderObject)}." +
-                    $"{State.GetType().Name} returned a {State.RenderObject.GetType().Name} instead.");
+                // Structural, so it stays a throw: a view paired with the wrong render object has no
+                // layout to continue with. The path is what makes it findable.
+                throw new System.InvalidOperationException(
+                    $"{typeof(SingleChildLayoutView).Name} expects the state to return a "
+                        + $"{nameof(ISingleChildRenderObject)}. {State.GetType().Name} returned a "
+                        + $"{State.RenderObject.GetType().Name} instead.\n"
+                        + $"  at      {WidgetPath.From(State)}"
+                );
             }
 
             if (State.Child == null)
@@ -92,8 +98,7 @@ namespace UniMob.UI.Layout.Internal.Views
 
 #if UNITY_EDITOR
         private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
-#endif
-#if UNITY_EDITOR
+
         private void OnDrawGizmosSelected()
         {
             if (this.rectTransform == null) return;

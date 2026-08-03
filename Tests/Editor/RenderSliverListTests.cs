@@ -14,6 +14,37 @@ namespace UniMob.UI.Tests
     // separate contract, using a plain (non-reactive) fake so the two concerns don't overlap.
     public class RenderSliverListTests
     {
+        // An unbounded scroll axis used to throw out of the sizing pass, where View catches it into a
+        // LogException with no widget path, no context object and no remedy. It is now the same
+        // report-and-materialise every other unbounded axis gets.
+        [Test]
+        public void UnboundedScrollAxis_IsReportedAndZeroed_InsteadOfThrown()
+        {
+            using var log = RecordingReporter.Capture();
+            var sliver = new RenderSliverList(new FakeSliverState { Axis = Axis.Vertical });
+
+            Assert.DoesNotThrow(() =>
+                sliver.Layout(LayoutConstraints.Loose(100, float.PositiveInfinity))
+            );
+
+            var issue = log.Single();
+            Assert.AreEqual(Diagnostics.LayoutIssueCode.UnboundedConstraint, issue.Code);
+            Assert.AreEqual(Diagnostics.LayoutAxes.Vertical, issue.Axes);
+            Assert.IsNotNull(issue.Remedy);
+            Assert.AreEqual(new Vector2(100, 0), sliver.Size);
+        }
+
+        [Test]
+        public void BoundedScrollAxis_IsSilent()
+        {
+            using var log = RecordingReporter.Capture();
+            var sliver = new RenderSliverList(new FakeSliverState { Axis = Axis.Vertical });
+
+            sliver.Layout(LayoutConstraints.Loose(100, 200));
+
+            Assert.IsEmpty(log);
+        }
+
         private class FakeSliverState : FakeState, ISliverState
         {
             public IState[] Children => AllChildren; // Unused by RenderSliverList itself; only to satisfy IMultiChildLayoutState.

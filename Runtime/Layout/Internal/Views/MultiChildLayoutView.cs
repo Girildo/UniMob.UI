@@ -59,8 +59,13 @@ namespace UniMob.UI.Layout.Internal.Views
 
                 if (child is null)
                 {
-                    throw new InvalidOperationException("Child state at position " + i + " is null. All children must have a valid state." +
-                        "Use SizedBox.Shrink() if necessary.");
+                    // Structural, so it stays a throw: there is no layout to continue with and no
+                    // remedy to offer beyond "do not do that". It does get the path, because "some
+                    // multi-child widget somewhere" was never enough to act on.
+                    throw new InvalidOperationException(
+                        $"Child state at position {i} is null. All children must have a valid state; "
+                            + $"use SizedBox.Shrink() if necessary.\n  at      {WidgetPath.From(State)}"
+                    );
                 }
 
                 var layoutData = childrenLayout[i];
@@ -70,8 +75,8 @@ namespace UniMob.UI.Layout.Internal.Views
                 // offending axis, in every build, like everywhere else -- the old fallback to
                 // rect.size was last frame's Unity state, so it was neither deterministic nor
                 // reproducible, and it was written into a local nothing downstream ever read.
-                var nonFiniteAxes = NonFiniteAxes(layoutData.Size);
-                var size = Materialise(layoutData.Size, nonFiniteAxes);
+                var nonFiniteAxes = layoutData.Size.NonFiniteAxes();
+                var size = layoutData.Size.ZeroOn(nonFiniteAxes);
 
                 NoteNonFiniteChild(i, child, nonFiniteAxes);
 
@@ -109,31 +114,6 @@ namespace UniMob.UI.Layout.Internal.Views
             _warnings.HideUnused();
 #endif
         }
-
-        private static LayoutAxes NonFiniteAxes(Vector2 size)
-        {
-            var axes = LayoutAxes.None;
-
-            if (!float.IsFinite(size.x))
-            {
-                axes |= LayoutAxes.Horizontal;
-            }
-
-            if (!float.IsFinite(size.y))
-            {
-                axes |= LayoutAxes.Vertical;
-            }
-
-            return axes;
-        }
-
-        private static Vector2 Materialise(Vector2 size, LayoutAxes nonFinite) =>
-            nonFinite == LayoutAxes.None
-                ? size
-                : new Vector2(
-                    nonFinite.HasFlag(LayoutAxes.Horizontal) ? 0f : size.x,
-                    nonFinite.HasFlag(LayoutAxes.Vertical) ? 0f : size.y
-                );
 
         /// <summary>
         ///     Reports a child whose size cannot reach a RectTransform, once per child until it stops.
