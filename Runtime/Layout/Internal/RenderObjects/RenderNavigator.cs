@@ -57,7 +57,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return size;
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {

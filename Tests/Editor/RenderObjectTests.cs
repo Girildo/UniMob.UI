@@ -24,6 +24,7 @@ namespace UniMob.UI.Tests
         {
             public int SizingCalls;
             public int PositioningCalls;
+            public Vector2 LastPositioningSize;
 
             public CountingRenderObject(Lifetime lifetime)
                 : base(new OwnerState { FakeLifetime = lifetime }) { }
@@ -34,7 +35,11 @@ namespace UniMob.UI.Tests
                 return new Vector2(1, 1);
             }
 
-            protected override void PerformPositioning() => PositioningCalls++;
+            protected override void PerformPositioning(Vector2 size)
+            {
+                PositioningCalls++;
+                LastPositioningSize = size;
+            }
 
             protected override float ComputeIntrinsicWidth(float height) => 0f;
 
@@ -105,6 +110,20 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(1, renderObject.SizingCalls);
             Assert.AreEqual(1, renderObject.PositioningCalls);
             Assert.AreEqual(new Vector2(1, 1), renderObject.Size);
+        }
+
+        // The parameter is the only channel between the two phases: sizing returns a value, the base
+        // commits it, and positioning is handed exactly that. If the base ever passed anything else
+        // (a stale field, a re-derived value), children would be placed against a box their parent
+        // never committed to.
+        [Test]
+        public void Positioning_ReceivesTheSizeThePassCommitted()
+        {
+            var renderObject = new CountingRenderObject(Lifetime.Eternal);
+
+            var returned = renderObject.Layout(LayoutConstraints.Loose(100, 100));
+
+            Assert.AreEqual(returned, renderObject.LastPositioningSize);
         }
     }
 }

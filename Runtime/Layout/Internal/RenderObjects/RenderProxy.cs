@@ -31,7 +31,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             ChildPosition = Vector2.zero;
         }

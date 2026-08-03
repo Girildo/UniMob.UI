@@ -337,7 +337,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///     <see cref="EstimateRowLeadingEdgeOffset" />) and column's cross offset, then culls to the rows
         ///     intersecting the viewport plus cache along the scrolling axis (the cross axis always fits).
         /// </summary>
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             var visible = _visibleChildrenIndexed;
             visible.Clear();

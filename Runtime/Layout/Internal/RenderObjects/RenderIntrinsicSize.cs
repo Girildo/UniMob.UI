@@ -22,7 +22,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return constraints.Constrain(ChildSize);
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             ChildPosition = Vector2.zero;
         }

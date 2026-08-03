@@ -67,7 +67,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return constraints.Constrain(largest);
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             // Reading Value here is what animates the slide: it is an atom, so positioning re-runs for
             // each frame the controller tweens through, not just on the final index.
@@ -76,7 +76,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
                 var layout = ChildrenLayoutBuffer[i];
-                layout.Position = new Vector2((i - scrolled) * Size.x, 0f);
+                layout.Position = new Vector2((i - scrolled) * size.x, 0f);
                 ChildrenLayoutBuffer[i] = layout;
             }
         }

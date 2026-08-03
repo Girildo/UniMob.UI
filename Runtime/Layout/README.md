@@ -73,7 +73,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
     internal class RenderFoo : SingleChildRenderObject
     {
-        // PerformSizing(constraints) -> Vector2 ; PerformPositioning() ; intrinsics
+        // PerformSizing(constraints) -> Vector2 ; PerformPositioning(size) ; intrinsics
     }
 }
 ```

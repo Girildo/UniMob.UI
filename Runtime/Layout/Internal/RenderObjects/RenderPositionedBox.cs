@@ -45,7 +45,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             if (Child == null)
             {
@@ -54,8 +54,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
 
             // Calculate the top-left corner of the child based on the alignment
-            // and the available space (Size) versus the child's size (ChildSize).
-            ChildPosition = _state.Alignment.ResolveOffset(Size, ChildSize);
+            // and the available space (size) versus the child's size (ChildSize).
+            ChildPosition = _state.Alignment.ResolveOffset(size, ChildSize);
         }
     }
 }

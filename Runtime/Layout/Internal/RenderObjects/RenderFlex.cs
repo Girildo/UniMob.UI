@@ -192,11 +192,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             var isHorizontal = _axis == Axis.Horizontal;
-            var mainAxisSize = isHorizontal ? Size.x : Size.y;
-            var freeSpace = (isHorizontal ? Size.x : Size.y) - _unconstrainedMainAxisSize;
+            var mainAxisSize = isHorizontal ? size.x : size.y;
+            var freeSpace = (isHorizontal ? size.x : size.y) - _unconstrainedMainAxisSize;
             float mainAxisPos = 0;
             float alignmentSpacing = 0;
             var childCount = ChildrenLayoutBuffer.Count;
@@ -235,7 +235,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var layout = ChildrenLayoutBuffer[i];
 
                 // --- CROSS AXIS ALIGNMENT ---
-                var crossAxisSize = isHorizontal ? this.Size.y : this.Size.x;
+                var crossAxisSize = isHorizontal ? size.y : size.x;
                 var childCrossAxisSize = isHorizontal ? layout.Size.y : layout.Size.x;
 
 

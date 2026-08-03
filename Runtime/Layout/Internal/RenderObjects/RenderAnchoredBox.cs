@@ -99,7 +99,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return self;
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             if (this.Child == null || !this.TryGetGeometry(out var anchor, out var origin))
             {
@@ -130,8 +130,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (this.state.KeepInsidePadding is { } padding)
             {
                 position = new Vector2(
-                    KeepInside(position.x, this.ChildSize.x, this.Size.x, padding),
-                    KeepInside(position.y, this.ChildSize.y, this.Size.y, padding)
+                    KeepInside(position.x, this.ChildSize.x, size.x, padding),
+                    KeepInside(position.y, this.ChildSize.y, size.y, padding)
                 );
             }
 

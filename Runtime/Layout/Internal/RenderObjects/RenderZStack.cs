@@ -47,33 +47,33 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return constraints.Constrain(new Vector2(maxWidth, maxHeight));
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
                 var child = _state.Children[i];
                 if (child.InnerViewState is PositionedState pos)
                 {
-                    LayoutPositionedChild(i, child, pos.RawWidget as Positioned);
+                    LayoutPositionedChild(i, child, pos.RawWidget as Positioned, size);
                 }
                 else
                 {
-                    LayoutNonPositionedChild(i);
+                    LayoutNonPositionedChild(i, size);
                 }
             }
         }
 
-        private void LayoutNonPositionedChild(int index)
+        private void LayoutNonPositionedChild(int index, Vector2 size)
         {
             // Now this correctly retrieves the size calculated in *this* frame's sizing pass.
             var childSize = ChildrenLayoutBuffer[index].Size;
 
             var layoutData = ChildrenLayoutBuffer[index];
-            layoutData.Position = _state.Alignment.ResolveOffset(Size, childSize);
+            layoutData.Position = _state.Alignment.ResolveOffset(size, childSize);
             ChildrenLayoutBuffer[index] = layoutData;
         }
 
-        private void LayoutPositionedChild(int index, IState child, Positioned pos)
+        private void LayoutPositionedChild(int index, IState child, Positioned pos, Vector2 size)
         {
             float? x = pos.Left;
             float? y = pos.Top;
@@ -86,12 +86,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // (see RenderFlex), which names the fix: pin the axis on the Positioned.
             var width =
                 pos.Left != null && pos.Right != null
-                    ? Size.x - pos.Left.Value - pos.Right.Value
+                    ? size.x - pos.Left.Value - pos.Right.Value
                     : pos.Width;
 
             var height =
                 pos.Top != null && pos.Bottom != null
-                    ? Size.y - pos.Top.Value - pos.Bottom.Value
+                    ? size.y - pos.Top.Value - pos.Bottom.Value
                     : pos.Height;
 
             var childConstraints = LayoutConstraints.TightFor(
@@ -103,12 +103,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             if (x == null)
             {
-                x = Size.x - childSize.x - (pos.Right ?? 0);
+                x = size.x - childSize.x - (pos.Right ?? 0);
             }
 
             if (y == null)
             {
-                y = Size.y - childSize.y - (pos.Bottom ?? 0);
+                y = size.y - childSize.y - (pos.Bottom ?? 0);
             }
 
             ChildrenLayoutBuffer[index] = new LayoutInfo { Size = childSize, Position = new Vector2(x.Value, y.Value) };

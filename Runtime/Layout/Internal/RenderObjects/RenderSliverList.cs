@@ -341,7 +341,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///     <see cref="TotalContentSize"/> (and the final item can't be pushed past the scrollable range and
         ///     clipped). Both share <see cref="CullVisibleRun"/>; only the run they hand it differs.
         /// </summary>
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             var visible = _visibleChildrenIndexed;
             visible.Clear();

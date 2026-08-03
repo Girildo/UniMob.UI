@@ -103,10 +103,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return constraints.Constrain(new Vector2(finalWidth, finalHeight));
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
-            var wrapMainSize = Direction == Axis.Horizontal ? Size.x : Size.y;
-            var wrapCrossSize = Direction == Axis.Horizontal ? Size.y : Size.x;
+            var wrapMainSize = Direction == Axis.Horizontal ? size.x : size.y;
+            var wrapCrossSize = Direction == Axis.Horizontal ? size.y : size.x;
 
             // 1. Calculate Run Alignment (Cross Axis Distribution of the lines)
             var totalRunsCrossSize = 0f;

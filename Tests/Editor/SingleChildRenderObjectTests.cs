@@ -17,7 +17,7 @@ namespace UniMob.UI.Tests
             }
 
             protected override Vector2 PerformSizing(LayoutConstraints constraints) => Vector2.zero;
-            protected override void PerformPositioning()
+            protected override void PerformPositioning(Vector2 size)
             {
             }
         }

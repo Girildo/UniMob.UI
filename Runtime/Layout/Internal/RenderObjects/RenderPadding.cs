@@ -34,7 +34,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return constraints.Constrain(new Vector2(finalWidth, finalHeight));
         }
 
-        protected override void PerformPositioning()
+        protected override void PerformPositioning(Vector2 size)
         {
             var padding = _state.Padding;
 

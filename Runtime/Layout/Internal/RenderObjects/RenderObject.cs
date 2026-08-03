@@ -241,7 +241,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             Size = PerformSizing(constraints.Value);
 
             // Phase 2: Perform layout for children.
-            PerformPositioning();
+            PerformPositioning(Size);
 
 #if UNIMOB_UI_DIAGNOSTICS
             ValidateLayout(constraints.Value);
@@ -269,9 +269,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///     Performs the positioning of the widget and its children.
         /// </summary>
         /// <remarks>
-        ///     This method is called after the size has been determined to position the widget.
-        ///     Subclasses should implement this to set the position of the widget, accessing, if necessary,
-        ///     the <see cref="Size"/> field that has been calculated in the sizing phase.
+        ///     Called after the sizing phase with <paramref name="size"/>, the size this pass just
+        ///     committed. The parameter is the only channel between the phases: sizing cannot read a
+        ///     value that does not exist yet, and positioning does not reach for ambient state that
+        ///     could be stale.
         ///     <para>
         ///         After this method is called, the positions of the children should be set in such a way that
         ///         the children's positions are known relative to the parent's top-left corner.
@@ -288,7 +289,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///         </list>
         ///     </para>
         /// </remarks>
-        protected abstract void PerformPositioning();
+        protected abstract void PerformPositioning(Vector2 size);
 
         /// <summary>
         ///     A helper method to handle the boilerplate of laying out a child.

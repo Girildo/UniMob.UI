@@ -10,7 +10,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         protected LeafRenderObject(IState owner) : base(owner) { }
 
-        protected sealed override void PerformPositioning()
+        protected sealed override void PerformPositioning(Vector2 size)
         {
             // Nothing to position inside a leaf.
         }
