@@ -18,10 +18,13 @@ namespace UniMob.UI.Tests
         public Key Key { get; set; }
 
         public State CreateState(StateProvider provider) => null;
+
         public State CreateState() => new FixedSizeBoxState();
 
         public RenderObject CreateRenderObject(BuildContext context, IState state) =>
-            new RenderFixedSizeBox((FixedSizeBoxState) state);
+            new RenderFixedSizeBox((FixedSizeBoxState)state);
+
+        public string GetDiagnosticInfo() => null;
     }
 
     public class FixedSizeBoxState : ViewState<FixedSizeBox>
@@ -33,14 +36,16 @@ namespace UniMob.UI.Tests
         // RenderLegacy, so ViewState.CalculateSize()'s prefab-loading branch never runs either.
         // Any WidgetViewReference works here -- this one just happens to point at a resource that
         // does exist, in case a future change makes it load-bearing.
-        public override WidgetViewReference View => WidgetViewReference.Resource("Layout/UniMob.Text");
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("Layout/UniMob.Text");
     }
 
     public class RenderFixedSizeBox : LeafRenderObject
     {
         private readonly FixedSizeBoxState _state;
 
-        public RenderFixedSizeBox(FixedSizeBoxState state) : base(state.StateLifetime)
+        public RenderFixedSizeBox(FixedSizeBoxState state)
+            : base(state.StateLifetime)
         {
             _state = state;
         }

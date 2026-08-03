@@ -131,7 +131,20 @@ namespace UniMob.UI
             );
         }
 
-        public virtual string GetDiagnosticInfo() => null;
+        /// <summary>
+        ///     A label describing this state, defaulting to whatever its widget says about itself.
+        /// </summary>
+        /// <remarks>
+        ///     Override when the useful thing is runtime state rather than configuration, and compose
+        ///     with <c>base</c> to keep both. The state wins over its widget because it is the only one
+        ///     of the two that can see both.
+        ///     <para>
+        ///         Null-conditional because the window exists: <c>RawWidget</c> is not set until the
+        ///         first Update, and <see cref="Key"/> has the same gap. A diagnostic is exactly the
+        ///         thing that gets called during it.
+        ///     </para>
+        /// </remarks>
+        public virtual string GetDiagnosticInfo() => RawWidget?.GetDiagnosticInfo();
     }
 
     public class StateCollectionHolder

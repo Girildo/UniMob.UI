@@ -47,5 +47,9 @@ namespace UniMob.UI
                     + "that builds rather than paints must own a proxy over its child (see "
                     + "HocState.CreateOwnRenderObject), not borrow its child's.");
         }
+
+        /// <inheritdoc/>
+        [CanBeNull]
+        public virtual string GetDiagnosticInfo() => null;
     }
 }

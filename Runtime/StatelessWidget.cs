@@ -26,7 +26,9 @@ namespace UniMob.UI
                 "A StatelessWidget's render object is the proxy owned by its StatelessElement."
             );
 
-        public virtual string? GetDiagnosticsInfo() => null;
+        /// <inheritdoc/>
+        [CanBeNull]
+        public virtual string GetDiagnosticInfo() => null;
 
         [CanBeNull]
         public State CreateState(StateProvider provider) => null;
@@ -56,11 +58,6 @@ namespace UniMob.UI
         {
             _widget.Value = widget;
             _stateHolder = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), BuildChild);
-        }
-
-        public override string GetDiagnosticInfo()
-        {
-            return this._widget.Value?.GetDiagnosticsInfo();
         }
 
         private Widget BuildChild(BuildContext context)

@@ -27,6 +27,8 @@ namespace UniMob.UI.Tests
 
         public RenderObject CreateRenderObject(BuildContext context, IState state) =>
             new RenderCountingBox((CountingBoxState)state);
+
+        public string GetDiagnosticInfo() => null;
     }
 
     public class CountingBoxState : ViewState<CountingBox>
