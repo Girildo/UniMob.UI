@@ -32,6 +32,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private int _layoutVersion = int.MinValue;
 
+        // Plain field, not derived from the constraints atom: this is read from a diagnostic that
+        // must not register a dependency on anything.
+        private bool _everLaidOut;
+
+#if UNITY_EDITOR
+        private bool _reportedNeverLaidOut;
+#endif
+
         protected Lifetime Lifetime { get; }
 
         protected RenderObject(Lifetime lifetime)
@@ -87,6 +95,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 _constraints.Value = constraints;
             }
 
+            _everLaidOut = true;
+
             return _trackedSize.Get();
         }
 
@@ -120,6 +130,28 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             if (this.Lifetime.IsDisposed)
                 return Vector2.zero;
+
+#if UNITY_EDITOR
+            // The view layer is the one caller that cannot tolerate "not yet": it is about to stamp
+            // this size onto a RectTransform, and the answer here is a zero that looks like a
+            // measurement. Reported here rather than in the pass itself because measuring something
+            // before anything has laid it out is legitimate -- a geometry key read on the first
+            // frame, say -- whereas painting it is not.
+            //
+            // Nothing constrains a render object ambiently any more: a state whose parent never
+            // pushes is not laid out small, it is not laid out at all, and stays zero forever.
+            if (!_everLaidOut && !_reportedNeverLaidOut)
+            {
+                _reportedNeverLaidOut = true;
+                Debug.LogError(
+                    $"{GetType().Name} is being rendered before anything laid it out, so its size is "
+                        + "zero rather than measured. Its parent's layout pass never reached it: a "
+                        + "custom render object whose sizing pass does not call LayoutChild for every "
+                        + "child is the usual cause."
+                );
+            }
+#endif
+
             return _trackedLayout.Get().size;
         }
 
