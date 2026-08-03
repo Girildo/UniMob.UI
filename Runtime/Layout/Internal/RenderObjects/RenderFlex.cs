@@ -88,16 +88,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     ? float.IsInfinity(childSize.x)
                     : float.IsInfinity(childSize.y);
 
-#if UNITY_EDITOR
-                // Still editor-only, so the editor and a player lay this out differently. A9 decides
-                // that once, for all four sites, and this block goes with it.
                 if (childIsNonFinite)
                 {
-                    childSize = isHorizontal
-                        ? new Vector2(0, childSize.y)
-                        : new Vector2(childSize.x, 0);
+                    childSize = ZeroMainAxis(childSize, isHorizontal);
                 }
-#endif
 
                 // Written before the report, which marks this entry for the in-scene overlay.
                 ChildrenLayoutBuffer[i] = new LayoutInfo { Size = childSize };
@@ -159,12 +153,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     }
 
                     var childSize = LayoutChild(_state.Children[i], flexConstraints);
+                    var childIsNonFinite = isHorizontal
+                        ? float.IsInfinity(childSize.x)
+                        : float.IsInfinity(childSize.y);
+
+                    if (childIsNonFinite)
+                    {
+                        childSize = ZeroMainAxis(childSize, isHorizontal);
+                    }
 
                     ChildrenLayoutBuffer[i] = new LayoutInfo { Size = childSize };
 
-                    // Not clamped, where the inflexible pass above clamps the same fault. A9 settles
-                    // that; routing both through one facade only settles the reporting.
-                    if (isHorizontal ? float.IsInfinity(childSize.x) : float.IsInfinity(childSize.y))
+                    if (childIsNonFinite)
                     {
                         ReportNonFiniteChildSize(i, MainAxis, WrapInFlexible);
                     }
@@ -391,6 +391,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             return child.RenderObject.GetIntrinsicHeight(width);
         }
+
+        /// <summary>
+        ///     The repair for a child that answered with a non-finite main axis: that axis alone,
+        ///     zeroed, in every build.
+        /// </summary>
+        /// <remarks>
+        ///     Zero rather than the available extent, because the available extent is exactly what is
+        ///     missing in the case that causes this -- the fault originates in an unbounded constraint,
+        ///     where the maximum <i>is</i> infinity. Honest only because it is paired with a marker in
+        ///     the scene and a report naming the widget, the axis and the fix: a zero-sized widget is
+        ///     otherwise indistinguishable from an intentionally empty one.
+        /// </remarks>
+        private static Vector2 ZeroMainAxis(Vector2 size, bool isHorizontal) =>
+            isHorizontal ? new Vector2(0, size.y) : new Vector2(size.x, 0);
 
         /// <summary>
         ///     The inflexible child taking the most room on the main axis, or -1 if there are none.

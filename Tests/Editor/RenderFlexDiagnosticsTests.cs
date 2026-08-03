@@ -78,11 +78,12 @@ namespace UniMob.UI.Tests
             Assert.IsNull(row.ChildrenLayout[1].DebugWarning);
         }
 
-        // Site 3: flexible children need a bounded main axis to divide, and there is none. Nothing is
-        // repaired, so the row answers with the infinity it was handed. Site 4 fires in the same pass
-        // -- the flex child was handed an infinite share -- which is one push seen from both ends.
+        // Site 3: flexible children need a bounded main axis to divide, and there is none. The axis
+        // itself is not repaired -- there is nothing to repair it to -- but site 4 fires in the same
+        // pass, because the flex child was handed an infinite share, and that end is repaired. So the
+        // row ends up the width of its inflexible child rather than infinite.
         [Test]
-        public void UnboundedMainAxis_WithFlexChildren_ReportsAndRepairsNothing()
+        public void UnboundedMainAxis_WithFlexChildren_IsReportedAtBothEnds()
         {
             using var log = RecordingReporter.Capture();
             var (_, row) = MountRow(Box(20, 10), new Expanded { Child = Box(5, 10) });
@@ -94,13 +95,13 @@ namespace UniMob.UI.Tests
                 log.Select(issue => issue.Code).ToArray()
             );
             Assert.IsNotNull(log.First().Remedy, "an unbounded axis is fixed differently per site");
-            Assert.IsTrue(float.IsPositiveInfinity(row.Size.x));
+            Assert.AreEqual(20f, row.Size.x, 0.01f);
         }
 
-        // Site 4: the same fault as site 1, seen on a flexible child instead of an inflexible one --
-        // and left alone, where site 1 clamps. One method, two answers.
+        // Site 4: the same fault as site 1, seen on a flexible child instead of an inflexible one,
+        // and now given the same answer. One method, one repair.
         [Test]
-        public void FlexChild_AnsweringInfinity_IsReportedButNotClamped()
+        public void FlexChild_AnsweringInfinity_IsClampedToZero()
         {
             using var log = RecordingReporter.Capture();
             var (_, row) = MountRow(new Expanded { Child = Box(5, 10) });
@@ -108,7 +109,7 @@ namespace UniMob.UI.Tests
             row.Layout(new LayoutConstraints(0, 0, Inf, 10));
 
             Assert.IsTrue(log.Any(issue => issue.Code == LayoutIssueCode.NonFiniteChildSize));
-            Assert.IsTrue(float.IsPositiveInfinity(row.ChildrenLayout[0].Size.x));
+            Assert.AreEqual(new Vector2(0, 10), row.ChildrenLayout[0].Size);
         }
 
         // Below the tolerance band nothing is said and nothing is marked, which keeps a pixel of
