@@ -62,7 +62,7 @@ namespace UniMob.UI.Tests
                 RenderOf(root).LastConstraints,
                 "The leaf's sizing pass must run against the constraints written at the root."
             );
-            Assert.AreEqual(new Vector2(80, 60), root.RenderObject.Size);
+            Assert.AreEqual(new Vector2(80, 60), root.RenderObject.PeekSize());
         }
 
         [Test]
@@ -98,7 +98,7 @@ namespace UniMob.UI.Tests
             TestHarness.DriveFrame(root, LayoutConstraints.Tight(20, 25));
 
             Assert.AreEqual(LayoutConstraints.Tight(20, 25), RenderOf(root).LastConstraints);
-            Assert.AreEqual(new Vector2(20, 25), root.RenderObject.Size);
+            Assert.AreEqual(new Vector2(20, 25), root.RenderObject.PeekSize());
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace UniMob.UI.Tests
                 "The child should have been rebuilt."
             );
             Assert.AreEqual(constraints, RenderOf(root).LastConstraints);
-            Assert.AreEqual(new Vector2(80, 60), root.RenderObject.Size);
+            Assert.AreEqual(new Vector2(80, 60), root.RenderObject.PeekSize());
         }
 
         /// <summary>Changing a widget property must re-run layout rather than serve a stale size.</summary>
@@ -146,12 +146,12 @@ namespace UniMob.UI.Tests
             var constraints = LayoutConstraints.Loose(100, 100);
 
             TestHarness.DriveFrame(root, constraints);
-            Assert.AreEqual(new Vector2(30, 40), root.RenderObject.Size);
+            Assert.AreEqual(new Vector2(30, 40), root.RenderObject.PeekSize());
 
             size.Value = new Vector2(55, 65);
             TestHarness.DriveFrame(root, constraints);
 
-            Assert.AreEqual(new Vector2(55, 65), root.RenderObject.Size);
+            Assert.AreEqual(new Vector2(55, 65), root.RenderObject.PeekSize());
         }
 
         // == Tranche 2: fails today, must flip =====================================================

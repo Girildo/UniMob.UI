@@ -175,7 +175,7 @@ namespace UniMob.UI
 
                 var constraints = _renderObject.Constraints;
                 return constraints.HasValue
-                    ? $"{node}  {constraints.Value}  ->  {_renderObject.Size}"
+                    ? $"{node}  {constraints.Value}  ->  {_renderObject.PeekSize()}"
                     : $"{node}  <not laid out>";
             }
         }

@@ -155,7 +155,7 @@ namespace UniMob.UI.Layout.Internal.Views
                     axes,
                     BoundItBeforeItIsPainted,
                     child,
-                    size: child.RenderObject?.Size
+                    size: child.RenderObject?.PeekSize()
                 )
             );
         }

@@ -98,8 +98,21 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
         }
 
-        /// <summary>The final size after layout.</summary>
-        public Vector2 Size { get; private set; }
+        private Vector2 _size;
+
+        /// <summary>
+        ///     The size as of the last pass, read inertly: no subscription, and no recomputation of
+        ///     a pass that was invalidated since.
+        /// </summary>
+        /// <remarks>
+        ///     For readers that must not drive anything: diagnostics and debugger displays evaluated
+        ///     mid-layout, and fixtures asserting immediately after a synchronous <see cref="Layout"/>.
+        ///     <c>Atom.NoWatch</c> is not a substitute here -- it stops the subscription, but a
+        ///     tracked accessor still recomputes a dirty pass, and a report that lays a subtree out
+        ///     mid-report is a fault of its own. Anything that wants a size that stays current wants
+        ///     <see cref="WatchedSize"/> instead.
+        /// </remarks>
+        public Vector2 PeekSize() => _size;
 
         /// <summary>
         ///     The constraints this render object was last laid out against, or <c>null</c> if it has
@@ -117,7 +130,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///             <description>The RenderObject works exclusively in a logical, top-left coordinate system:</description>
         ///         </item>
         ///         <item>
-        ///             <c>RenderObject.Size</c> (Vector2): The final, calculated width and height of the widget.
+        ///             <c>RenderObject.PeekSize()</c> (Vector2): The final, calculated width and height of the widget.
         ///         </item>
         ///         <item>
         ///             <c>RenderObject.ChildrenLayout[i].CornerPosition</c> (Vector2):
@@ -222,7 +235,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             if (this.Lifetime.IsDisposed)
             {
-                return (Size, _layoutVersion);
+                return (_size, _layoutVersion);
             }
 
             var constraints = _constraints.Value;
@@ -230,7 +243,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 // Never laid out. Nothing can be computed yet, and inventing a value here would be
                 // indistinguishable from having been laid out at that size.
-                return (Size, _layoutVersion);
+                return (_size, _layoutVersion);
             }
 
 #if UNIMOB_UI_DIAGNOSTICS
@@ -238,10 +251,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 #endif
 
             // Phase 1: Perform this widget's own size.
-            Size = PerformSizing(constraints.Value);
+            _size = PerformSizing(constraints.Value);
 
             // Phase 2: Perform layout for children.
-            PerformPositioning(Size);
+            PerformPositioning(_size);
 
 #if UNIMOB_UI_DIAGNOSTICS
             ValidateLayout(constraints.Value);
@@ -254,7 +267,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // A pass ran, and subscribers to WatchLayout must re-run even if the size is unchanged,
             // so the version always moves.
-            return (Size, _layoutVersion = (_layoutVersion + 1) % int.MaxValue);
+            return (_size, _layoutVersion = (_layoutVersion + 1) % int.MaxValue);
         }
 
         /// <summary>
@@ -445,7 +458,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     axes,
                     remedy,
                     constraints: constraints,
-                    size: Size
+                    size: _size
                 )
             );
 #endif
@@ -473,12 +486,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             var axes = LayoutAxes.None;
 
-            if (!float.IsFinite(Size.x) && float.IsFinite(constraints.MaxWidth))
+            if (!float.IsFinite(_size.x) && float.IsFinite(constraints.MaxWidth))
             {
                 axes |= LayoutAxes.Horizontal;
             }
 
-            if (!float.IsFinite(Size.y) && float.IsFinite(constraints.MaxHeight))
+            if (!float.IsFinite(_size.y) && float.IsFinite(constraints.MaxHeight))
             {
                 axes |= LayoutAxes.Vertical;
             }

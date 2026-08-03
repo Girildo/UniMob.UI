@@ -31,7 +31,7 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(Diagnostics.LayoutIssueCode.UnboundedConstraint, issue.Code);
             Assert.AreEqual(Diagnostics.LayoutAxes.Vertical, issue.Axes);
             Assert.IsNotNull(issue.Remedy);
-            Assert.AreEqual(new Vector2(100, 0), sliver.Size);
+            Assert.AreEqual(new Vector2(100, 0), sliver.PeekSize());
         }
 
         [Test]

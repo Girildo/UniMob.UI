@@ -45,7 +45,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.Contain, texture: null);
             render.Layout(LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(Vector2.zero, render.Size);
+            Assert.AreEqual(Vector2.zero, render.PeekSize());
             Assert.AreEqual(0f, render.GetIntrinsicWidth(100f));
             Assert.AreEqual(0f, render.GetIntrinsicHeight(100f));
         }
@@ -56,7 +56,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.Contain, MakeTexture());
             render.Layout(LayoutConstraints.Tight(30, 30));
 
-            Assert.AreEqual(new Vector2(30, 30), render.Size);
+            Assert.AreEqual(new Vector2(30, 30), render.PeekSize());
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.Fill, MakeTexture());
             render.Layout(LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(200, 200), render.Size);
+            Assert.AreEqual(new Vector2(200, 200), render.PeekSize());
         }
 
         [Test]
@@ -76,7 +76,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.Cover, MakeTexture());
             render.Layout(LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(200, 200), render.Size);
+            Assert.AreEqual(new Vector2(200, 200), render.PeekSize());
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace UniMob.UI.Tests
             render.Layout(LayoutConstraints.Loose(200, 200));
 
             // scale = min(200/100, 200/50) = 2 => (100,50) * 2
-            Assert.AreEqual(new Vector2(200, 100), render.Size);
+            Assert.AreEqual(new Vector2(200, 100), render.PeekSize());
         }
 
         [Test]
@@ -95,7 +95,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.ScaleDown, MakeTexture());
             render.Layout(LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(100, 50), render.Size);
+            Assert.AreEqual(new Vector2(100, 50), render.PeekSize());
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace UniMob.UI.Tests
             render.Layout(LayoutConstraints.Loose(40, 40));
 
             // scale = min(40/100, 40/50) = 0.4 => (100,50) * 0.4
-            Assert.AreEqual(new Vector2(40, 20), render.Size);
+            Assert.AreEqual(new Vector2(40, 20), render.PeekSize());
         }
 
         [Test]
@@ -114,7 +114,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.FitWidth, MakeTexture());
             render.Layout(LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(200, 100), render.Size);
+            Assert.AreEqual(new Vector2(200, 100), render.PeekSize());
         }
 
         [Test]
@@ -123,7 +123,7 @@ namespace UniMob.UI.Tests
             var render = Build(ImageFit.None, MakeTexture());
             render.Layout(LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(100, 50), render.Size);
+            Assert.AreEqual(new Vector2(100, 50), render.PeekSize());
         }
 
         [Test]

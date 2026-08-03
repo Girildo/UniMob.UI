@@ -21,7 +21,7 @@ namespace UniMob.UI.Tests
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Loose(1000, 1000));
 
-            Assert.AreEqual(new Vector2(50, 50), box.Size);
+            Assert.AreEqual(new Vector2(50, 50), box.PeekSize());
         }
 
         [Test]
@@ -33,7 +33,7 @@ namespace UniMob.UI.Tests
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Loose(100, 100));
 
-            Assert.AreEqual(new Vector2(100, 100), box.Size);
+            Assert.AreEqual(new Vector2(100, 100), box.PeekSize());
         }
 
         [Test]
@@ -48,7 +48,7 @@ namespace UniMob.UI.Tests
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Loose(1000, 1000));
 
-            Assert.AreEqual(new Vector2(20, 30), box.Size);
+            Assert.AreEqual(new Vector2(20, 30), box.PeekSize());
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace UniMob.UI.Tests
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Unbounded());
 
-            Assert.AreEqual(Vector2.zero, box.Size);
+            Assert.AreEqual(Vector2.zero, box.PeekSize());
         }
 
         [Test]

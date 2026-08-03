@@ -20,7 +20,7 @@ namespace UniMob.UI.Tests
 
             // Documents actual behavior: PerformSizing returns Vector2.zero unconditionally, without
             // running it through constraints.Constrain() -- so a nonzero MinWidth/MinHeight is not honored.
-            Assert.AreEqual(Vector2.zero, render.Size);
+            Assert.AreEqual(Vector2.zero, render.PeekSize());
         }
 
         [Test]

@@ -46,7 +46,7 @@ namespace UniMob.UI.Tests
 
             var render = Layout(children, LayoutConstraints.Loose(200, 200));
 
-            Assert.AreEqual(new Vector2(50, 80), render.Size);
+            Assert.AreEqual(new Vector2(50, 80), render.PeekSize());
         }
 
         [Test]
@@ -96,7 +96,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(
                 new Vector2(10, 10),
-                render.Size,
+                render.PeekSize(),
                 "positioned children must not contribute to the stack's own size"
             );
             Assert.AreEqual(new Vector2(40, 5), render.ChildrenLayout[1].Position);

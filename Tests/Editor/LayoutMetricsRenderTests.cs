@@ -100,7 +100,7 @@ namespace UniMob.UI.Tests
             // through a geometry interface the state has to implement.
             Assert.That(size.x, Is.EqualTo(120f).Within(0.01f));
             Assert.That(size.y, Is.EqualTo(80f).Within(0.01f));
-            Assert.AreEqual(size, state.RenderObject.Size);
+            Assert.AreEqual(size, state.RenderObject.PeekSize());
         }
 
         // Minimal IView carrying a real RectTransform, so we can drive DidViewMount without the full

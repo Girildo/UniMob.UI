@@ -95,7 +95,7 @@ namespace UniMob.UI.Tests
                 log.Select(issue => issue.Code).ToArray()
             );
             Assert.IsNotNull(log.First().Remedy, "an unbounded axis is fixed differently per site");
-            Assert.AreEqual(20f, row.Size.x, 0.01f);
+            Assert.AreEqual(20f, row.PeekSize().x, 0.01f);
         }
 
         // Site 4: the same fault as site 1, seen on a flexible child instead of an inflexible one,

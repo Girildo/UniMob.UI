@@ -99,7 +99,7 @@ namespace UniMob.UI.Tests
 
             box.Layout(LayoutConstraints.Tight(400, 300));
 
-            Assert.AreEqual(new Vector2(400, 300), box.Size);
+            Assert.AreEqual(new Vector2(400, 300), box.PeekSize());
             Assert.IsEmpty(log);
         }
 
@@ -113,7 +113,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(
                 new Vector2(400, 300),
-                box.Size,
+                box.PeekSize(),
                 "the box fills whatever bounded room it is given: that room is the keep-inside frame."
             );
             Assert.IsEmpty(log);

@@ -120,7 +120,7 @@ namespace UniMob.UI.Diagnostics
             var described = DiagnosticNode.Describe(issue.Culprit);
             var size = issue.Culprit.RenderObject is null
                 ? string.Empty
-                : $"  {issue.Culprit.RenderObject.Size}";
+                : $"  {issue.Culprit.RenderObject.PeekSize()}";
 
             if (issue.Subject is not IMultiChildLayoutState multiChild)
             {
@@ -197,7 +197,7 @@ namespace UniMob.UI.Diagnostics
 
                     if (child.RenderObject != null)
                     {
-                        builder.Append(' ').Append(child.RenderObject.Size);
+                        builder.Append(' ').Append(child.RenderObject.PeekSize());
                     }
                 }
 

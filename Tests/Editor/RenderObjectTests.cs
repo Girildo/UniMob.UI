@@ -61,7 +61,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(0, renderObject.SizingCalls);
             Assert.AreEqual(0, renderObject.PositioningCalls);
-            Assert.AreEqual(Vector2.zero, renderObject.Size);
+            Assert.AreEqual(Vector2.zero, renderObject.PeekSize());
         }
 
         [Test]
@@ -109,7 +109,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(1, renderObject.SizingCalls);
             Assert.AreEqual(1, renderObject.PositioningCalls);
-            Assert.AreEqual(new Vector2(1, 1), renderObject.Size);
+            Assert.AreEqual(new Vector2(1, 1), renderObject.PeekSize());
         }
 
         // The parameter is the only channel between the two phases: sizing returns a value, the base
@@ -124,6 +124,26 @@ namespace UniMob.UI.Tests
             var returned = renderObject.Layout(LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(returned, renderObject.LastPositioningSize);
+        }
+
+        // PeekSize exists for readers that must not drive anything: diagnostics and debugger
+        // displays evaluated mid-layout. NoWatch alone cannot give that guarantee -- it stops the
+        // subscription, but a tracked accessor still recomputes a dirty pass on read, and a report
+        // that lays a subtree out mid-report is a fault of its own.
+        [Test]
+        public void PeekSize_ServesTheMemoWithoutRecomputing()
+        {
+            var renderObject = new CountingRenderObject(Lifetime.Eternal);
+            renderObject.Layout(LayoutConstraints.Loose(100, 100));
+
+            renderObject.InvalidateLayout();
+            var peeked = renderObject.PeekSize();
+
+            Assert.AreEqual(1, renderObject.SizingCalls, "a peek must not run the pass");
+            Assert.AreEqual(new Vector2(1, 1), peeked);
+
+            Assert.AreEqual(new Vector2(1, 1), renderObject.WatchedSize());
+            Assert.AreEqual(2, renderObject.SizingCalls, "a watched read serves the fresh pass");
         }
     }
 }

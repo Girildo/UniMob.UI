@@ -42,10 +42,10 @@ namespace UniMob.UI.Tests
             var legacy = new RenderLegacy(state);
 
             legacy.Layout(LayoutConstraints.Loose(1000, 1000));
-            Assert.AreEqual(new Vector2(50, 30), legacy.Size);
+            Assert.AreEqual(new Vector2(50, 30), legacy.PeekSize());
 
             legacy.Layout(new LayoutConstraints(0, 0, 10, 10));
-            Assert.AreEqual(new Vector2(10, 10), legacy.Size);
+            Assert.AreEqual(new Vector2(10, 10), legacy.PeekSize());
         }
 
         [Test]
@@ -76,7 +76,7 @@ namespace UniMob.UI.Tests
 
             legacy.Layout(LayoutConstraints.Loose(1000, 1000));
 
-            Assert.AreEqual(Vector2.zero, legacy.Size);
+            Assert.AreEqual(Vector2.zero, legacy.PeekSize());
         }
     }
 }

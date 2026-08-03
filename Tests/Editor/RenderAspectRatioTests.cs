@@ -23,7 +23,7 @@ namespace UniMob.UI.Tests
             var render = Build(aspectRatio: 2f);
             render.Layout(LayoutConstraints.Tight(80, 60));
 
-            Assert.AreEqual(new Vector2(80, 60), render.Size);
+            Assert.AreEqual(new Vector2(80, 60), render.PeekSize());
         }
 
         [Test]
@@ -32,7 +32,7 @@ namespace UniMob.UI.Tests
             var render = Build(aspectRatio: 2f);
             render.Layout(LayoutConstraints.Loose(100, 1000));
 
-            Assert.AreEqual(new Vector2(100, 50), render.Size);
+            Assert.AreEqual(new Vector2(100, 50), render.PeekSize());
         }
 
         [Test]
@@ -41,7 +41,7 @@ namespace UniMob.UI.Tests
             var render = Build(aspectRatio: 2f);
             render.Layout(new LayoutConstraints(0, 0, float.PositiveInfinity, 60));
 
-            Assert.AreEqual(new Vector2(120, 60), render.Size);
+            Assert.AreEqual(new Vector2(120, 60), render.PeekSize());
         }
 
         [Test]
@@ -53,7 +53,7 @@ namespace UniMob.UI.Tests
             // Naive width=100 => height=50 overflows MaxHeight=30, so height is clamped to 30 and width
             // rescaled from it (30*2=60) instead of just being clamped independently -- this is what
             // keeps the aspect ratio (60/30=2) instead of distorting it.
-            Assert.AreEqual(new Vector2(60, 30), render.Size);
+            Assert.AreEqual(new Vector2(60, 30), render.PeekSize());
         }
 
         [Test]
@@ -66,7 +66,7 @@ namespace UniMob.UI.Tests
             var render = Build(aspectRatio: 0.1f);
             render.Layout(new LayoutConstraints(30, 0, float.PositiveInfinity, 40));
 
-            Assert.AreEqual(new Vector2(30, 40), render.Size);
+            Assert.AreEqual(new Vector2(30, 40), render.PeekSize());
         }
 
         [Test]

@@ -16,7 +16,7 @@ namespace UniMob.UI.Tests
             var proxy = new RenderProxy(state);
             proxy.Layout(LayoutConstraints.Loose(100, 100));
 
-            Assert.AreEqual(new Vector2(30, 40), proxy.Size);
+            Assert.AreEqual(new Vector2(30, 40), proxy.PeekSize());
             Assert.AreEqual(Vector2.zero, proxy.ChildPosition);
         }
 
@@ -28,7 +28,7 @@ namespace UniMob.UI.Tests
             var proxy = new RenderProxy(state);
             proxy.Layout(new LayoutConstraints(10, 20, 100, 100));
 
-            Assert.AreEqual(new Vector2(10, 20), proxy.Size);
+            Assert.AreEqual(new Vector2(10, 20), proxy.PeekSize());
         }
     }
 }

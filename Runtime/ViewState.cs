@@ -56,10 +56,11 @@ namespace UniMob.UI
         // Local geometry is render-tree truth, so it is read off RenderObject rather than mirrored
         // here. Any state can answer it without an interface.
         //
-        // Reach for RenderObject.WatchedSize(), not RenderObject.Size: Size is the raw result of the
-        // last pass, so it is whatever was current when someone last laid this out, and reading it
-        // subscribes to nothing. WatchedSize both runs the pass if it is due and re-runs the caller
-        // when the answer changes, which is what anything outside a layout pass actually wants.
+        // Reach for RenderObject.WatchedSize(), not RenderObject.PeekSize(): the peek is the raw
+        // result of the last pass, so it is whatever was current when someone last laid this out,
+        // and reading it subscribes to nothing. WatchedSize both runs the pass if it is due and
+        // re-runs the caller when the answer changes, which is what anything outside a layout pass
+        // actually wants.
 
         /// <summary>
         /// Reads this widget's current on-screen box in canvas space. Returns <c>false</c> (and

@@ -92,12 +92,12 @@ namespace UniMob.UI.Tests
             );
 
             TestHarness.DriveFrame(root, LayoutConstraints.Loose(200, 100));
-            Assert.AreEqual(new Vector2(100, 10), root.RenderObject.Size);
+            Assert.AreEqual(new Vector2(100, 10), root.RenderObject.PeekSize());
 
             TestHarness.DriveFrame(root, LayoutConstraints.Loose(60, 100));
             Assert.AreEqual(
                 new Vector2(30, 10),
-                root.RenderObject.Size,
+                root.RenderObject.PeekSize(),
                 "a stale build would still measure 100 wide here."
             );
         }

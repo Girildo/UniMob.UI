@@ -23,7 +23,7 @@ namespace UniMob.UI.Tests
             var box = new RenderPositionedBox(state);
             box.Layout(LayoutConstraints.Unbounded());
 
-            Assert.AreEqual(new Vector2(30, 40), box.Size);
+            Assert.AreEqual(new Vector2(30, 40), box.PeekSize());
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace UniMob.UI.Tests
             var box = new RenderPositionedBox(state);
             box.Layout(LayoutConstraints.Tight(200, 150));
 
-            Assert.AreEqual(new Vector2(200, 150), box.Size);
+            Assert.AreEqual(new Vector2(200, 150), box.PeekSize());
         }
 
         [Test]
@@ -49,7 +49,7 @@ namespace UniMob.UI.Tests
 
             // Width is shrink-wrapped via the factor (20 * 2); height has no factor and the incoming
             // constraints are bounded, so it expands to fill instead of shrink-wrapping.
-            Assert.AreEqual(new Vector2(40, 1000), box.Size);
+            Assert.AreEqual(new Vector2(40, 1000), box.PeekSize());
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace UniMob.UI.Tests
             var box = new RenderPositionedBox(state);
             box.Layout(LayoutConstraints.Loose(1000, 1000));
 
-            Assert.AreEqual(0f, box.Size.x);
+            Assert.AreEqual(0f, box.PeekSize().x);
             Assert.AreEqual(Vector2.zero, box.ChildPosition);
         }
     }

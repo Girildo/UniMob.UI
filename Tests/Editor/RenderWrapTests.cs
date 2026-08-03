@@ -34,7 +34,7 @@ namespace UniMob.UI.Tests
             wrap.Layout(new LayoutConstraints(0, 0, 100, 1000));
 
             // First two fit in one row (80 <= 100); the third overflows into a second row.
-            Assert.AreEqual(new Vector2(80, 40), wrap.Size);
+            Assert.AreEqual(new Vector2(80, 40), wrap.PeekSize());
             Assert.AreEqual(0f, wrap.ChildrenLayout[0].Position.y);
             Assert.AreEqual(0f, wrap.ChildrenLayout[1].Position.y);
             Assert.AreEqual(20f, wrap.ChildrenLayout[2].Position.y);
@@ -68,7 +68,7 @@ namespace UniMob.UI.Tests
             var wrap = new RenderWrap(state);
             wrap.Layout(new LayoutConstraints(0, 0, 1000, 1000));
 
-            Assert.AreEqual(65f, wrap.Size.x, 0.01f);
+            Assert.AreEqual(65f, wrap.PeekSize().x, 0.01f);
             Assert.AreEqual(35f, wrap.ChildrenLayout[1].Position.x, 0.01f);
         }
 

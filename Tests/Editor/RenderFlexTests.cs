@@ -35,7 +35,7 @@ namespace UniMob.UI.Tests
             var flex = new RenderFlex(state, Axis.Horizontal);
             flex.Layout(LayoutConstraints.Loose(1000, 1000));
 
-            Assert.AreEqual(new Vector2(10 + 30 + 5 + 4 * 2, 25), flex.Size);
+            Assert.AreEqual(new Vector2(10 + 30 + 5 + 4 * 2, 25), flex.PeekSize());
             Assert.AreEqual(0f, flex.ChildrenLayout[0].Position.x);
             Assert.AreEqual(10 + 4, flex.ChildrenLayout[1].Position.x);
             Assert.AreEqual(10 + 4 + 30 + 4, flex.ChildrenLayout[2].Position.x);
