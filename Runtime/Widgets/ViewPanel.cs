@@ -13,6 +13,13 @@ namespace UniMob.UI.Widgets
         // The state this panel roots its layout chain at. Distinct from State, which is that state's
         // InnerViewState: a panel wrapping a build-only widget has an outer state that owns the chain
         // and an inner one that owns the view, and they are not the same object.
+        //
+        // A plain field read from the reactive Render() below, which is safe only because of the
+        // order the two Renders run in: the caller sets this and pushes constraints in Render(state)
+        // before base.Render reaches Render(). A reactive re-run in between reuses the last state,
+        // which is the same one -- the caller passes a fresh state by calling Render(state) again,
+        // which reassigns this first. The null fallback below covers the one case the ordering does
+        // not: a render before any caller has passed a state at all.
         private IState _layoutRoot;
 
         private ViewMapperBase _mapper;
