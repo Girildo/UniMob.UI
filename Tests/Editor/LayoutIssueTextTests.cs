@@ -98,7 +98,9 @@ namespace UniMob.UI.Tests
             StringAssert.StartsWith("  fix     ", lines[2]);
             StringAssert.Contains("Let it scroll.", lines[2]);
             StringAssert.StartsWith("  got     ", lines[3]);
-            StringAssert.StartsWith("  gave    ", lines[4]);
+            // "measured", not "gave": a report fired mid-pass sees some children at this pass's sizes
+            // and the rest at their previous ones, and the label has to say which claim it is making.
+            StringAssert.StartsWith("  measured", lines[4]);
         }
 
         // Naming a type identifies nothing in a row of four of them, so a culprit is placed among its

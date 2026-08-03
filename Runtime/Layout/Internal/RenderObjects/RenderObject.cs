@@ -368,6 +368,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             MarkCulprit(culpritIndex, LayoutIssueCode.Overflow);
 
+            // No size: this fires from inside PerformSizing, and Size is not written until that
+            // returns -- so passing it here reports the PREVIOUS pass's answer as though it were this
+            // one's. Seen in the wild as a row printing 1098 while being laid out at 258.
             Emit(
                 new LayoutIssue(
                     LayoutIssueCode.Overflow,
@@ -376,8 +379,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     remedy,
                     ChildAt(culpritIndex),
                     _constraints.Value,
-                    Size,
-                    amount
+                    amount: amount
                 )
             );
 #endif

@@ -97,7 +97,13 @@ namespace UniMob.UI.Diagnostics
                 var children = ChildSizes(issue.Subject);
                 if (children != null)
                 {
-                    Row(builder, "gave", children);
+                    // "measured", not "gave". A report fired from inside a sizing pass sees the
+                    // children the algorithm has already reached at this pass's sizes and the rest at
+                    // their previous ones -- for an overflow that means the inflexible children are
+                    // current (and are the ones that overflowed) while the flexible ones are stale.
+                    // Naming the line for what it is beats printing last frame's numbers as this
+                    // frame's.
+                    Row(builder, "measured", children);
                 }
             }
 
@@ -149,6 +155,11 @@ namespace UniMob.UI.Diagnostics
         ///     reachable only through a getter that drives a pass. Where the two differ -- a parent that
         ///     clamped what a child answered -- the child's own answer is the more useful of the two,
         ///     because it is the one that caused the report.
+        ///     <para>
+        ///         These are last-measured sizes, not necessarily this pass's: a child the reporting
+        ///         algorithm has not reached yet still holds the size it was given last time. The line
+        ///         is labelled "measured" for that reason.
+        ///     </para>
         /// </remarks>
         private static string ChildSizes(IState subject)
         {
