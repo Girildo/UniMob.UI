@@ -1,5 +1,6 @@
 #nullable enable
 using UniMob.UI;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout;
 using UnityEngine;
 
@@ -55,27 +56,28 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-#if UNITY_EDITOR
             // Reported rather than repaired, because every repair is a lie: this widget's frame IS
             // the policy, so inventing one would place the child against a box the caller never
             // chose and keep-inside would enforce a boundary that is not on screen. An unbounded
             // axis makes `self` infinite below, which silently turns KeepInside's clamp into a
             // no-op and hands the child unbounded constraints of its own. Both look like a
             // positioning bug at the call site rather than a missing frame here.
-            if (!constraints.HasBoundedWidth || !constraints.HasBoundedHeight)
-            {
-                var axis =
-                    !constraints.HasBoundedWidth && !constraints.HasBoundedHeight ? "both axes"
-                    : !constraints.HasBoundedWidth ? "width"
-                    : "height";
+            var unbounded = LayoutAxes.None;
 
-                Debug.LogError(
-                    $"AnchoredBox was given unbounded {axis} ({constraints}), so it has no frame to "
-                        + "place its child within and keep-inside cannot hold. Give it a bounded box: "
-                        + "wrap it in Positioned.Fill, or pin the axis on the enclosing Positioned."
-                );
+            if (!constraints.HasBoundedWidth)
+            {
+                unbounded |= LayoutAxes.Horizontal;
             }
-#endif
+
+            if (!constraints.HasBoundedHeight)
+            {
+                unbounded |= LayoutAxes.Vertical;
+            }
+
+            if (unbounded != LayoutAxes.None)
+            {
+                ReportUnboundedConstraint(unbounded, constraints, GiveItAFrame);
+            }
 
             // Fill what we are given: this widget IS the space the child is placed within, so its own
             // size is the frame that "keep inside" refers to.
@@ -269,5 +271,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             return Mathf.Clamp(position, padding, max);
         }
+
+        private const string GiveItAFrame =
+            "An AnchoredBox has no frame to place its child within, and keep-inside cannot hold "
+            + "without one. Wrap it in Positioned.Fill, or pin the axis on the enclosing Positioned.";
+
     }
 }

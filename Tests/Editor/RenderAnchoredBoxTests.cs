@@ -1,9 +1,9 @@
-using System.Text.RegularExpressions;
+using System.Linq;
 using NUnit.Framework;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -20,6 +20,12 @@ namespace UniMob.UI.Tests
     ///         any axis it does not pin, so <c>Positioned { Left, Top }</c> around an anchored box
     ///         hands it exactly this. Every such site in the app today uses <c>Positioned.Fill</c>,
     ///         and these tests are what keeps the next one from being silent.
+    ///     </para>
+    ///     <para>
+    ///         Asserted against a recording reporter rather than Unity's log. A silence assertion made
+    ///         with <c>LogAssert.NoUnexpectedReceived</c> would go vacuous the moment reports stopped
+    ///         reaching Unity's log -- passing just as happily while the box screamed into a recorder
+    ///         nobody read -- and a test that stops testing without failing is worse than no test.
     ///     </para>
     /// </remarks>
     public class RenderAnchoredBoxTests
@@ -44,34 +50,41 @@ namespace UniMob.UI.Tests
                 }
             );
 
-        // Matched loosely on purpose: the assertion is that the box refuses the axis and says how to
-        // give it one, not that the sentence keeps its wording.
-        private static readonly Regex UnboundedComplaint = new Regex(
-            "AnchoredBox was given unbounded .*Positioned"
-        );
-
+        // Structural, not textual: the assertion is that the box refuses the axis and says how to
+        // give it one, which survives the sentence being rewritten.
         [Test]
         public void UnboundedWidth_IsReported()
         {
-            LogAssert.Expect(LogType.Error, UnboundedComplaint);
+            using var log = RecordingReporter.Capture();
 
             Box().Layout(new LayoutConstraints(0, 0, float.PositiveInfinity, 200));
+
+            var issue = log.Single();
+            Assert.AreEqual(LayoutIssueCode.UnboundedConstraint, issue.Code);
+            Assert.AreEqual(LayoutAxes.Horizontal, issue.Axes);
+            Assert.IsNotNull(issue.Remedy);
         }
 
         [Test]
         public void UnboundedHeight_IsReported()
         {
-            LogAssert.Expect(LogType.Error, UnboundedComplaint);
+            using var log = RecordingReporter.Capture();
 
             Box().Layout(new LayoutConstraints(0, 0, 200, float.PositiveInfinity));
+
+            Assert.AreEqual(LayoutAxes.Vertical, log.Single().Axes);
         }
 
+        // Axis, not Axes: the enum the rest of layout uses cannot say "both", which is exactly what
+        // this case is.
         [Test]
-        public void FullyUnboundedConstraints_AreReportedOnce()
+        public void FullyUnboundedConstraints_AreReportedOnce_NamingBothAxes()
         {
-            LogAssert.Expect(LogType.Error, UnboundedComplaint);
+            using var log = RecordingReporter.Capture();
 
             Box().Layout(LayoutConstraints.Unbounded());
+
+            Assert.AreEqual(LayoutAxes.Both, log.Single().Axes);
         }
 
         /// <summary>
@@ -81,17 +94,19 @@ namespace UniMob.UI.Tests
         [Test]
         public void ATightFrame_IsNotReported()
         {
+            using var log = RecordingReporter.Capture();
             var box = Box();
 
             box.Layout(LayoutConstraints.Tight(400, 300));
 
             Assert.AreEqual(new Vector2(400, 300), box.Size);
-            LogAssert.NoUnexpectedReceived();
+            Assert.IsEmpty(log);
         }
 
         [Test]
         public void ALooseButBoundedFrame_IsNotReported()
         {
+            using var log = RecordingReporter.Capture();
             var box = Box();
 
             box.Layout(LayoutConstraints.Loose(400, 300));
@@ -101,7 +116,7 @@ namespace UniMob.UI.Tests
                 box.Size,
                 "the box fills whatever bounded room it is given: that room is the keep-inside frame."
             );
-            LogAssert.NoUnexpectedReceived();
+            Assert.IsEmpty(log);
         }
     }
 }
