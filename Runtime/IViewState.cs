@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using UniMob.UI.Layout;
 
 namespace UniMob.UI
@@ -8,6 +9,17 @@ namespace UniMob.UI
 
         void DidViewMount(IView view);
         void DidViewUnmount(IView view);
+
+        /// <summary>
+        /// The view this state is currently painted by, or <c>null</c> while it is not mounted to one.
+        /// </summary>
+        /// <remarks>
+        /// Exists so a diagnostic can attach the offending GameObject to a console entry, which is what
+        /// makes the entry select the widget when clicked. Plain and non-reactive: it is written by
+        /// <see cref="DidViewMount"/> and read from inside a layout pass, so it must not be an atom.
+        /// </remarks>
+        [CanBeNull]
+        IView MountedView { get; }
 
         /// <summary>
         /// Reads the widget's current on-screen box in canvas space. Returns <c>false</c> (and

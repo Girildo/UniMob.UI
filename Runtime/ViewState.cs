@@ -19,6 +19,9 @@ namespace UniMob.UI
 
         public sealed override IViewState InnerViewState => this;
 
+        /// <inheritdoc/>
+        public IView MountedView => _mountedView;
+
         public Lifetime MountLifetime
         {
             get

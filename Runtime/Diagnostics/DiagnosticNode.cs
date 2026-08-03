@@ -33,6 +33,15 @@ namespace UniMob.UI.Diagnostics
             return builder.ToString();
         }
 
+        /// <summary>
+        ///     Channel 0 alone: the widget's type, with no Key and no label. What a summary sentence
+        ///     wants, where the full node would bury the fault it is describing.
+        /// </summary>
+        internal static string NameOf([CanBeNull] IState state)
+        {
+            return state is null ? "<null>" : TypeName(state);
+        }
+
         internal static void AppendTo(StringBuilder builder, [CanBeNull] IState state)
         {
             if (state is null)
