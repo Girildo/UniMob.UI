@@ -1,3 +1,7 @@
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNIMOB_UI_FORCE_DIAGNOSTICS
+#define UNIMOB_UI_DIAGNOSTICS
+#endif
+
 using System.Collections.Generic;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout.Internal.Views;
@@ -57,7 +61,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <inheritdoc/>
         protected override void MarkCulprit(int index, LayoutIssueCode code)
         {
-#if UNITY_EDITOR
+#if UNIMOB_UI_DIAGNOSTICS
             if (index < 0 || index >= ChildrenLayoutBuffer.Count)
             {
                 return;

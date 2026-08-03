@@ -1,3 +1,7 @@
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNIMOB_UI_FORCE_DIAGNOSTICS
+#define UNIMOB_UI_DIAGNOSTICS
+#endif
+
 using UniMob.UI.Diagnostics;
 using UnityEngine;
 
@@ -12,7 +16,7 @@ namespace UniMob.UI.Layout
         public Vector2 Size;
         public Vector2 Position;
 
-#if UNITY_EDITOR
+#if UNIMOB_UI_DIAGNOSTICS
         /// <summary>
         ///     Set while this child is implicated in a layout fault, for the in-scene stripe.
         /// </summary>

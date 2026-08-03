@@ -1,4 +1,8 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNIMOB_UI_FORCE_DIAGNOSTICS
+#define UNIMOB_UI_DIAGNOSTICS
+#endif
+
+#if UNIMOB_UI_DIAGNOSTICS
 using System.Collections.Generic;
 using UnityEngine;
 

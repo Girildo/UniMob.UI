@@ -1,10 +1,14 @@
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNIMOB_UI_FORCE_DIAGNOSTICS
+#define UNIMOB_UI_DIAGNOSTICS
+#endif
+
 using System;
 using System.Diagnostics;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
-#if UNITY_EDITOR
-// LayoutWarningOverlay is the only type in this namespace, and it is editor-only -- so in a
-// player build the namespace does not exist and an unguarded using is a compile error.
+#if UNIMOB_UI_DIAGNOSTICS
+// LayoutWarningOverlay is the only type in this namespace and it compiles out with the diagnostics,
+// taking the namespace with it -- so an unguarded using of it is a compile error in a build without.
 using UniMob.UI.Layout.Internal.Diagnostics;
 #endif
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -110,9 +114,11 @@ namespace UniMob.UI.Layout.Internal.Views
         ///     </para>
         /// </remarks>
         [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
         private void PaintOwnIssue()
         {
-#if UNITY_EDITOR
+#if UNIMOB_UI_DIAGNOSTICS
             if (State.RenderObject.HasLayoutIssue && this.rectTransform.parent != null)
             {
                 _warnings.Paint(this.rectTransform);
@@ -122,9 +128,11 @@ namespace UniMob.UI.Layout.Internal.Views
 #endif
         }
 
-#if UNITY_EDITOR
+#if UNIMOB_UI_DIAGNOSTICS
         private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
+#endif
 
+#if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             if (this.rectTransform == null) return;
