@@ -64,7 +64,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
 
             var layout = ChildrenLayoutBuffer[index];
-            layout.DebugWarning = code.ToString();
+            layout.Issue = code;
             ChildrenLayoutBuffer[index] = layout;
 #endif
         }

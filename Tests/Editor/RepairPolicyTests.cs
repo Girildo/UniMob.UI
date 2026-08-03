@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
@@ -75,7 +76,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(1, log.Count);
             Assert.IsNotNull(log[0].Remedy);
-            Assert.IsNotNull(render.ChildrenLayout[0].DebugWarning);
+            Assert.AreEqual(LayoutIssueCode.NonFiniteChildSize, render.ChildrenLayout[0].Issue);
         }
     }
 }

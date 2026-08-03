@@ -1,10 +1,9 @@
 using System;
-using System.Collections.Generic;
 using UniMob.UI.Internal;
+using UniMob.UI.Layout.Internal.Diagnostics;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
 using UnityEngine;
-using UnityEngine.UI;
 
 [assembly: RegisterComponentViewFactory("$$_Layout.MultiChildLayoutView",
     typeof(RectTransform),
@@ -99,11 +98,11 @@ namespace UniMob.UI.Layout.Internal.Views
                     new Vector2(layoutData.Position.x, -layoutData.Position.y) + pivotOffset;
 
 #if UNITY_EDITOR
-                if (infiniteWidth || infiniteHeight || layoutData.DebugWarning != null)
+                // Level-triggered: drawn for exactly as long as the fault is happening. The report
+                // that says it *started* was already made, once, by whoever set the marker.
+                if (infiniteWidth || infiniteHeight || layoutData.Issue.HasValue)
                 {
-                    if (layoutData.DebugWarning != null)
-                        Debug.LogWarning($"{child.GetType().Name}: {layoutData.DebugWarning}", this);
-                    PaintLayoutWarning(rt);
+                    _warnings.Paint(rt);
                 }
 #endif
                 // SYNC UNITY HIERARCHY WITH DECLARATIVE ORDER
@@ -114,79 +113,12 @@ namespace UniMob.UI.Layout.Internal.Views
             }
 
 #if UNITY_EDITOR
-            HideUnusedLayoutWarnings();
+            _warnings.HideUnused();
 #endif
         }
-
-        // Diagnostics code
 
 #if UNITY_EDITOR
-        private static Sprite _stripeSprite;
-        private readonly List<UnityEngine.UI.Image> _warningPool = new();
-        private int _warningsUsed;
-
-        private static Sprite StripeSprite
-        {
-            get
-            {
-                if (_stripeSprite != null) return _stripeSprite;
-
-                const int size = 16;
-                var tex = new Texture2D(size, size) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Point, hideFlags = HideFlags.DontSave };
-                var pixels = new Color32[size * size];
-                for (var y = 0; y < size; y++)
-                    for (var x = 0; x < size; x++)
-                        pixels[y * size + x] = (x + y) % size < size / 2
-                            ? new Color32(255, 220, 0, 220)
-                            : new Color32(20, 20, 20, 220);
-                tex.SetPixels32(pixels);
-                tex.Apply();
-
-                _stripeSprite = Sprite.Create(tex, new Rect(0, 0, size, size), Vector2.zero, size, 0, SpriteMeshType.FullRect);
-                _stripeSprite.hideFlags = HideFlags.DontSave;
-                return _stripeSprite;
-            }
-        }
-
-        private void PaintLayoutWarning(RectTransform childRect)
-        {
-            UnityEngine.UI.Image overlay;
-            if (_warningsUsed < _warningPool.Count)
-            {
-                overlay = _warningPool[_warningsUsed];
-                overlay.gameObject.SetActive(true);
-            }
-            else
-            {
-                var go = new GameObject("LayoutWarning", typeof(RectTransform), typeof(UnityEngine.UI.Image))
-                {
-                    hideFlags = HideFlags.DontSave
-                };
-                overlay = go.GetComponent<UnityEngine.UI.Image>();
-                overlay.sprite = StripeSprite;
-                overlay.type = UnityEngine.UI.Image.Type.Tiled;
-                overlay.raycastTarget = false;
-                _warningPool.Add(overlay);
-            }
-            _warningsUsed++;
-
-            var rt = (RectTransform) overlay.transform;
-            rt.SetParent(childRect.parent, false); // sibling of the child, same coordinate space
-            rt.SetAsLastSibling();                 // paint on top
-            rt.anchorMin = childRect.anchorMin;
-            rt.anchorMax = childRect.anchorMax;
-            rt.pivot = childRect.pivot;
-            rt.anchoredPosition = childRect.anchoredPosition;
-            rt.sizeDelta = childRect.sizeDelta;
-        }
-
-        private void HideUnusedLayoutWarnings()
-        {
-            for (var i = _warningsUsed; i < _warningPool.Count; i++)
-                _warningPool[i].gameObject.SetActive(false);
-            _warningsUsed = 0;
-        }
+        private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
 #endif
-
     }
 }

@@ -50,7 +50,7 @@ namespace UniMob.UI.Tests
             Assert.AreSame(ChildOf(state, 0), issue.Culprit);
 
             Assert.AreEqual(new Vector2(0, 10), row.ChildrenLayout[0].Size);
-            Assert.IsNotNull(row.ChildrenLayout[0].DebugWarning);
+            Assert.AreEqual(LayoutIssueCode.NonFiniteChildSize, row.ChildrenLayout[0].Issue);
         }
 
         // Site 2: the inflexible children do not fit. The overflow is absorbed by giving the flexible
@@ -74,8 +74,8 @@ namespace UniMob.UI.Tests
             Assert.AreSame(ChildOf(state, 0), issue.Culprit, "the 200px child should be named");
 
             Assert.AreEqual(0f, row.ChildrenLayout[2].Size.x, "flex children absorb the overflow");
-            Assert.IsNotNull(row.ChildrenLayout[0].DebugWarning);
-            Assert.IsNull(row.ChildrenLayout[1].DebugWarning);
+            Assert.AreEqual(LayoutIssueCode.Overflow, row.ChildrenLayout[0].Issue);
+            Assert.IsNull(row.ChildrenLayout[1].Issue);
         }
 
         // Site 3: flexible children need a bounded main axis to divide, and there is none. The axis
@@ -125,7 +125,7 @@ namespace UniMob.UI.Tests
             row.Layout(LayoutConstraints.Tight(100, 10));
 
             Assert.IsEmpty(log);
-            Assert.IsNull(row.ChildrenLayout[0].DebugWarning);
+            Assert.IsNull(row.ChildrenLayout[0].Issue);
         }
     }
 }

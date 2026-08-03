@@ -1,5 +1,6 @@
 using System;
 using UniMob.UI.Internal;
+using UniMob.UI.Layout.Internal.Diagnostics;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
 
@@ -73,8 +74,25 @@ namespace UniMob.UI.Layout.Internal.Views
 
                 rt.sizeDelta = childSize;
                 rt.anchoredPosition = new Vector2(topLeftPosition.x, -topLeftPosition.y) + pivotOffset;
+
+#if UNITY_EDITOR
+                // The single-child half of the tree could report a fault and show nothing for it,
+                // because the stripe only ever existed on the multi-child view. There is no per-child
+                // marker to read here -- a single-child render object keeps one child's geometry, not
+                // a buffer of it -- so the signal is the render object's own live issue flag.
+                if (State.RenderObject.HasLayoutIssue)
+                {
+                    _warnings.Paint(rt);
+                }
+
+                _warnings.HideUnused();
+#endif
             }
         }
+
+#if UNITY_EDITOR
+        private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
+#endif
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
