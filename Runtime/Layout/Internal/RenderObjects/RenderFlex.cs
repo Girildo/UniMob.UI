@@ -1,6 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
-using UniMob.UI.Layout.Internal.Diagnostics;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
@@ -30,6 +29,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _state = state;
             _axis = axis;
         }
+
+        private LayoutAxes MainAxis =>
+            _axis == Axis.Horizontal ? LayoutAxes.Horizontal : LayoutAxes.Vertical;
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
@@ -82,31 +84,29 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 }
 
                 var childSize = LayoutChild(_state.Children[i], childConstraints);
-
+                var childIsNonFinite = isHorizontal
+                    ? float.IsInfinity(childSize.x)
+                    : float.IsInfinity(childSize.y);
 
 #if UNITY_EDITOR
-                string debugWarning = null;
-                var infiniteMain = isHorizontal ? float.IsInfinity(childSize.x) : float.IsInfinity(childSize.y);
-                if (infiniteMain)
+                // Still editor-only, so the editor and a player lay this out differently. A9 decides
+                // that once, for all four sites, and this block goes with it.
+                if (childIsNonFinite)
                 {
-                    var axisName = isHorizontal ? "width" : "height";
-                    debugWarning = $"Returned infinite {axisName} under unbounded {axisName} constraints. " +
-                                    "Wrap in Expanded/Flexible to fix.";
-                    Debug.LogError($"{_state.GetType().Name}: child {_state.Children[i].GetType().Name} " +
-                                    $"(index {i}) {debugWarning}");
-
-                    childSize = isHorizontal ? new Vector2(0, childSize.y) : new Vector2(childSize.x, 0);
+                    childSize = isHorizontal
+                        ? new Vector2(0, childSize.y)
+                        : new Vector2(childSize.x, 0);
                 }
 #endif
 
-                ChildrenLayoutBuffer[i] = new LayoutInfo
-                {
-                    Size = childSize,
-#if UNITY_EDITOR
-                    DebugWarning = debugWarning
-#endif
+                // Written before the report, which marks this entry for the in-scene overlay.
+                ChildrenLayoutBuffer[i] = new LayoutInfo { Size = childSize };
 
-                };
+                if (childIsNonFinite)
+                {
+                    ReportNonFiniteChildSize(i, MainAxis, WrapInFlexible);
+                }
+
                 mainAxisTotalSize += isHorizontal ? childSize.x : childSize.y;
                 crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
             }
@@ -120,33 +120,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             if (freeSpace < 0)
             {
-                // Handle overflow: non-flex children exceed available space. We log a warning and set freeSpace to 0, so flex children won't get negative space.
-                // The tolerance bands to absorb small floating point errors without logging warnings, but still catch significant overflows.
-                if (freeSpace < -LayoutConstants.OverflowTolerance)
-                {
-                    var overflowAmount = -freeSpace;
-                    var axisName = isHorizontal ? "horizontal" : "vertical";
-                    var childNames = string.Join(", ", _nonFlexChildrenIndices
-                        .Select(i => _state.Children[i].GetType().Name));
-
-                    Debug.LogWarning(
-                        $"{_state.GetType().Name} overflowed by {overflowAmount:F1}px on the {axisName} axis. " +
-                        $"Non-flex children ({childNames}) requested more space than is available.");
-
-#if UNITY_EDITOR
-                    if (_nonFlexChildrenIndices.Count > 0)
-                    {
-                        var lastIndex = _nonFlexChildrenIndices[^1];
-                        var layoutData = ChildrenLayoutBuffer[lastIndex];
-                        var msg = $"Container overflowed by {overflowAmount:F1}px ({axisName}). " +
-                                  "This child doesn't fit alongside its siblings.";
-                        layoutData.DebugWarning = layoutData.DebugWarning is null
-                            ? msg
-                            : layoutData.DebugWarning + " | " + msg;
-                        ChildrenLayoutBuffer[lastIndex] = layoutData;
-                    }
-#endif
-                }
+                // Flexible children cannot be given negative space, so the overflow is absorbed here
+                // whether or not anything is said about it. The tolerance band that decides whether
+                // to say anything belongs to the report, not to this.
+                ReportOverflow(MainAxis, -freeSpace, LargestNonFlexChild(), MakeRoomOrScroll);
 
                 freeSpace = 0;
             }
@@ -155,12 +132,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 if (float.IsInfinity(maxMainAxis))
                 {
-                    Debug.LogError(
-                        $"{_state.GetType().Name}: has flexible (Expanded) children but received " +
-                        $"unbounded {(isHorizontal ? "width" : "height")} constraints. " +
-                        "An ancestor must provide a bounded size on this axis, or remove Expanded.");
-
-                    Debug.LogError(_state.PrintHierarchy());
+                    ReportUnboundedConstraint(MainAxis, constraints, BoundTheMainAxis);
                 }
 
                 foreach (var (i, flex, fit) in _flexChildrenData)
@@ -188,18 +160,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                     var childSize = LayoutChild(_state.Children[i], flexConstraints);
 
+                    ChildrenLayoutBuffer[i] = new LayoutInfo { Size = childSize };
 
-
+                    // Not clamped, where the inflexible pass above clamps the same fault. A9 settles
+                    // that; routing both through one facade only settles the reporting.
                     if (isHorizontal ? float.IsInfinity(childSize.x) : float.IsInfinity(childSize.y))
                     {
-                        Debug.LogError(
-                            $"{_state.Children[i].GetType().Name} returned an infinite " +
-                            $"{(isHorizontal ? "width" : "height")} when given unconstrained " +
-                            $"{(isHorizontal ? "width" : "height")}. Wrap it in Expanded/Flexible " +
-                            "so it receives a bounded constraint.");
+                        ReportNonFiniteChildSize(i, MainAxis, WrapInFlexible);
                     }
 
-                    ChildrenLayoutBuffer[i] = new LayoutInfo { Size = childSize };
                     crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
                 }
             }
@@ -423,6 +392,40 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return child.RenderObject.GetIntrinsicHeight(width);
         }
 
+        /// <summary>
+        ///     The inflexible child taking the most room on the main axis, or -1 if there are none.
+        /// </summary>
+        /// <remarks>
+        ///     A hint, and labelled as one in the message: the biggest child is where the room went, not
+        ///     necessarily whose fault it is. It replaces naming the <i>last</i> inflexible child, which
+        ///     is a position rather than a cause -- a Row bounded to 100 with children 200 and 5 blamed
+        ///     the 5.
+        ///     <para>
+        ///         Only ever evaluated as an argument to a reporting facade, so <c>[Conditional]</c>
+        ///         deletes the scan along with the call: it costs nothing unless something is wrong.
+        ///     </para>
+        /// </remarks>
+        private int LargestNonFlexChild()
+        {
+            var isHorizontal = _axis == Axis.Horizontal;
+            var largest = -1;
+            var largestExtent = float.NegativeInfinity;
+
+            foreach (var i in _nonFlexChildrenIndices)
+            {
+                var size = ChildrenLayoutBuffer[i].Size;
+                var extent = isHorizontal ? size.x : size.y;
+
+                if (extent > largestExtent)
+                {
+                    largestExtent = extent;
+                    largest = i;
+                }
+            }
+
+            return largest;
+        }
+
         // Shared with PerformSizing() so the intrinsic-size estimate can never silently diverge
         // from what the real flex layout pass actually does.
         private static bool TryGetFlex(IState child, bool isHorizontal, out int flex, out FlexFit fit)
@@ -452,5 +455,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return false;
         }
 
+        // Remedies live next to the algorithm that knows the fix. An unbounded axis is not fixed the
+        // same way in a flex, an anchored box and a pan surface, so there is nothing here to derive
+        // from the code alone.
+
+        private const string WrapInFlexible =
+            "Wrap it in Expanded or Flexible so it is given a bounded main axis.";
+
+        private const string MakeRoomOrScroll =
+            "Give the flex a bounded main axis, wrap a child in Expanded/Flexible, or let it scroll.";
+
+        private const string BoundTheMainAxis =
+            "An ancestor must bound this axis (Expanded, SizedBox, or a fixed-size parent), "
+            + "or the flexible children must be removed.";
     }
 }

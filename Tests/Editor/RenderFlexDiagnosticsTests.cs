@@ -1,15 +1,16 @@
-using System.Text.RegularExpressions;
+using System.Linq;
 using NUnit.Framework;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
+using UniMob.UI.Layout.Internal.Views;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
     // What RenderFlex reports, and what it does to the layout while reporting it. Two of its four
     // sites also repair, and they disagree with each other, so the geometry is pinned here alongside
-    // the messages: the geometry is the part that must survive a refactor of the reporting, and the
+    // the reports: the geometry is the part that must survive a refactor of the reporting, and the
     // part that has to break, loudly, when the repair policy changes.
     //
     // Mounted rather than driven off a FakeState, unlike RenderFlexTests: a report names the states
@@ -18,89 +19,112 @@ namespace UniMob.UI.Tests
     {
         private const float Inf = float.PositiveInfinity;
 
-        private static RenderFlex MountRow(params Widget[] children)
+        private static (State state, RenderFlex render) MountRow(params Widget[] children)
         {
             var row = new Row();
             row.Children.AddRange(children);
-            return (RenderFlex)TestHarness.Mount(row).RenderObject;
+
+            var state = TestHarness.Mount(row);
+            return (state, (RenderFlex)state.RenderObject);
         }
 
         private static Widget Box(float width, float height) =>
             new FixedSizeBox { Size = new Vector2(width, height) };
+
+        private static IState ChildOf(State row, int index) =>
+            ((IMultiChildLayoutState)row).Children[index];
 
         // Site 1: an inflexible child is measured against an unbounded main axis, so a child that
         // wants "as much as there is" answers with infinity. Clamped, and marked for the stripe.
         [Test]
         public void InflexibleChild_AnsweringInfinity_IsClampedToZeroAndMarked()
         {
-            var row = MountRow(Box(Inf, 10));
+            using var log = RecordingReporter.Capture();
+            var (state, row) = MountRow(Box(Inf, 10));
 
-            LogAssert.Expect(LogType.Error, new Regex("Returned infinite width"));
             row.Layout(LayoutConstraints.Loose(100, 10));
+
+            var issue = log.Single();
+            Assert.AreEqual(LayoutIssueCode.NonFiniteChildSize, issue.Code);
+            Assert.AreEqual(LayoutAxes.Horizontal, issue.Axes);
+            Assert.AreSame(ChildOf(state, 0), issue.Culprit);
 
             Assert.AreEqual(new Vector2(0, 10), row.ChildrenLayout[0].Size);
             Assert.IsNotNull(row.ChildrenLayout[0].DebugWarning);
         }
 
         // Site 2: the inflexible children do not fit. The overflow is absorbed by giving the flexible
-        // children nothing, and one child is marked -- the last inflexible one, which is a position
-        // rather than a cause: here it is the 5px box, next to a 200px box in a 100px row.
+        // children nothing, and the biggest inflexible child is named -- the 200px box, not the 5px
+        // one that merely happened to be last.
         [Test]
-        public void Overflow_ZeroesTheFlexSpace_AndMarksTheLastInflexibleChild()
+        public void Overflow_ZeroesTheFlexSpace_AndNamesTheLargestInflexibleChild()
         {
-            var row = MountRow(Box(200, 10), Box(5, 10), new Expanded { Child = Box(0, 10) });
+            using var log = RecordingReporter.Capture();
+            var (state, row) = MountRow(
+                Box(200, 10),
+                Box(5, 10),
+                new Expanded { Child = Box(0, 10) }
+            );
 
-            LogAssert.Expect(LogType.Warning, new Regex("overflowed by 105"));
             row.Layout(LayoutConstraints.Tight(100, 10));
 
+            var issue = log.Single();
+            Assert.AreEqual(LayoutIssueCode.Overflow, issue.Code);
+            Assert.AreEqual(105f, issue.Amount, 0.01f);
+            Assert.AreSame(ChildOf(state, 0), issue.Culprit, "the 200px child should be named");
+
             Assert.AreEqual(0f, row.ChildrenLayout[2].Size.x, "flex children absorb the overflow");
-            Assert.IsNull(row.ChildrenLayout[0].DebugWarning, "the 200px child is not blamed");
-            StringAssert.Contains("overflowed", row.ChildrenLayout[1].DebugWarning);
+            Assert.IsNotNull(row.ChildrenLayout[0].DebugWarning);
+            Assert.IsNull(row.ChildrenLayout[1].DebugWarning);
         }
 
-        // Site 3: flexible children need a bounded main axis to divide, and there is none. Reported
-        // twice -- the complaint, then the tree dump -- and nothing is repaired, so the row answers
-        // with the infinity it was handed.
+        // Site 3: flexible children need a bounded main axis to divide, and there is none. Nothing is
+        // repaired, so the row answers with the infinity it was handed. Site 4 fires in the same pass
+        // -- the flex child was handed an infinite share -- which is one push seen from both ends.
         [Test]
-        public void UnboundedMainAxis_WithFlexChildren_ReportsTwiceAndRepairsNothing()
+        public void UnboundedMainAxis_WithFlexChildren_ReportsAndRepairsNothing()
         {
-            var row = MountRow(Box(20, 10), new Expanded { Child = Box(5, 10) });
+            using var log = RecordingReporter.Capture();
+            var (_, row) = MountRow(Box(20, 10), new Expanded { Child = Box(5, 10) });
 
-            LogAssert.Expect(LogType.Error, new Regex("unbounded width constraints"));
-            LogAssert.Expect(LogType.Error, new Regex("RowState"));
-            LogAssert.Expect(LogType.Error, new Regex("returned an infinite"));
             row.Layout(new LayoutConstraints(0, 0, Inf, 10));
 
+            Assert.AreEqual(
+                new[] { LayoutIssueCode.UnboundedConstraint, LayoutIssueCode.NonFiniteChildSize },
+                log.Select(issue => issue.Code).ToArray()
+            );
+            Assert.IsNotNull(log.First().Remedy, "an unbounded axis is fixed differently per site");
             Assert.IsTrue(float.IsPositiveInfinity(row.Size.x));
         }
 
         // Site 4: the same fault as site 1, seen on a flexible child instead of an inflexible one --
         // and left alone, where site 1 clamps. One method, two answers.
         [Test]
-        public void FlexChild_AnsweringInfinity_IsNeitherClampedNorMarked()
+        public void FlexChild_AnsweringInfinity_IsReportedButNotClamped()
         {
-            var row = MountRow(new Expanded { Child = Box(5, 10) });
+            using var log = RecordingReporter.Capture();
+            var (_, row) = MountRow(new Expanded { Child = Box(5, 10) });
 
-            LogAssert.Expect(LogType.Error, new Regex("unbounded width constraints"));
-            LogAssert.Expect(LogType.Error, new Regex("RowState"));
-            LogAssert.Expect(LogType.Error, new Regex("returned an infinite"));
             row.Layout(new LayoutConstraints(0, 0, Inf, 10));
 
+            Assert.IsTrue(log.Any(issue => issue.Code == LayoutIssueCode.NonFiniteChildSize));
             Assert.IsTrue(float.IsPositiveInfinity(row.ChildrenLayout[0].Size.x));
-            Assert.IsNull(row.ChildrenLayout[0].DebugWarning);
         }
 
-        // Below the tolerance band nothing is said and nothing is marked, which is what keeps a
-        // pixel of rounding from reading as a fault.
+        // Below the tolerance band nothing is said and nothing is marked, which keeps a pixel of
+        // rounding from reading as a fault. Asserted against the recorder rather than Unity's log:
+        // once reports route through a reporter, a log-silence assertion passes whether the widget
+        // is quiet or screaming.
         [Test]
         public void OverflowWithinTolerance_IsNeitherReportedNorMarked()
         {
-            var row = MountRow(Box(100.2f, 10));
+            using var log = RecordingReporter.Capture();
+            var (_, row) = MountRow(Box(100.2f, 10));
 
             row.Layout(LayoutConstraints.Tight(100, 10));
 
+            Assert.IsEmpty(log);
             Assert.IsNull(row.ChildrenLayout[0].DebugWarning);
-            LogAssert.NoUnexpectedReceived();
         }
     }
 }
