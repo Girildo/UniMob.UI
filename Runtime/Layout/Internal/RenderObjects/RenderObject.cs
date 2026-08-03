@@ -447,15 +447,46 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         /// <summary>
-        ///     A checked postcondition, run at the end of every pass. Report only -- a render object
-        ///     that materialises an unbounded axis does it in its own algorithm, where it knows what to
-        ///     materialise to.
+        ///     A checked postcondition, run at the end of every pass: <b>an infinite size out is legal
+        ///     exactly when the constraint in was infinite on that axis.</b>
         /// </summary>
         /// <remarks>
-        ///     Not <c>[Conditional]</c>: that attribute is invalid on an override (CS0243), so the hook
-        ///     cannot carry it and its single call site does instead.
+        ///     Passing infinity along under infinity is passing the buck upward, and stays legal right
+        ///     up until it reaches a RectTransform. Returning it under a finite maximum is always this
+        ///     render object's own fault, and there is nowhere further up for it to be caught.
+        ///     <para>
+        ///         Report only, never repair. Five render objects already materialise an unbounded axis
+        ///         by hand, each to a value only its own algorithm knows; a base class clamping on their
+        ///         behalf would be guessing.
+        ///     </para>
+        ///     <para>
+        ///         Not <c>[Conditional]</c>: that attribute is invalid on an override (CS0243), so the
+        ///         hook cannot carry it and its single call site does instead.
+        ///     </para>
         /// </remarks>
-        protected virtual void ValidateLayout(LayoutConstraints constraints) { }
+        protected virtual void ValidateLayout(LayoutConstraints constraints)
+        {
+            var axes = LayoutAxes.None;
+
+            if (!float.IsFinite(Size.x) && float.IsFinite(constraints.MaxWidth))
+            {
+                axes |= LayoutAxes.Horizontal;
+            }
+
+            if (!float.IsFinite(Size.y) && float.IsFinite(constraints.MaxHeight))
+            {
+                axes |= LayoutAxes.Vertical;
+            }
+
+            if (axes != LayoutAxes.None)
+            {
+                ReportNonFiniteSize(axes, constraints, MaterialiseAgainstTheMaximum);
+            }
+        }
+
+        private const string MaterialiseAgainstTheMaximum =
+            "A render object may answer with an infinite axis only where the constraint it was given "
+            + "was infinite on that axis. Constrain the result before returning it.";
 
         /// <summary>
         ///     The child at <paramref name="index"/>, for a render object with ordered children.
