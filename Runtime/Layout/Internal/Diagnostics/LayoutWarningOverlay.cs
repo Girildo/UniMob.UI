@@ -100,7 +100,18 @@ namespace UniMob.UI.Layout.Internal.Diagnostics
             rt.anchorMax = target.anchorMax;
             rt.pivot = target.pivot;
             rt.anchoredPosition = target.anchoredPosition;
-            rt.sizeDelta = target.sizeDelta;
+
+            // Never smaller than this, even though it means the stripe is not the box. The commonest
+            // fault reaching here is a non-finite axis, and the repair for that is to zero the axis --
+            // so drawing the marker at the box's own size draws nothing at all, in precisely the case
+            // it exists for. A zeroed widget is indistinguishable from an intentionally empty one, and
+            // that ambiguity is the whole reason the clamp is paired with a marker; a marker that
+            // disappears with the box does not resolve it.
+            const float minimumVisibleExtent = 16f;
+            rt.sizeDelta = new Vector2(
+                Mathf.Max(target.sizeDelta.x, minimumVisibleExtent),
+                Mathf.Max(target.sizeDelta.y, minimumVisibleExtent)
+            );
         }
 
         /// <summary>

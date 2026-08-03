@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.Diagnostics;
@@ -49,7 +50,13 @@ namespace UniMob.UI.Layout.Internal.Views
             }
 
             if (State.Child == null)
+            {
+                // No child to place, but this render object can still be the one at fault -- one that
+                // answers with a non-finite size of its own has nothing below it to blame. Returning
+                // here is what made that invisible.
+                PaintOwnIssue();
                 return;
+            }
 
 #if UNITY_EDITOR
 
@@ -80,20 +87,35 @@ namespace UniMob.UI.Layout.Internal.Views
 
                 rt.sizeDelta = childSize;
                 rt.anchoredPosition = new Vector2(topLeftPosition.x, -topLeftPosition.y) + pivotOffset;
-
-#if UNITY_EDITOR
-                // The single-child half of the tree could report a fault and show nothing for it,
-                // because the stripe only ever existed on the multi-child view. There is no per-child
-                // marker to read here -- a single-child render object keeps one child's geometry, not
-                // a buffer of it -- so the signal is the render object's own live issue flag.
-                if (State.RenderObject.HasLayoutIssue)
-                {
-                    _warnings.Paint(rt);
-                }
-
-                _warnings.HideUnused();
-#endif
             }
+
+            PaintOwnIssue();
+        }
+
+        /// <summary>
+        ///     Stripes this widget's own box while its render object has a live fault.
+        /// </summary>
+        /// <remarks>
+        ///     Its own box, not its child's: a single-child render object keeps one child's geometry
+        ///     rather than a buffer of per-child markers, so there is nothing here that says which side
+        ///     of the pair is at fault -- and for the faults that reach this half of the tree, an
+        ///     unbounded frame or a non-finite size of its own, the answer is this widget.
+        ///     <para>
+        ///         Called on every path, including the one that returns early with no child, so a fault
+        ///         that clears always un-draws.
+        ///     </para>
+        /// </remarks>
+        [Conditional("UNITY_EDITOR")]
+        private void PaintOwnIssue()
+        {
+#if UNITY_EDITOR
+            if (State.RenderObject.HasLayoutIssue && this.rectTransform.parent != null)
+            {
+                _warnings.Paint(this.rectTransform);
+            }
+
+            _warnings.HideUnused();
+#endif
         }
 
 #if UNITY_EDITOR
