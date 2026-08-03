@@ -40,14 +40,20 @@ namespace UniMob.UI.Layout.Internal.Diagnostics
                     hideFlags = HideFlags.DontSave,
                 };
 
+                // Translucent, not merely tinted. At full strength the hatch hides the widget it is
+                // pointing at, which is the one thing it must not do: "which widget" is half of what
+                // the marker is for, and a striped box you cannot identify sends you back to the
+                // console for the name anyway.
+                const byte hatchAlpha = 110;
+
                 var pixels = new Color32[size * size];
                 for (var y = 0; y < size; y++)
                 for (var x = 0; x < size; x++)
                 {
                     pixels[y * size + x] =
                         (x + y) % size < size / 2
-                            ? new Color32(255, 220, 0, 220)
-                            : new Color32(20, 20, 20, 220);
+                            ? new Color32(255, 220, 0, hatchAlpha)
+                            : new Color32(20, 20, 20, hatchAlpha);
                 }
 
                 tex.SetPixels32(pixels);
