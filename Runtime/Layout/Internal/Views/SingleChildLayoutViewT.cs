@@ -2,7 +2,11 @@ using System;
 using System.Diagnostics;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
+#if UNITY_EDITOR
+// LayoutWarningOverlay is the only type in this namespace, and it is editor-only -- so in a
+// player build the namespace does not exist and an unguarded using is a compile error.
 using UniMob.UI.Layout.Internal.Diagnostics;
+#endif
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
 
