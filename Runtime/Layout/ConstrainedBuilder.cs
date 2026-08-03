@@ -24,10 +24,15 @@ namespace UniMob.UI.Layout
 
         public ConstrainedBuilderState()
         {
-            // RenderObject is an eagerly-created RenderProxy, so its constraints are a plain field
-            // written by the parent's LayoutChild before the proxy's sizing pass pulls this child.
-            // Write-then-build is therefore guaranteed, which is what makes reading constraints during
-            // a build legitimate here and nowhere else.
+            // Reading a layout result during a build inverts the usual order, and it resolves only
+            // because of a sequence: RenderObject.Layout writes its constraints atom before pulling
+            // anything, and the eagerly-created RenderProxy's sizing pass pulls Child afterwards. So
+            // the write always lands before this builder runs.
+            //
+            // The write is what makes this reactive rather than merely lucky -- this build subscribes
+            // to the constraints atom, so a later push rebuilds the subtree. That is also why the
+            // ordering is load-bearing rather than cosmetic: reverse it and the builder quietly sees
+            // the previous frame's constraints. ConstrainedBuilderTests pins it.
             _child = CreateChild(context =>
                 Widget.Builder?.Invoke(context, RenderObject.Constraints ?? default)
             );
