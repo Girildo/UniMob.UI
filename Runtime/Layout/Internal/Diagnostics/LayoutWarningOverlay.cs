@@ -105,8 +105,6 @@ namespace UniMob.UI.Layout.Internal.Diagnostics
             rt.anchorMin = target.anchorMin;
             rt.anchorMax = target.anchorMax;
             rt.pivot = target.pivot;
-            rt.anchoredPosition = target.anchoredPosition;
-
             // Never smaller than this, even though it means the stripe is not the box. The commonest
             // fault reaching here is a non-finite axis, and the repair for that is to zero the axis --
             // so drawing the marker at the box's own size draws nothing at all, in precisely the case
@@ -114,10 +112,21 @@ namespace UniMob.UI.Layout.Internal.Diagnostics
             // that ambiguity is the whole reason the clamp is paired with a marker; a marker that
             // disappears with the box does not resolve it.
             const float minimumVisibleExtent = 16f;
-            rt.sizeDelta = new Vector2(
+
+            var grown = new Vector2(
                 Mathf.Max(target.sizeDelta.x, minimumVisibleExtent),
                 Mathf.Max(target.sizeDelta.y, minimumVisibleExtent)
             );
+
+            // Grown from the box's top-left corner, not around its pivot. Unity keeps the pivot fixed
+            // when sizeDelta changes, so a centred pivot spends half the growth on the wrong side of
+            // the box -- and for the zero-height case that is all of the visible stripe, sitting over
+            // whatever is above rather than where the collapsed widget actually is.
+            var growth = grown - target.sizeDelta;
+            rt.sizeDelta = grown;
+            rt.anchoredPosition =
+                target.anchoredPosition
+                + new Vector2(growth.x * target.pivot.x, -growth.y * (1f - target.pivot.y));
         }
 
         /// <summary>
