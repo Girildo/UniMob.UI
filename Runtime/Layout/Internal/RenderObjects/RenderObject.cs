@@ -1,4 +1,13 @@
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNIMOB_UI_FORCE_DIAGNOSTICS
+#define UNIMOB_UI_DIAGNOSTICS
+#endif
+
+using System;
+using System.Diagnostics;
+using JetBrains.Annotations;
+using UniMob.UI.Diagnostics;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
@@ -40,14 +49,53 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private bool _reportedNeverLaidOut;
 #endif
 
+#if UNIMOB_UI_DIAGNOSTICS
+        // The latch. Two bitmasks over LayoutIssueCode: what this pass noticed, and what has already
+        // been said. Frame counters are not usable -- Time.frameCount does not advance in EditMode
+        // tests -- and a dictionary would cost something on the healthy path.
+        private int _seenThisPass;
+        private int _reported;
+#endif
+
         protected Lifetime Lifetime { get; }
 
-        protected RenderObject(Lifetime lifetime)
-        {
-            this.Lifetime = lifetime;
+        /// <summary>
+        ///     The single state this render object belongs to.
+        /// </summary>
+        /// <remarks>
+        ///     Deliberately <c>protected</c>. Every reader of <c>.RenderObject</c> in this package
+        ///     already holds the corresponding state, and not one goes the other way. A public back-edge
+        ///     from the layout graph into the element tree would invite <c>Owner.Size</c> inside a
+        ///     sizing pass, which is exactly the aliasing that moving layout onto the render object
+        ///     removed. Widening it later breaks nobody; narrowing it would.
+        /// </remarks>
+        [NotNull]
+        protected IState Owner { get; }
 
-            _trackedLayout = Atom.Computed(lifetime, PerformLayout);
-            _trackedSize = Atom.Computed(lifetime, () => _trackedLayout.Get().size);
+        protected RenderObject([NotNull] IState owner)
+        {
+            this.Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            this.Lifetime = owner.StateLifetime;
+
+            _trackedLayout = Atom.Computed(this.Lifetime, PerformLayout);
+            _trackedSize = Atom.Computed(this.Lifetime, () => _trackedLayout.Get().size);
+        }
+
+        /// <summary>
+        ///     <b>Level-triggered.</b> True for exactly as long as a fault is happening here, which is
+        ///     not the same thing as the console having said so: the log is edge-triggered and reports
+        ///     that a fault <i>started</i>.
+        /// </summary>
+        public bool HasLayoutIssue
+        {
+            get
+            {
+#if UNIMOB_UI_DIAGNOSTICS
+                return _seenThisPass != 0;
+#else
+                return false;
+#endif
+            }
         }
 
         /// <summary>The final size after layout.</summary>
@@ -183,11 +231,24 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return (Size, _layoutVersion);
             }
 
+#if UNIMOB_UI_DIAGNOSTICS
+            _seenThisPass = 0;
+#endif
+
             // Phase 1: Perform this widget's own size.
             Size = PerformSizing(constraints.Value);
 
             // Phase 2: Perform layout for children.
             PerformPositioning();
+
+#if UNIMOB_UI_DIAGNOSTICS
+            ValidateLayout(constraints.Value);
+
+            // Re-arm anything that stopped happening. Only the condition clearing does this: a
+            // changing culprit or a changing amount is the same fault, and re-reporting it every pass
+            // is the flood this latch exists to stop.
+            _reported &= _seenThisPass;
+#endif
 
             // A pass ran, and subscribers to WatchLayout must re-run even if the size is unchanged,
             // so the version always moves.
@@ -270,5 +331,170 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         protected abstract float ComputeIntrinsicHeight(float width);
+
+        // -- Reporting --------------------------------------------------------------------------
+        //
+        // Report through these, never Debug.Log at the call site. Being void and [Conditional], a
+        // release player drops the call *and its argument expressions*, which is what makes an
+        // argument like "find the largest inflexible child" free when nothing is wrong. It is also
+        // the one place Atom.NoWatch can be applied on behalf of every site at once: a report reads
+        // the tree, and the tree is atoms, and all of this runs inside a layout computation.
+        //
+        // Three symbols rather than an opt-out, because [Conditional] attributes OR together and
+        // there is no "and not X". The third has to be a project-wide Player Settings define, since
+        // [Conditional] is evaluated in the caller's compilation -- which is also why it correctly
+        // covers a render object living outside this package.
+
+        /// <summary>Children needed more room than there was.</summary>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        protected void ReportOverflow(
+            LayoutAxes axes,
+            float amount,
+            int culpritIndex,
+            string remedy
+        )
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            // The tolerance band lives here rather than in the algorithm, because it is a threshold
+            // for saying something, not for doing something: the free space is clamped either way.
+            if (amount <= LayoutConstants.OverflowTolerance)
+            {
+                return;
+            }
+
+            MarkCulprit(culpritIndex, LayoutIssueCode.Overflow);
+
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.Overflow,
+                    this.Owner,
+                    axes,
+                    remedy,
+                    ChildAt(culpritIndex),
+                    _constraints.Value,
+                    Size,
+                    amount
+                )
+            );
+#endif
+        }
+
+        /// <summary>An axis reached something that cannot work without a bound.</summary>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        protected void ReportUnboundedConstraint(
+            LayoutAxes axes,
+            LayoutConstraints constraints,
+            string remedy
+        )
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.UnboundedConstraint,
+                    this.Owner,
+                    axes,
+                    remedy,
+                    constraints: constraints
+                )
+            );
+#endif
+        }
+
+        /// <summary>A child answered with infinity or NaN.</summary>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        protected void ReportNonFiniteChildSize(int childIndex, LayoutAxes axes, string remedy)
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            MarkCulprit(childIndex, LayoutIssueCode.NonFiniteChildSize);
+
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.NonFiniteChildSize,
+                    this.Owner,
+                    axes,
+                    remedy,
+                    ChildAt(childIndex),
+                    _constraints.Value
+                )
+            );
+#endif
+        }
+
+        /// <summary>This render object answered with infinity or NaN under a finite maximum.</summary>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        protected void ReportNonFiniteSize(LayoutAxes axes, LayoutConstraints constraints, string remedy)
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.NonFiniteSize,
+                    this.Owner,
+                    axes,
+                    remedy,
+                    constraints: constraints,
+                    size: Size
+                )
+            );
+#endif
+        }
+
+        /// <summary>
+        ///     A checked postcondition, run at the end of every pass. Report only -- a render object
+        ///     that materialises an unbounded axis does it in its own algorithm, where it knows what to
+        ///     materialise to.
+        /// </summary>
+        /// <remarks>
+        ///     Not <c>[Conditional]</c>: that attribute is invalid on an override (CS0243), so the hook
+        ///     cannot carry it and its single call site does instead.
+        /// </remarks>
+        protected virtual void ValidateLayout(LayoutConstraints constraints) { }
+
+        /// <summary>
+        ///     The child at <paramref name="index"/>, for a render object with ordered children.
+        /// </summary>
+        [CanBeNull]
+        protected virtual IState ChildAt(int index) => null;
+
+        /// <summary>
+        ///     Records that a specific child is implicated, for the in-scene marker.
+        /// </summary>
+        /// <remarks>
+        ///     Separate from the report because the two have opposite triggers: the console says a fault
+        ///     started, the marker says it is happening. Done by the facade rather than the algorithm,
+        ///     so no layout method has to know the overlay exists.
+        /// </remarks>
+        protected virtual void MarkCulprit(int index, LayoutIssueCode code) { }
+
+#if UNIMOB_UI_DIAGNOSTICS
+        private void Emit(in LayoutIssue issue)
+        {
+            var bit = 1 << (int) issue.Code;
+
+            // Always, even when suppressed. Noticing is not emitting: without this, a fault that
+            // persists clears the latch at the end of every pass and reports on every other one --
+            // which is the flood, at half rate, plus a level signal that blinks.
+            _seenThisPass |= bit;
+
+            if ((_reported & bit) != 0)
+            {
+                return;
+            }
+
+            _reported |= bit;
+
+            using (Atom.NoWatch)
+            {
+                UniMobDiagnostics.Report(issue);
+            }
+        }
+#endif
     }
 }

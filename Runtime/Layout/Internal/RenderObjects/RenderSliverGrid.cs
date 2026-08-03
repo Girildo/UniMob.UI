@@ -101,7 +101,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             public float MainExtent { get; }
         }
 
-        public RenderSliverGrid(ISliverGridState state) : base(state.StateLifetime)
+        public RenderSliverGrid(ISliverGridState state) : base(state)
         {
             _state = state;
         }

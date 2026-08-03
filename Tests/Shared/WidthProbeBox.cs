@@ -35,7 +35,7 @@ namespace UniMob.UI.Tests
     public class RenderWidthProbeBox : LeafRenderObject
     {
         public RenderWidthProbeBox(WidthProbeBoxState state)
-            : base(state.StateLifetime) { }
+            : base(state) { }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints) =>
             new Vector2(constraints.MinWidth, constraints.MinHeight);

@@ -9,7 +9,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly IZStackState _state;
 
 
-        public RenderZStack(IZStackState state) : base(state.StateLifetime)
+        public RenderZStack(IZStackState state) : base(state)
         {
             _state = state;
         }

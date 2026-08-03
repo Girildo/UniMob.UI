@@ -45,7 +45,7 @@ namespace UniMob.UI.Tests
         private readonly FixedSizeBoxState _state;
 
         public RenderFixedSizeBox(FixedSizeBoxState state)
-            : base(state.StateLifetime)
+            : base(state)
         {
             _state = state;
         }

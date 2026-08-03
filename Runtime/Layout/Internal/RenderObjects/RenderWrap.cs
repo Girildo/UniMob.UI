@@ -30,7 +30,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
         private readonly List<RunMetrics> _runs = new();
 
-        public RenderWrap(IWrapState state) : base(state.StateLifetime)
+        public RenderWrap(IWrapState state) : base(state)
         {
             _state = state;
         }

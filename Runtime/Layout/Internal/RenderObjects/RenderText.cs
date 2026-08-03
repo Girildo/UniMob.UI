@@ -26,7 +26,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private readonly ITextState _state;
 
-        public RenderText(ITextState state) : base(state.StateLifetime)
+        public RenderText(ITextState state) : base(state)
         {
             _state = state;
 

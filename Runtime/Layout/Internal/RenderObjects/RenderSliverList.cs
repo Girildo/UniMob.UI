@@ -128,7 +128,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private float _lazyWindowScrollOffset;
         private readonly List<Vector2> _lazyWindowSizes = new();
 
-        public RenderSliverList(ISliverState state) : base(state.StateLifetime)
+        public RenderSliverList(ISliverState state) : base(state)
         {
             _state = state;
         }

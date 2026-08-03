@@ -9,7 +9,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         // invalidating every other parent's. Sizing to zero unconditionally makes sharing look free;
         // owning layout state is what makes it not.
         public RenderEmpty(IState state)
-            : base(state.StateLifetime) { }
+            : base(state) { }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {

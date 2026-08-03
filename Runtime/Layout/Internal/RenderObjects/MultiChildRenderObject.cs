@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using UniMob.UI.Diagnostics;
+using UniMob.UI.Layout.Internal.Views;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
@@ -21,8 +23,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// </remarks>
     public abstract class MultiChildRenderObject : RenderObject, IMultiChildrenRenderObject
     {
-        protected MultiChildRenderObject(Lifetime lifetime)
-            : base(lifetime) { }
+        protected MultiChildRenderObject(IState owner)
+            : base(owner) { }
 
         /// <summary>
         ///     Where subclasses record each child's size and position during their layout pass.
@@ -38,6 +40,33 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 WatchLayout();
                 return ChildrenLayoutBuffer;
             }
+        }
+
+        /// <inheritdoc/>
+        protected override IState ChildAt(int index)
+        {
+            if (this.Owner is not IMultiChildLayoutState state)
+            {
+                return null;
+            }
+
+            var children = state.Children;
+            return index >= 0 && index < children.Length ? children[index] : null;
+        }
+
+        /// <inheritdoc/>
+        protected override void MarkCulprit(int index, LayoutIssueCode code)
+        {
+#if UNITY_EDITOR
+            if (index < 0 || index >= ChildrenLayoutBuffer.Count)
+            {
+                return;
+            }
+
+            var layout = ChildrenLayoutBuffer[index];
+            layout.DebugWarning = code.ToString();
+            ChildrenLayoutBuffer[index] = layout;
+#endif
         }
     }
 }

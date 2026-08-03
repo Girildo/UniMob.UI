@@ -25,7 +25,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly List<(int index, int flex, FlexFit fit)> _flexChildrenData = new();
 
 
-        public RenderFlex(IFlexContainerState state, Axis axis) : base(state.StateLifetime)
+        public RenderFlex(IFlexContainerState state, Axis axis) : base(state)
         {
             _state = state;
             _axis = axis;

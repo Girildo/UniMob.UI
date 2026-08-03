@@ -10,13 +10,23 @@ namespace UniMob.UI.Tests
     // never called with a disposed lifetime in the first place).
     public class RenderObjectTests
     {
+        // A render object now names the state it belongs to rather than a bare lifetime, so this is
+        // the smallest thing that can own one: a state whose lifetime the test controls, and which
+        // throws on everything else it is not supposed to be asked for.
+        private class OwnerState : FakeState
+        {
+            public Lifetime? FakeLifetime { get; set; }
+
+            public override Lifetime StateLifetime => FakeLifetime ?? Lifetime.Eternal;
+        }
+
         private class CountingRenderObject : RenderObject
         {
             public int SizingCalls;
             public int PositioningCalls;
 
             public CountingRenderObject(Lifetime lifetime)
-                : base(lifetime) { }
+                : base(new OwnerState { FakeLifetime = lifetime }) { }
 
             protected override Vector2 PerformSizing(LayoutConstraints constraints)
             {

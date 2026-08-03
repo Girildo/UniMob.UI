@@ -6,7 +6,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly IViewState _state;
 
-        public RenderLegacy(IViewState state) : base(state.StateLifetime)
+        public RenderLegacy(IViewState state) : base(state)
         {
             _state = state;
         }

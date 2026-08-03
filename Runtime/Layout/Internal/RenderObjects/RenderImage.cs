@@ -11,7 +11,7 @@ namespace UniMob.UI.Layout.Internal
         private Texture? Texture => _state.Texture;
         private ImageFit Fit => _state.Fit;
 
-        public RenderImage(IImageState state) : base(state.StateLifetime)
+        public RenderImage(IImageState state) : base(state)
         {
             _state = state;
         }

@@ -52,7 +52,7 @@ namespace UniMob.UI.Tests
         public LayoutConstraints LastConstraints { get; private set; }
 
         public RenderCountingBox(CountingBoxState state)
-            : base(state.StateLifetime)
+            : base(state)
         {
             _state = state;
         }

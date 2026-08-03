@@ -8,7 +8,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// </summary>
     public abstract class LeafRenderObject : RenderObject
     {
-        protected LeafRenderObject(Lifetime lifetime) : base(lifetime) { }
+        protected LeafRenderObject(IState owner) : base(owner) { }
 
         protected sealed override void PerformPositioning()
         {
@@ -57,7 +57,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <summary>
         /// Initializes a new instance of the <see cref="RenderConstrainedLeaf"/> class with the specified state and a delegate to pull dynamic constraints.
         /// </summary>
-        public RenderConstrainedLeaf(IState state, Func<LayoutConstraints> pullConstraints) : base(state.StateLifetime)
+        public RenderConstrainedLeaf(IState state, Func<LayoutConstraints> pullConstraints) : base(state)
         {
             this.pullConstraints = pullConstraints;
         }

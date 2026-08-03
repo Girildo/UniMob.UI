@@ -23,7 +23,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly ITabsLayoutState _state;
 
 
-        public RenderTabs(ITabsLayoutState state) : base(state.StateLifetime)
+        public RenderTabs(ITabsLayoutState state) : base(state)
         {
             _state = state;
         }

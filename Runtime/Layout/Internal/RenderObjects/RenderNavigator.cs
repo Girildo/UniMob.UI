@@ -14,7 +14,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly INavigatorState _state;
 
 
-        public RenderNavigator(INavigatorState state) : base(state.StateLifetime)
+        public RenderNavigator(INavigatorState state) : base(state)
         {
             _state = state;
         }

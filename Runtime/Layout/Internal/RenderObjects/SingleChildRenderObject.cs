@@ -38,7 +38,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected IState? Child => _state.Child;
 
-        protected SingleChildRenderObject(ISingleChildLayoutState state) : base(state.StateLifetime)
+        protected SingleChildRenderObject(ISingleChildLayoutState state) : base(state)
         {
             _state = state;
         }
