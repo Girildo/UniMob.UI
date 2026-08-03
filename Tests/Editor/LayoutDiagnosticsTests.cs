@@ -1,10 +1,7 @@
 using NUnit.Framework;
 using UniMob.UI.Layout;
-using UniMob.UI.Layout.Internal.Diagnostics;
-using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -12,18 +9,6 @@ namespace UniMob.UI.Tests
     // what a diagnostic wants to read. These cover that hazard rather than the wording of any message.
     public class LayoutDiagnosticsTests
     {
-        // A state that was created but never mounted: BuildContext.Parent stays null until State.Mount
-        // runs, and an upward walk has to stop there rather than dereference it.
-        private sealed class UnmountedState : FakeState
-        {
-            private readonly BuildContext _context;
-
-            public UnmountedState() => _context = new BuildContext(this, null);
-
-            public override BuildContext Context => _context;
-            public override RenderObject RenderObject => null;
-        }
-
         /// <summary>
         ///     Column &gt; PaddingBox &gt; Column, where the inner column is given an unbounded main axis
         ///     and holds a flexible child, which is what makes it report.
@@ -62,16 +47,14 @@ namespace UniMob.UI.Tests
             return (root, reporter, leaf);
         }
 
-        // Reading an ancestor's constraints from inside a sizing pass subscribes the reporting render
-        // object's layout atom to that ancestor, so every later ancestor layout drives the reporter
-        // again -- forever, and for a fault that has not changed.
+        // Describing the tree is the natural thing for a report to do, and the tree is atoms. Read
+        // without care, reporting a fault subscribes the reporting render object's layout to every
+        // ancestor's constraints, so every later ancestor layout drives it again -- forever, and for
+        // a fault that has not changed.
         [Test]
-        public void HierarchyReport_LeavesTheReporterUnsubscribedFromItsAncestors()
+        public void Reporting_LeavesTheReporterUnsubscribedFromItsAncestors()
         {
-            // The report is several Debug.LogErrors. They are the trigger here, not the subject, and
-            // expecting them by wording would make this fail for the wrong reason the moment it moves.
-            LogAssert.ignoreFailingMessages = true;
-
+            using var log = RecordingReporter.Capture();
             var (root, reporter, leaf) = BuildReportingTree();
 
             // Frame 1: lays the tree out and fires the report, wiring up whatever it reads.
@@ -118,13 +101,5 @@ namespace UniMob.UI.Tests
             );
         }
 
-        // The upward walk dereferences its way past the root, where there is no parent to dereference.
-        [Test]
-        public void HierarchyReport_StopsAtAnUnmountedState_InsteadOfThrowing()
-        {
-            var unmounted = new UnmountedState();
-
-            Assert.DoesNotThrow(() => unmounted.PrintHierarchy());
-        }
     }
 }

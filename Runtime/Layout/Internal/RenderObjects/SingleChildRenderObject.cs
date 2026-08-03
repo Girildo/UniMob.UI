@@ -43,6 +43,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _state = state;
         }
 
+        /// <summary>
+        ///     The one child, at index 0, so a report from here can name a culprit the same way a
+        ///     multi-child one does.
+        /// </summary>
+        protected override IState? ChildAt(int index) => index == 0 ? Child : null;
+
         protected override float ComputeIntrinsicWidth(float height)
         {
             if (Child != null)
