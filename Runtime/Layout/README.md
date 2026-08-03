@@ -15,7 +15,8 @@ This document governs the **modern layer only**. Every new modern widget must fo
 | `UniMob.UI.Layout.Internal` | Shared internal helpers (`VirtualizedChildren`, `LayoutConstants`). |
 | `UniMob.UI.Layout.Internal.RenderObjects` | `RenderObject` subclasses **and** the `I<X>State` contract interfaces they consume. |
 | `UniMob.UI.Layout.Internal.Views` | Unity `MonoBehaviour` views (`*View`) plus the shared `SingleChildLayoutView` / `MultiChildLayoutView`. |
-| `UniMob.UI.Layout.Internal.Diagnostics` / `.Utilities` | Diagnostics and small utilities. |
+| `UniMob.UI.Layout.Internal.Diagnostics` / `.Utilities` | One private painting helper (`LayoutWarningOverlay`) and small utilities. |
+| `UniMob.UI.Diagnostics` | **Public.** Describing the tree (`DiagnosticNode`, `WidgetPath`, `LayoutTree`) and reporting a fault (`LayoutIssue`, `IDiagnosticsReporter`, `UniMobDiagnostics`). Deliberately not under `Layout/Internal`: tests cannot see `internal`, and a diagnostics layer nobody outside can call is not one. |
 
 ## Where each type lives, and what it's called
 
@@ -24,7 +25,7 @@ This document governs the **modern layer only**. Every new modern widget must fo
 | Widget | `<Widget>` | `Layout/<Widget>.cs` | `public` |
 | State | `<Widget>State` | same file as the widget | `internal` (default) |
 | State contract | `I<X>State` | in its consumer's file (render object or bespoke view) | `internal`/`public` |
-| Render object | `Render<Behavior>` | `Layout/Internal/RenderObjects/` | `internal` |
+| Render object | `Render<Behavior>` | `Layout/Internal/RenderObjects/` | `public` — all of them are, the `Internal` in the namespace notwithstanding |
 | Bespoke view | `<Widget>View` | `Layout/Internal/Views/` | `internal` |
 
 Rules:
@@ -35,6 +36,7 @@ Rules:
 - **The consumer owns its required-state contract.** The `I<X>State` interface is declared in the file of whatever reads it — the render object (`IConstrainedBoxState` in `RenderConstrainedBox.cs`) or, for view-driven effects, the bespoke view (`IOpacityState` in `OpacityView.cs`). The widget's `State` implements it. This keeps the state→consumer coupling explicit and one-directional.
 - **Add a bespoke view only when needed.** Widgets that need custom Unity rendering or interaction get a `<Widget>View` (see `OpacityView`, `GestureDetectorView`, `ImageView`, `ColoredImageBoxView`). Everything else lets the `State.View` fall through to the shared `$$_Layout.SingleChildLayoutView` / `$$_Layout.MultiChildLayoutView`.
 - **Widget-specific enums live in the widget file** (`FlexFit`, `CrossFadeState`); value types used by more than one widget get their own top-level file.
+- **A render object takes its owner state, not a lifetime.** `base(state)`, never `base(state.StateLifetime)` — the lifetime comes off the state, and `Owner` is what lets a report say which widget it is about.
 
 ## Skeleton — single-child widget
 
@@ -115,6 +117,87 @@ Not every widget needs a render object. A widget defined purely in terms of othe
 
 - **Composition** — build from modern widgets: `Container` → `Align`/`ColoredImageBox`/`SizedBox`; `AnimatedCrossFade` → a `ZStack` of two `CompositeTransition`s.
 - **Facade over legacy** — when a legacy widget's behaviour lives in a Unity-prefab, interactive view that isn't worth reimplementing yet (`AnimatedSwitcher`, `Tabs`), wrap the legacy widget in an `HocState`; it renders under modern parents via the `RenderLegacy` bridge. Keep the public surface modern (no `WidgetSize` in the API).
+
+## Vocabulary
+
+**Push** — a parent handing constraints down to one child. The only way a render object is ever laid out; there is no ambient size and no pull. A child a parent's sizing pass never pushed to is not laid out small, it is not laid out at all.
+
+**Unbounded** — of a constraint, having no finite maximum on an axis. Legal and routine: a scroll list gives its children an unbounded main axis on purpose, and a flex measures its inflexible children that way to learn their natural size.
+
+**Materialise** — to turn an unbounded axis into a concrete number, which a render object can only do once something bounds it.
+
+**Build-only state** — a state with no view, and therefore no `GameObject`. `HocState`, `StatelessElement`, and every state owning a `RenderProxy` (`Flexible`, `Positioned`, `Opacity`, `Clickable`, and the rest). Invisible in Unity's Hierarchy window, and disproportionately the cause of layout faults.
+
+**Owner** — the single state a render object belongs to. A structural relationship, held by the render object, true whether or not anything is being reported.
+
+**Subject** — the state that *noticed* a fault, in a report. A role, not a relationship. It is the reporting render object's Owner at every site that exists today; the words are kept apart because Subject is meaningful only inside a report and Owner is meaningful always.
+
+**Culprit** — the state a report *blames*, when that differs from the Subject. A `Row` is the Subject of an overflow; the child that did not fit is the Culprit.
+
+**Remedy** — the sentence telling a developer what to change, written next to the algorithm that knows. Belongs to the *site*, not to the code: an unbounded constraint is fixed differently in a flex, an anchored box and a pan surface.
+
+**Edge-triggered / level-triggered** — the console is edge-triggered, emitting when a fault starts and not again while it persists. The in-scene stripe is level-triggered, true for exactly as long as the fault is happening. The stripe is the live picture and the console is the history, so a stale number in the log is not a defect.
+
+## The materialise rule
+
+**An infinite size out is legal exactly when the constraint in was infinite on that axis.**
+
+Returning infinity under a finite maximum is always the render object's own fault, and `ValidateLayout` checks it at the end of every pass. Passing infinity along under infinity is passing the buck upward, and stays legal right up until it reaches a `RectTransform`, where it is fatal — which is why `MultiChildLayoutView` keeps a check at paint: that is the only place the fault is decidable.
+
+**A non-finite axis is clamped to zero**, on that axis alone, at the point of detection, **in every build**. Zero rather than the available extent, because the available extent is exactly what is missing in the case that causes this: the fault almost always originates in an unbounded constraint, where the axis maximum *is* infinity.
+
+Zero is only honest when something says so — a zero-sized widget is indistinguishable from an intentionally empty one — so the clamp is never adopted alone. It comes with a reported issue naming the widget, the axis and the remedy, and with the in-scene stripe. Use `NonFiniteAxes()` / `ZeroOn()` rather than hand-rolling it; four hand-rolled copies is how the four sites came to disagree in the first place.
+
+## Labelling a widget for diagnostics
+
+A layout error that says `Column` identifies nothing in an app with forty of them. Four channels, in increasing order of author effort, all resolved in one place — `DiagnosticNode.Describe`.
+
+**Channel 0 — free.** The widget's type name with generic arguments expanded, its position among its siblings, and the ancestor chain: `App > HomeScreen > Padding > Row`. Enough for most errors, because the failure is usually structural rather than instance-specific.
+
+**Channel 1 — `Key`, for a widget you did not author.** Works on a `Column` you are merely composing:
+
+```csharp
+new Column { Key = Key.Of("body"), Children = { ... } }   // renders as  Column#body
+```
+
+Two caveats, and both bite.
+
+*It is identity, not decoration.* `CanUpdateWidget` compares `Key` and type, so adding a `Key` to a previously unkeyed widget makes the old state fail to match once: it is disposed and recreated. That is a one-time cost on the frame you add it, which is a source edit and therefore a domain reload anyway. Inside a `Children` list it switches that child from positional to keyed matching, which is usually a fix rather than a regression.
+
+*It may already be spent.* A widget carrying a `GlobalKey` for functional identity cannot be labelled this way — adding a label would destroy identity the app depends on. Such a widget renders `#global<T>`, and must use channel 2 or 3, which it can, because a widget that needs a `GlobalKey` is one you authored.
+
+**Channel 2 — `Widget.GetDiagnosticInfo()`, for config-derived labels.** For widgets you author, where the disambiguating information is the widget's own configuration:
+
+```csharp
+public override string? GetDiagnosticInfo() => $"{this.Icon} {this.Text}";
+```
+
+Renders as `AppButton "Cart Add to cart"`. Available on every widget, stateful included — it used to exist only on `StatelessWidget`, which is a large part of why nothing in this package ever implemented it.
+
+**Channel 3 — `State.GetDiagnosticInfo()`, for runtime-state labels.** Defaults to the widget's, so channel 2 needs no state involvement at all. Override when runtime state is the useful thing, and compose with `base` to keep both:
+
+```csharp
+public override string GetDiagnosticInfo() =>
+    $"{base.GetDiagnosticInfo()} items={_children.Value.Length} window={_first}..{_last}";
+```
+
+**The state wins**, because it is the only one of the two that can see both.
+
+**Channel 4 — free.** Constraints in, size out, and one level of child sizes. The reporting render object already holds all of it; nothing is walked.
+
+The contract on a label lives on `Widget.GetDiagnosticInfo`: one line, describes the instance rather than the type, may read reactive state freely (it is invoked under `Atom.NoWatch`), and must tolerate being called mid-layout, before anything has been laid out, and on a disposed state.
+
+## Reporting a fault from a render object
+
+Never `Debug.Log` at the call site. Call a facade — `ReportOverflow`, `ReportUnboundedConstraint`, `ReportNonFiniteChildSize`, `ReportNonFiniteSize` — and pass a `const string` remedy declared next to the algorithm that knows the fix.
+
+They are `void` and `[Conditional]`, so a release player deletes the call **and its argument expressions**: an argument that scans every child to find the largest costs nothing unless something is already wrong. They are also the one place `Atom.NoWatch` is applied on behalf of every site, which matters because a report describes the tree, the tree is atoms, and all of this runs inside a layout computation. **Reporting observes; it never participates.**
+
+Each report is emitted **once per render object per fault**, and re-arms when that fault clears. `HasLayoutIssue` is the level-triggered counterpart, true for as long as the fault is happening — that is what the stripe is drawn from.
+
+Severity is derived from the code, not chosen at the site: overflow warns, everything else errors. `Remedy` goes the other way and stays per-site, because the same code has genuinely different fixes in a flex, an anchored box and a pan surface.
+
+To capture reports instead of logging them — in a test, or to route them into an application logger — install a reporter with `UniMobDiagnostics.Override(...)`, which restores the previous one when its scope is disposed.
 
 ## Known cruft (tracked, not yet removed)
 
