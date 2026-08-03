@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.Diagnostics;
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -61,26 +64,16 @@ namespace UniMob.UI.Layout.Internal.Views
                 }
 
                 var layoutData = childrenLayout[i];
-                var size = layoutData.Size;
 
-#if UNITY_EDITOR
-                var infiniteWidth = float.IsInfinity(size.x);
-                var infiniteHeight = float.IsInfinity(size.y);
-                if (infiniteWidth || infiniteHeight)
-                {
-                    var axis = infiniteWidth && infiniteHeight ? "width and height"
-                        : infiniteWidth ? "width" : "height";
-                    Debug.LogError(
-                        $"{State.RawWidget.GetType().Name}: child {child.GetType().Name} at position {i} " +
-                        $"has an unbounded {axis}. Wrap it (e.g. Expanded, SizedBox) to give it a finite size.",
-                        this);
+                // Paint is the last place this fault is decidable, and the only one: infinity is legal
+                // in transit right up until it reaches a RectTransform. Repaired here to zero on the
+                // offending axis, in every build, like everywhere else -- the old fallback to
+                // rect.size was last frame's Unity state, so it was neither deterministic nor
+                // reproducible, and it was written into a local nothing downstream ever read.
+                var nonFiniteAxes = NonFiniteAxes(layoutData.Size);
+                var size = Materialise(layoutData.Size, nonFiniteAxes);
 
-                    var available = ((RectTransform) transform).rect.size;
-                    size = new Vector2(
-                        infiniteWidth ? Mathf.Max(available.x, 1f) : size.x,
-                        infiniteHeight ? Mathf.Max(available.y, 1f) : size.y);
-                }
-#endif
+                NoteNonFiniteChild(i, child, nonFiniteAxes);
 
                 var childView = render.RenderItem(child);
                 var rt = childView.rectTransform;
@@ -89,18 +82,18 @@ namespace UniMob.UI.Layout.Internal.Views
                 rt.anchorMax = new Vector2(0, 1);
 
                 var pivotOffset = new Vector2(
-                    layoutData.Size.x * rt.pivot.x,
-                    -layoutData.Size.y * (1.0f - rt.pivot.y)
+                    size.x * rt.pivot.x,
+                    -size.y * (1.0f - rt.pivot.y)
                 );
 
-                rt.sizeDelta = layoutData.Size;
+                rt.sizeDelta = size;
                 rt.anchoredPosition =
                     new Vector2(layoutData.Position.x, -layoutData.Position.y) + pivotOffset;
 
 #if UNITY_EDITOR
                 // Level-triggered: drawn for exactly as long as the fault is happening. The report
-                // that says it *started* was already made, once, by whoever set the marker.
-                if (infiniteWidth || infiniteHeight || layoutData.Issue.HasValue)
+                // that says it *started* was already made, once, by whoever noticed it.
+                if (nonFiniteAxes != LayoutAxes.None || layoutData.Issue.HasValue)
                 {
                     _warnings.Paint(rt);
                 }
@@ -116,6 +109,74 @@ namespace UniMob.UI.Layout.Internal.Views
             _warnings.HideUnused();
 #endif
         }
+
+        private static LayoutAxes NonFiniteAxes(Vector2 size)
+        {
+            var axes = LayoutAxes.None;
+
+            if (!float.IsFinite(size.x))
+            {
+                axes |= LayoutAxes.Horizontal;
+            }
+
+            if (!float.IsFinite(size.y))
+            {
+                axes |= LayoutAxes.Vertical;
+            }
+
+            return axes;
+        }
+
+        private static Vector2 Materialise(Vector2 size, LayoutAxes nonFinite) =>
+            nonFinite == LayoutAxes.None
+                ? size
+                : new Vector2(
+                    nonFinite.HasFlag(LayoutAxes.Horizontal) ? 0f : size.x,
+                    nonFinite.HasFlag(LayoutAxes.Vertical) ? 0f : size.y
+                );
+
+        /// <summary>
+        ///     Reports a child whose size cannot reach a RectTransform, once per child until it stops.
+        /// </summary>
+        /// <remarks>
+        ///     Its own dedup rather than a render object's latch: that one is scoped to a layout pass,
+        ///     and this fires from paint, which can run many times without a pass in between. Called for
+        ///     every child on every frame, with <see cref="LayoutAxes.None"/> meaning "healthy", so the
+        ///     entry re-arms the moment the fault clears.
+        /// </remarks>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        private void NoteNonFiniteChild(int index, IState child, LayoutAxes axes)
+        {
+            if (axes == LayoutAxes.None)
+            {
+                _reportedNonFinite.Remove(index);
+                return;
+            }
+
+            if (!_reportedNonFinite.Add(index))
+            {
+                return;
+            }
+
+            UniMobDiagnostics.Report(
+                new LayoutIssue(
+                    LayoutIssueCode.NonFiniteChildSize,
+                    State,
+                    axes,
+                    BoundItBeforeItIsPainted,
+                    child,
+                    size: child.RenderObject?.Size
+                )
+            );
+        }
+
+        private const string BoundItBeforeItIsPainted =
+            "An infinite size is legal in transit and fatal at a RectTransform. Bound this child "
+            + "(Expanded, SizedBox, or a fixed-size ancestor) so it materialises before it is painted.";
+
+        private readonly HashSet<int> _reportedNonFinite = new HashSet<int>();
 
 #if UNITY_EDITOR
         private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
