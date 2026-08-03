@@ -9,22 +9,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     ///     region its parent gives it, and every screen is sized to that full area and aligned to the
     ///     top-left, so the topmost route covers the ones beneath it.
     /// </summary>
-    public class RenderNavigator : RenderObject, IMultiChildrenRenderObject
+    public class RenderNavigator : MultiChildRenderObject
     {
         private readonly INavigatorState _state;
 
-        private readonly List<LayoutInfo> _childrenLayout = new();
-        public IReadOnlyList<LayoutInfo> ChildrenLayout
-        {
-            get
-            {
-                // Pulls layout before handing the list out. The list is only valid immediately
-                // after a pass, so a caller that reads it without one stamps stale positions onto
-                // live RectTransforms -- silently, and only while something else happens to move.
-                WatchLayout();
-                return _childrenLayout;
-            }
-        }
 
         public RenderNavigator(INavigatorState state) : base(state.StateLifetime)
         {
@@ -33,7 +21,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            _childrenLayout.Clear();
+            ChildrenLayoutBuffer.Clear();
 
             var screens = _state.Screens;
 
@@ -63,7 +51,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             foreach (var screen in screens)
             {
                 var screenSize = LayoutChild(screen, screenConstraints);
-                _childrenLayout.Add(new LayoutInfo { Size = screenSize, Position = Vector2.zero });
+                ChildrenLayoutBuffer.Add(new LayoutInfo { Size = screenSize, Position = Vector2.zero });
             }
 
             return size;
@@ -71,11 +59,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override void PerformPositioning()
         {
-            for (var i = 0; i < _childrenLayout.Count; i++)
+            for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
-                var info = _childrenLayout[i];
+                var info = ChildrenLayoutBuffer[i];
                 info.Position = Vector2.zero;
-                _childrenLayout[i] = info;
+                ChildrenLayoutBuffer[i] = info;
             }
         }
 

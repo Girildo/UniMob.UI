@@ -4,22 +4,10 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    public class RenderZStack : RenderObject, IMultiChildrenRenderObject
+    public class RenderZStack : MultiChildRenderObject
     {
         private readonly IZStackState _state;
 
-        private readonly List<LayoutInfo> _childrenLayout = new();
-        public IReadOnlyList<LayoutInfo> ChildrenLayout
-        {
-            get
-            {
-                // Pulls layout before handing the list out. The list is only valid immediately
-                // after a pass, so a caller that reads it without one stamps stale positions onto
-                // live RectTransforms -- silently, and only while something else happens to move.
-                WatchLayout();
-                return _childrenLayout;
-            }
-        }
 
         public RenderZStack(IZStackState state) : base(state.StateLifetime)
         {
@@ -28,7 +16,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            _childrenLayout.Clear();
+            ChildrenLayoutBuffer.Clear();
             float maxWidth = 0f;
             float maxHeight = 0f;
 
@@ -43,14 +31,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 if (child.InnerViewState is PositionedState)
                 {
                     // Add a placeholder. The positioned child will be fully laid out later.
-                    _childrenLayout.Add(new LayoutInfo());
+                    ChildrenLayoutBuffer.Add(new LayoutInfo());
                     continue;
                 }
 
                 // This is a non-positioned child.
                 var childSize = LayoutChild(child, childConstraints);
 
-                _childrenLayout.Add(new LayoutInfo { Size = childSize });
+                ChildrenLayoutBuffer.Add(new LayoutInfo { Size = childSize });
 
                 maxWidth = Mathf.Max(maxWidth, childSize.x);
                 maxHeight = Mathf.Max(maxHeight, childSize.y);
@@ -61,7 +49,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override void PerformPositioning()
         {
-            for (var i = 0; i < _childrenLayout.Count; i++)
+            for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
                 var child = _state.Children[i];
                 if (child.InnerViewState is PositionedState pos)
@@ -78,11 +66,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private void LayoutNonPositionedChild(int index)
         {
             // Now this correctly retrieves the size calculated in *this* frame's sizing pass.
-            var childSize = _childrenLayout[index].Size;
+            var childSize = ChildrenLayoutBuffer[index].Size;
 
-            var layoutData = _childrenLayout[index];
+            var layoutData = ChildrenLayoutBuffer[index];
             layoutData.Position = _state.Alignment.ResolveOffset(Size, childSize);
-            _childrenLayout[index] = layoutData;
+            ChildrenLayoutBuffer[index] = layoutData;
         }
 
         private void LayoutPositionedChild(int index, IState child, Positioned pos)
@@ -123,7 +111,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 y = Size.y - childSize.y - (pos.Bottom ?? 0);
             }
 
-            _childrenLayout[index] = new LayoutInfo { Size = childSize, Position = new Vector2(x.Value, y.Value) };
+            ChildrenLayoutBuffer[index] = new LayoutInfo { Size = childSize, Position = new Vector2(x.Value, y.Value) };
         }
 
         protected override float ComputeIntrinsicWidth(float height)

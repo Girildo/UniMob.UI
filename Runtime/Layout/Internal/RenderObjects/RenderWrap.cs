@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-    public class RenderWrap : RenderObject, IMultiChildrenRenderObject
+    public class RenderWrap : MultiChildRenderObject
     {
         private readonly IWrapState _state;
         
@@ -19,18 +19,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private MainAxisAlignment RunAlignment => _state.RunAlignment;
         
 
-        private readonly List<LayoutInfo> _childrenLayout = new();
-        public IReadOnlyList<LayoutInfo> ChildrenLayout
-        {
-            get
-            {
-                // Pulls layout before handing the list out. The list is only valid immediately
-                // after a pass, so a caller that reads it without one stamps stale positions onto
-                // live RectTransforms -- silently, and only while something else happens to move.
-                WatchLayout();
-                return _childrenLayout;
-            }
-        }
 
         private class RunMetrics
         {
@@ -49,7 +37,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            _childrenLayout.Clear();
+            ChildrenLayoutBuffer.Clear();
             _runs.Clear();
 
             var childConstraints = constraints.Loosen(); 
@@ -68,7 +56,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var child = _state.Children[i];
                 var childSize = LayoutChild(child, childConstraints);
                 
-                _childrenLayout.Add(new LayoutInfo { Size = childSize });
+                ChildrenLayoutBuffer.Add(new LayoutInfo { Size = childSize });
 
                 var childMain = Direction == Axis.Horizontal ? childSize.x : childSize.y;
                 var childCross = Direction == Axis.Horizontal ? childSize.y : childSize.x;
@@ -192,7 +180,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 for (var i = 0; i < run.Count; i++)
                 {
                     var childIndex = run.StartIndex + i;
-                    var layoutData = _childrenLayout[childIndex];
+                    var layoutData = ChildrenLayoutBuffer[childIndex];
                     
                     var childMain = Direction == Axis.Horizontal ? layoutData.Size.x : layoutData.Size.y;
                     var childCross = Direction == Axis.Horizontal ? layoutData.Size.y : layoutData.Size.x;
@@ -219,7 +207,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     var yPos = Direction == Axis.Horizontal ? finalCross : currentMain;
 
                     layoutData.Position = new Vector2(xPos, yPos);
-                    _childrenLayout[childIndex] = layoutData;
+                    ChildrenLayoutBuffer[childIndex] = layoutData;
 
                     currentMain += childMain + mainStep;
                 }

@@ -18,22 +18,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     ///     what makes them pages: a tab must not resize the body when it is selected, and the slide is only
     ///     coherent if every page is the same width.
     /// </remarks>
-    public class RenderTabs : RenderObject, IMultiChildrenRenderObject
+    public class RenderTabs : MultiChildRenderObject
     {
         private readonly ITabsLayoutState _state;
 
-        private readonly List<LayoutInfo> _childrenLayout = new();
-        public IReadOnlyList<LayoutInfo> ChildrenLayout
-        {
-            get
-            {
-                // Pulls layout before handing the list out. The list is only valid immediately
-                // after a pass, so a caller that reads it without one stamps stale positions onto
-                // live RectTransforms -- silently, and only while something else happens to move.
-                WatchLayout();
-                return _childrenLayout;
-            }
-        }
 
         public RenderTabs(ITabsLayoutState state) : base(state.StateLifetime)
         {
@@ -42,7 +30,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-            _childrenLayout.Clear();
+            ChildrenLayoutBuffer.Clear();
 
             var pageSize = ResolvePageSize(constraints);
             var pageConstraints = LayoutConstraints.Tight(pageSize.x, pageSize.y);
@@ -50,7 +38,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             foreach (var child in _state.Children)
             {
                 LayoutChild(child, pageConstraints);
-                _childrenLayout.Add(new LayoutInfo {Size = pageSize});
+                ChildrenLayoutBuffer.Add(new LayoutInfo {Size = pageSize});
             }
 
             return pageSize;
@@ -85,11 +73,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // each frame the controller tweens through, not just on the final index.
             var scrolled = _state.TabController.Value;
 
-            for (var i = 0; i < _childrenLayout.Count; i++)
+            for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
-                var layout = _childrenLayout[i];
+                var layout = ChildrenLayoutBuffer[i];
                 layout.Position = new Vector2((i - scrolled) * Size.x, 0f);
-                _childrenLayout[i] = layout;
+                ChildrenLayoutBuffer[i] = layout;
             }
         }
 

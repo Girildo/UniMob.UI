@@ -94,12 +94,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive);
     }
 
-    public class RenderSliverList : RenderObject, IScrollableRenderObject
+    public class RenderSliverList : MultiChildRenderObject, IScrollableRenderObject
     {
         // Caches the measured sizes of all children to avoid re-calculating every frame. Eager mode only.
         private readonly List<Vector2> _allChildrenSizes = new();
         private readonly ISliverState _state;
-        private readonly List<LayoutInfo> _visibleChildrenLayout = new();
         private readonly List<IndexedLayoutData> _visibleChildrenIndexed = new();
         private Vector2 _viewportSize; // this is determined after the sizing pass, based on the constraints from the parent.
         private float _virtualizationCacheExtent; // this is determined after the sizing pass, based on the view port size OR the user-defined value.
@@ -147,17 +146,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return viewportSize;
         }
 
-        public IReadOnlyList<LayoutInfo> ChildrenLayout
-        {
-            get
-            {
-                // Pulls layout before handing the list out. The list is only valid immediately
-                // after a pass, so a caller that reads it without one stamps stale positions onto
-                // live RectTransforms -- silently, and only while something else happens to move.
-                WatchLayout();
-                return _visibleChildrenLayout;
-            }
-        }
 
         /// <summary>
         ///     SIZING PASS: measures children to determine the total scrollable content size. In eager mode,
@@ -367,8 +355,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 CullVisibleRun(0, 0f, _allChildrenSizes, _state.ScrollPixelOffset, visible);
             }
 
-            _visibleChildrenLayout.Clear();
-            foreach (var child in visible) _visibleChildrenLayout.Add(child.Layout);
+            ChildrenLayoutBuffer.Clear();
+            foreach (var child in visible) ChildrenLayoutBuffer.Add(child.Layout);
 
             _state.SetVisibleChildren(visible);
         }

@@ -61,10 +61,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         IState[] RequestBuildWindow(int startIndexInclusive, int endIndexExclusive);
     }
 
-    public class RenderSliverGrid : RenderObject, IScrollableRenderObject
+    public class RenderSliverGrid : MultiChildRenderObject, IScrollableRenderObject
     {
         private readonly ISliverGridState _state;
-        private readonly List<LayoutInfo> _visibleChildrenLayout = new();
         private readonly List<IndexedLayoutData> _visibleChildrenIndexed = new();
 
         private Vector2 _viewportSize;
@@ -107,17 +106,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             _state = state;
         }
 
-        public IReadOnlyList<LayoutInfo> ChildrenLayout
-        {
-            get
-            {
-                // Pulls layout before handing the list out. The list is only valid immediately
-                // after a pass, so a caller that reads it without one stamps stale positions onto
-                // live RectTransforms -- silently, and only while something else happens to move.
-                WatchLayout();
-                return _visibleChildrenLayout;
-            }
-        }
 
         private float ComputeVirtualizationCacheExtent()
         {
@@ -377,8 +365,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 });
             }
 
-            _visibleChildrenLayout.Clear();
-            foreach (var child in visible) _visibleChildrenLayout.Add(child.Layout);
+            ChildrenLayoutBuffer.Clear();
+            foreach (var child in visible) ChildrenLayoutBuffer.Add(child.Layout);
 
             _state.SetVisibleChildren(visible);
         }
