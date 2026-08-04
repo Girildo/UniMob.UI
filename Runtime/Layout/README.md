@@ -202,6 +202,21 @@ Two things keep it meaningful, and both are load-bearing:
 
 Do not add the call where it can never fire. If children were laid out under `Loosen()` or `Tighten()`, they are already inside the maximum and the `Constrain` is defensive, not lossy.
 
+### The two checks you do not have to call
+
+Both run from `ValidateLayout` on every pass, so no render object opts into them.
+
+**`SizeExceedsConstraints`** is the contract: *a render object answers with a size its constraints allow*. Flutter enforces this in the `RenderBox.size` setter and treats a violation as fatal; here it is reported. It matters because code all over this layer assumes it holds — `RenderConstrainedBox` returns its child's size verbatim, and several render objects skip constraining a result they know came from a child they bounded themselves.
+
+**`ChildOutOfBounds`** is the geometry: *a child lies inside its parent's box*. It is the only check made of the finished result rather than of an algorithm's intentions, which is exactly why it catches what the others cannot. Every other code asks whether one render object's own reasoning held up, and they all trust the measurements the pass trusted; a pass whose numbers are wrong satisfies all of them while positioning a child outside the box, and this layer does not clip, so that child is then drawn there.
+
+Two properties of it are load-bearing:
+
+- **Overhang is counted at both edges.** Content taller than its box under a centred main axis escapes at the near edge as well as the far one.
+- **It is silent whenever anything else reported in the same pass.** A flex that overflows always has children outside it too, so without that it would repeat, in vaguer words, a fault already named precisely — and `MarkCulprit` would overwrite the specific code on the child the stripe points at. It is the net under the other checks, not a second opinion on what they caught.
+
+Override `ChildrenMayOverhang` to opt out, and only for a render object whose purpose involves painting outside itself: the slivers (positioning children beyond the viewport is what scrolling is), `RenderZStack`, `RenderAnchoredBox`, `RenderTabs`.
+
 They are `void` and `[Conditional]`, so a release player deletes the call **and its argument expressions**: an argument that scans every child to find the largest costs nothing unless something is already wrong. They are also the one place `Atom.NoWatch` is applied on behalf of every site, which matters because a report describes the tree, the tree is atoms, and all of this runs inside a layout computation. **Reporting observes; it never participates.**
 
 Each report is emitted **once per render object per fault**, and re-arms when that fault clears. `HasLayoutIssue` is the level-triggered counterpart, true for as long as the fault is happening — that is what the stripe is drawn from.
