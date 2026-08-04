@@ -111,6 +111,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return Vector2.zero;
             }
 
+            // The measurer is shared and reconfigured per measurement, so any property left unstated
+            // leaks in from whichever prefab was loaded last. Auto-sizing is the one that cannot be
+            // allowed to: it grows the font to fill the box, and everything below deliberately
+            // measures against an unbounded height, so leaving it on asks TMP how tall the text is
+            // when the font may grow forever. The answer is its 32767 clamp. The icon prefabs enable
+            // it -- an icon fills its box that way at render time -- which is why every icon in the
+            // app measured at that number and was saved only by the clamp at the end of PerformSizing.
+            measurer.enableAutoSizing = false;
+
             // Configure the static sizer with all properties
             measurer.fontSize = _state.FontSize;
             measurer.fontWeight = _state.FontWeight;
