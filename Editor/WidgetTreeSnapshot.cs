@@ -71,11 +71,17 @@ namespace UniMob.UI.Editor
 
                 foreach (var panel in panels)
                 {
-                    var root = snapshot.Capture(panel.LayoutRoot, depth: 0, maxDepth, index: -1);
-                    if (root != null)
+                    // A panel that has never been rendered has no root yet -- pooled panels and
+                    // prefab instances sit in the scene like this. They are not empty trees, they are
+                    // not trees, so they get no row rather than a row saying nothing.
+                    if (panel.LayoutRoot is null)
                     {
-                        snapshot.Roots.Add(root);
+                        continue;
                     }
+
+                    snapshot.Roots.Add(
+                        snapshot.Capture(panel.LayoutRoot, depth: 0, maxDepth, index: -1)
+                    );
                 }
             }
 
@@ -122,7 +128,10 @@ namespace UniMob.UI.Editor
             var children = Guarded(() => LayoutTree.ChildrenOf(state), Array.Empty<IState>());
             for (var i = 0; i < children.Count; i++)
             {
-                var child = Capture(children[i], depth + 1, maxDepth, i);
+                // An index only earns its place where there are siblings to tell apart. On an only
+                // child it is "[0]" on every second row of a deep chain of wrappers, which is most of
+                // this tree, and it reads as noise because it is.
+                var child = Capture(children[i], depth + 1, maxDepth, children.Count > 1 ? i : -1);
                 node.Children.Add(child);
                 node.SubtreeHasIssue |= child.SubtreeHasIssue;
             }

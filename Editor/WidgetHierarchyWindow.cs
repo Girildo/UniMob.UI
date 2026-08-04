@@ -39,6 +39,11 @@ namespace UniMob.UI.Editor
         /// </summary>
         private readonly HashSet<string> _collapsed = new HashSet<string>();
 
+        /// <summary>Keyed by path for the same reason <see cref="_collapsed"/> is.</summary>
+        private string _selectedPath;
+
+        private bool _rowIsOdd;
+
         [MenuItem("Window/UniMob/Widget Hierarchy")]
         private static void Open()
         {
@@ -47,7 +52,13 @@ namespace UniMob.UI.Editor
             window.Show();
         }
 
-        private void OnEnable() => Refresh();
+        private void OnEnable()
+        {
+            // Hover has to track the pointer, and without this the window only hears about the mouse
+            // when something else already caused a repaint.
+            this.wantsMouseMove = true;
+            Refresh();
+        }
 
         private void Update()
         {
@@ -79,11 +90,18 @@ namespace UniMob.UI.Editor
                 return;
             }
 
+            if (Event.current.type == EventType.MouseMove)
+            {
+                Repaint();
+            }
+
+            _rowIsOdd = false;
+
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            foreach (var root in _snapshot.Roots)
+            for (var i = 0; i < _snapshot.Roots.Count; i++)
             {
-                DrawNode(root, depth: 0, path: "0");
+                DrawNode(_snapshot.Roots[i], depth: 0, path: i.ToString());
             }
 
             EditorGUILayout.EndScrollView();
@@ -141,10 +159,30 @@ namespace UniMob.UI.Editor
             var collapsed = _collapsed.Contains(path);
             var row = GUILayoutUtility.GetRect(0, RowHeight, GUILayout.ExpandWidth(true));
 
+            // Backgrounds, weakest to strongest, so the stronger signal always wins the row. Without
+            // any of these a deep tree is a wall of text at forty indentation levels and the eye has
+            // nothing to track along a line.
+            if (_rowIsOdd)
+            {
+                EditorGUI.DrawRect(row, new Color(1f, 1f, 1f, 0.025f));
+            }
+
             if (node.HasIssue)
             {
                 EditorGUI.DrawRect(row, new Color(0.85f, 0.65f, 0.1f, 0.20f));
             }
+
+            if (row.Contains(Event.current.mousePosition))
+            {
+                EditorGUI.DrawRect(row, new Color(1f, 1f, 1f, 0.05f));
+            }
+
+            if (path == _selectedPath)
+            {
+                EditorGUI.DrawRect(row, new Color(0.24f, 0.48f, 0.90f, 0.35f));
+            }
+
+            _rowIsOdd = !_rowIsOdd;
 
             var x = row.x + depth * IndentWidth;
 
@@ -188,13 +226,17 @@ namespace UniMob.UI.Editor
             GUI.Label(labelRect, label, style);
             GUI.Label(numbersRect, numbers, EditorStyles.miniLabel);
 
+            // The whole row, not just the label. At this indentation the label is a narrow target in
+            // the middle of a wide row, and everything left and right of it looks equally clickable.
             if (
                 Event.current.type == EventType.MouseDown
-                && labelRect.Contains(Event.current.mousePosition)
+                && row.Contains(Event.current.mousePosition)
             )
             {
+                _selectedPath = path;
                 Select(node);
                 Event.current.Use();
+                Repaint();
             }
 
             if (collapsed)

@@ -96,6 +96,12 @@ namespace UniMob.UI.Diagnostics
                 case IMultiChildLayoutState multiChild:
                     return multiChild.Children;
 
+                // An empty list, not a list holding null. A SizedBox with no child *has* no child,
+                // which is not the same as a virtualized list's index that has not been built yet, and
+                // rendering both as "<not built>" reads as a fault where there is none.
+                case ISingleChildLayoutState { Child: null }:
+                    return Array.Empty<IState>();
+
                 case ISingleChildLayoutState singleChild:
                     return new[] { singleChild.Child };
 
