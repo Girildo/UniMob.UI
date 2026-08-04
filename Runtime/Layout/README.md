@@ -189,7 +189,18 @@ The contract on a label lives on `Widget.GetDiagnosticInfo`: one line, describes
 
 ## Reporting a fault from a render object
 
-Never `Debug.Log` at the call site. Call a facade — `ReportOverflow`, `ReportUnboundedConstraint`, `ReportNonFiniteChildSize`, `ReportNonFiniteSize` — and pass a `const string` remedy declared next to the algorithm that knows the fix.
+Never `Debug.Log` at the call site. Call a facade — `ReportOverflow`, `ReportContentOverflow`, `ReportUnboundedConstraint`, `ReportNonFiniteChildSize`, `ReportNonFiniteSize` — and pass a `const string` remedy declared next to the algorithm that knows the fix.
+
+### Content that does not fit
+
+`Constrain` is `Mathf.Clamp`, so the moment your desired size exceeds the maximum, the shortfall is gone: it exists for the lifetime of one expression, and nothing downstream can recover it. **If your sizing pass computes a size and then constrains it, call `ReportContentOverflow` immediately before the clamp.**
+
+Two things keep it meaningful, and both are load-bearing:
+
+- **An infinite desire is not a fault.** Asking for infinity and being clamped to the maximum is how a render object says "fill", and it is the most common thing they do. Only a *finite* desire beyond a finite maximum is content that will be drawn outside its box — this layer does not clip.
+- **Narrow the axes where one has a legitimate reason to come up short**, via the `considered` mask. A text told not to wrap is *meant* to be wider than its box; reporting that would put one console entry on every row of a list.
+
+Do not add the call where it can never fire. If children were laid out under `Loosen()` or `Tighten()`, they are already inside the maximum and the `Constrain` is defensive, not lossy.
 
 They are `void` and `[Conditional]`, so a release player deletes the call **and its argument expressions**: an argument that scans every child to find the largest costs nothing unless something is already wrong. They are also the one place `Atom.NoWatch` is applied on behalf of every site, which matters because a report describes the tree, the tree is atoms, and all of this runs inside a layout computation. **Reporting observes; it never participates.**
 
