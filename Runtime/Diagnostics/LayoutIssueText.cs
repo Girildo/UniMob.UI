@@ -69,6 +69,10 @@ namespace UniMob.UI.Diagnostics
                             : DiagnosticNode.NameOf(issue.Culprit);
                         return $"{culprit} answered {subject} with a non-finite size on the {where}.";
 
+                    case LayoutIssueCode.SizeExceedsConstraints:
+                        return $"{subject} answered {issue.Amount:F1}px larger than its constraints "
+                            + $"allowed on the {where}.";
+
                     case LayoutIssueCode.NonFiniteSize:
                         return $"{subject} answered with a non-finite size on the {where}, "
                             + "under a finite maximum.";

@@ -662,8 +662,85 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if (axes != LayoutAxes.None)
             {
                 ReportNonFiniteSize(axes, constraints, MaterialiseAgainstTheMaximum);
+                return;
             }
+
+            ValidateAgainstTheMaximum(constraints);
         }
+
+        /// <summary>
+        ///     The contract every push depends on: <b>a render object answers with a size its own
+        ///     constraints allow.</b>
+        /// </summary>
+        /// <remarks>
+        ///     Flutter enforces exactly this in the <c>RenderBox.size</c> setter, where a violation is
+        ///     fatal in a debug build. This layer inherited the protocol without the check, and a good
+        ///     deal of code assumes it holds: <see cref="RenderConstrainedBox"/> returns its child's size
+        ///     verbatim, and several render objects skip constraining a result they know came from a
+        ///     child laid out under a maximum they chose. Each of those is correct only while this is
+        ///     true, and nothing was verifying it.
+        ///     <para>
+        ///         Checked on the answering render object rather than in its parent's LayoutChild, so
+        ///         the widget that broke the promise is the one named, the one latched, and the one the
+        ///         stripe is drawn over. Reported through the parent would blame whichever widget did
+        ///         the asking and would let one violating sibling suppress the next.
+        ///     </para>
+        ///     <para>
+        ///         Reported, not thrown. This has never been enforced, so a first run may well find
+        ///         standing violations, and halting on them is a worse trade than naming them.
+        ///     </para>
+        ///     <para>
+        ///         The maximum only. Under-filling a tight minimum is a different fault with a different
+        ///         remedy and puts no pixels outside a box, and a non-finite answer is already
+        ///         <see cref="LayoutIssueCode.NonFiniteSize"/> -- which is why that case returns above
+        ///         rather than being named twice.
+        ///     </para>
+        /// </remarks>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        private void ValidateAgainstTheMaximum(LayoutConstraints constraints)
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            var axes = LayoutAxes.None;
+            var amount = 0f;
+
+            var overWidth = _size.x - constraints.MaxWidth;
+            if (overWidth > LayoutConstants.OverflowTolerance)
+            {
+                axes |= LayoutAxes.Horizontal;
+                amount = Mathf.Max(amount, overWidth);
+            }
+
+            var overHeight = _size.y - constraints.MaxHeight;
+            if (overHeight > LayoutConstants.OverflowTolerance)
+            {
+                axes |= LayoutAxes.Vertical;
+                amount = Mathf.Max(amount, overHeight);
+            }
+
+            if (axes == LayoutAxes.None)
+            {
+                return;
+            }
+
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.SizeExceedsConstraints,
+                    this.Owner,
+                    axes,
+                    ConstrainTheResult,
+                    constraints: constraints,
+                    size: _size,
+                    amount: amount
+                )
+            );
+#endif
+        }
+
+        private const string ConstrainTheResult =
+            "A render object may only answer with a size its constraints allow. Pass the result "
+            + "through LayoutConstraints.Constrain before returning it.";
 
         private const string MaterialiseAgainstTheMaximum =
             "A render object may answer with an infinite axis only where the constraint it was given "

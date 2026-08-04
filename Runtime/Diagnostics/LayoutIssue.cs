@@ -43,6 +43,18 @@ namespace UniMob.UI.Diagnostics
 
         /// <summary>A render object answered with infinity or NaN under a <i>finite</i> maximum.</summary>
         NonFiniteSize,
+
+        /// <summary>
+        ///     A render object answered with a finite size larger than its constraints allowed, breaking
+        ///     the contract every push in this layer depends on.
+        /// </summary>
+        /// <remarks>
+        ///     Flutter makes this fatal in a debug build, in the <c>RenderBox.size</c> setter. Here it is
+        ///     reported, because the check arrived long after the protocol did. It is the fault that
+        ///     makes the other codes untrustworthy: a parent is entitled to assume the maximum it handed
+        ///     down was respected, and several do.
+        /// </remarks>
+        SizeExceedsConstraints,
     }
 
     /// <summary>
