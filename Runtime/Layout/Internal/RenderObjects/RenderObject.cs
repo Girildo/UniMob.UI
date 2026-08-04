@@ -399,6 +399,74 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 #endif
         }
 
+        /// <summary>
+        ///     This render object's own content needs more room than it was given, on an axis where the
+        ///     shortfall is a real number rather than a request to fill.
+        /// </summary>
+        /// <remarks>
+        ///     Call it immediately before <see cref="LayoutConstraints.Constrain"/>, passing what the
+        ///     content actually wanted. That call is where the fault becomes undetectable: it is
+        ///     <c>Mathf.Clamp</c>, so the shortfall exists for the lifetime of one expression and nothing
+        ///     downstream -- including <see cref="ValidateLayout"/>, which runs after and sees only the
+        ///     clamped answer -- can recover it.
+        ///     <para>
+        ///         <b>An infinite desire is not a fault.</b> Asking for infinity and being clamped to the
+        ///         maximum is how a render object says "fill", and it is the single most common thing
+        ///         they do. Only a <i>finite</i> desire beyond the maximum means content that will be
+        ///         drawn outside its box, because this layout layer does not clip.
+        ///     </para>
+        /// </remarks>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        protected void ReportContentOverflow(
+            LayoutConstraints constraints,
+            Vector2 desired,
+            string remedy
+        )
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            var axes = LayoutAxes.None;
+            var amount = 0f;
+
+            // Subtracting an infinite maximum gives negative infinity, and a non-finite desire fails
+            // IsFinite, so both of the legal shapes fall out without being special-cased. A NaN desire
+            // reports nothing here: that is ValidateLayout's fault to name, not this one's.
+            var overWidth = desired.x - constraints.MaxWidth;
+            if (float.IsFinite(desired.x) && overWidth > LayoutConstants.OverflowTolerance)
+            {
+                axes |= LayoutAxes.Horizontal;
+                amount = Mathf.Max(amount, overWidth);
+            }
+
+            var overHeight = desired.y - constraints.MaxHeight;
+            if (float.IsFinite(desired.y) && overHeight > LayoutConstants.OverflowTolerance)
+            {
+                axes |= LayoutAxes.Vertical;
+                amount = Mathf.Max(amount, overHeight);
+            }
+
+            if (axes == LayoutAxes.None)
+            {
+                return;
+            }
+
+            // No size, for the same reason ReportOverflow passes none: this fires from inside
+            // PerformSizing, where Size still holds the previous pass's answer. The number that matters
+            // is the shortfall, and it is in Amount.
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.ContentOverflow,
+                    this.Owner,
+                    axes,
+                    remedy,
+                    constraints: constraints,
+                    amount: amount
+                )
+            );
+#endif
+        }
+
         /// <summary>An axis reached something that cannot work without a bound.</summary>
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]

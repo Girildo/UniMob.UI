@@ -5,11 +5,22 @@ using UnityEngine;
 
 namespace UniMob.UI.Diagnostics
 {
-    /// <summary>What went wrong. Four faults, and the last two are one push seen from both ends.</summary>
+    /// <summary>What went wrong. Five faults, and the last two are one push seen from both ends.</summary>
     public enum LayoutIssueCode
     {
         /// <summary>Children needed more room than there was.</summary>
         Overflow,
+
+        /// <summary>
+        ///     A render object's own content needed more room than its constraints allowed, so
+        ///     <see cref="LayoutConstraints.Constrain"/> silently took the difference away.
+        /// </summary>
+        /// <remarks>
+        ///     Distinct from <see cref="Overflow"/>, which is a flex discovering that its children do not
+        ///     fit along the axis it distributes. This one is a render object discovering that its own
+        ///     answer does not fit at all, and it is the shape a wrapping text takes.
+        /// </remarks>
+        ContentOverflow,
 
         /// <summary>An axis reached something that cannot work without a bound.</summary>
         UnboundedConstraint,

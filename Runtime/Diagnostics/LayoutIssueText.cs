@@ -27,8 +27,11 @@ namespace UniMob.UI.Diagnostics
     {
         public static LogType Severity(LayoutIssueCode code)
         {
-            // An overflow is a layout that still renders. The other three are a widget that will not.
-            return code == LayoutIssueCode.Overflow ? LogType.Warning : LogType.Error;
+            // Both overflows are a layout that still renders, wrongly and visibly. The other three are
+            // a widget that will not render at all.
+            return code is LayoutIssueCode.Overflow or LayoutIssueCode.ContentOverflow
+                ? LogType.Warning
+                : LogType.Error;
         }
 
         public static string Summary(in LayoutIssue issue)
@@ -42,6 +45,10 @@ namespace UniMob.UI.Diagnostics
                 {
                     case LayoutIssueCode.Overflow:
                         return $"{subject} overflowed by {issue.Amount:F1}px on the {where}.";
+
+                    case LayoutIssueCode.ContentOverflow:
+                        return $"{subject} needs {issue.Amount:F1}px more on the {where} "
+                            + "than it was given, and is drawn outside its box.";
 
                     case LayoutIssueCode.UnboundedConstraint:
                         return $"{subject} needs a bounded {where} and was given an unbounded one.";
