@@ -50,6 +50,12 @@ namespace UniMob.UI.Editor
             /// <summary>Null for a build-only widget, which has no GameObject to select.</summary>
             public GameObject Target;
 
+            /// <summary>
+            ///     Depth from the root, so a hit test can prefer the innermost widget under the
+            ///     pointer. Nested rects all contain the point; only depth says which one you meant.
+            /// </summary>
+            public int Depth;
+
             public int Index = -1;
             public readonly List<Node> Children = new List<Node>();
         }
@@ -98,7 +104,7 @@ namespace UniMob.UI.Editor
                 return new Node { Label = "<not built>", Index = index };
             }
 
-            var node = new Node { Index = index };
+            var node = new Node { Index = index, Depth = depth };
             this.NodeCount++;
 
             // Each channel guarded on its own. A state can be mid-construction or disposed, and one
@@ -137,6 +143,58 @@ namespace UniMob.UI.Editor
             }
 
             return node;
+        }
+
+        /// <summary>
+        ///     The innermost widget whose box contains <paramref name="screenPoint"/>, or null.
+        /// </summary>
+        /// <remarks>
+        ///     Deliberately not an <c>EventSystem</c> raycast. That only reports Graphics with
+        ///     <c>raycastTarget</c> set, so it would miss every widget that paints nothing -- which is
+        ///     most of a layout tree, and disproportionately the ones worth inspecting. Testing the
+        ///     boxes directly finds a Column or a Padding exactly as readily as a button.
+        ///     <para>
+        ///         Deepest wins, because every ancestor's rect contains the point too and only depth
+        ///         distinguishes what the user was aiming at.
+        ///     </para>
+        /// </remarks>
+        public Node HitTest(Vector2 screenPoint)
+        {
+            Node best = null;
+
+            foreach (var root in this.Roots)
+            {
+                HitTest(root, screenPoint, ref best);
+            }
+
+            return best;
+        }
+
+        private static void HitTest(Node node, Vector2 screenPoint, ref Node best)
+        {
+            if (node.Target != null && node.Target.transform is RectTransform rect)
+            {
+                // A Screen Space - Overlay canvas resolves against no camera; anything else needs the
+                // one its canvas renders through, or the point lands in the wrong space entirely.
+                var canvas = node.Target.GetComponentInParent<Canvas>();
+                var camera =
+                    canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay
+                        ? null
+                        : canvas.worldCamera;
+
+                if (
+                    RectTransformUtility.RectangleContainsScreenPoint(rect, screenPoint, camera)
+                    && (best == null || node.Depth > best.Depth)
+                )
+                {
+                    best = node;
+                }
+            }
+
+            foreach (var child in node.Children)
+            {
+                HitTest(child, screenPoint, ref best);
+            }
         }
 
         private static T Guarded<T>(Func<T> read, T fallback)

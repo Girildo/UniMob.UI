@@ -78,6 +78,8 @@ namespace UniMob.UI.Editor
             _search = new SearchField();
 
             Selection.selectionChanged += OnSceneSelectionChanged;
+            WidgetPicker.Picked += OnPicked;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
 
             Refresh();
         }
@@ -85,12 +87,20 @@ namespace UniMob.UI.Editor
         private void OnDisable()
         {
             Selection.selectionChanged -= OnSceneSelectionChanged;
+            WidgetPicker.Picked -= OnPicked;
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+
+            // A picker outliving the window that armed it would eat every click in the Game view with
+            // nothing left listening to explain why.
+            WidgetPicker.Disarm();
 
             if (_tree != null)
             {
                 _tree.NodeSelected -= OnNodeSelected;
             }
         }
+
+        private void OnPlayModeChanged(PlayModeStateChange change) => WidgetPicker.Disarm();
 
         private void Update()
         {
@@ -128,6 +138,33 @@ namespace UniMob.UI.Editor
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
+                // Inspect mode. Only meaningful while the app is running, since it works by putting a
+                // click-catcher into the live scene.
+                using (new EditorGUI.DisabledScope(!EditorApplication.isPlaying))
+                {
+                    var armed = GUILayout.Toggle(
+                        WidgetPicker.IsArmed,
+                        new GUIContent(
+                            "Select",
+                            "Click a widget in the Game view to select it here"
+                        ),
+                        EditorStyles.toolbarButton,
+                        GUILayout.Width(52)
+                    );
+
+                    if (armed != WidgetPicker.IsArmed)
+                    {
+                        if (armed)
+                        {
+                            WidgetPicker.Arm();
+                        }
+                        else
+                        {
+                            WidgetPicker.Disarm();
+                        }
+                    }
+                }
+
                 if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(58)))
                 {
                     Refresh();
@@ -241,6 +278,37 @@ namespace UniMob.UI.Editor
                 var parent = selected.transform.parent;
                 selected = parent == null ? null : parent.gameObject;
             }
+        }
+
+        /// <summary>Game view to window: a click in the running UI selects the widget under it.</summary>
+        /// <remarks>
+        ///     Re-snapshots first. Inspect mode is most useful on something that just changed, and the
+        ///     hit test has to run against the geometry as it is now rather than as it was up to half a
+        ///     second ago.
+        /// </remarks>
+        private void OnPicked(Vector2 screenPoint)
+        {
+            Refresh();
+
+            var snapshot = _tree?.Snapshot;
+            var hit = snapshot?.HitTest(screenPoint);
+
+            if (hit == null)
+            {
+                ShowNotification(new GUIContent("No widget under that point."), 0.7f);
+                Repaint();
+                return;
+            }
+
+            var id = _tree.FindIdForNode(hit);
+            if (id != 0)
+            {
+                _tree.SetSelection(new[] { id }, TreeViewSelectionOptions.RevealAndFrame);
+            }
+
+            OnNodeSelected(hit);
+            Focus();
+            Repaint();
         }
 
         private void CopyTreeToClipboard()

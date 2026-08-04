@@ -50,10 +50,37 @@ namespace UniMob.UI.Editor
         /// <summary>Raised with the clicked node, or null when the selection is cleared.</summary>
         public event Action<WidgetTreeSnapshot.Node> NodeSelected;
 
+        /// <summary>The snapshot currently on screen, for a caller that needs to hit test it.</summary>
+        public WidgetTreeSnapshot Snapshot => _snapshot;
+
         public void SetSnapshot(WidgetTreeSnapshot snapshot)
         {
             _snapshot = snapshot;
             Reload();
+        }
+
+        /// <summary>The id showing <paramref name="node"/>, or 0 when it is not on screen.</summary>
+        /// <remarks>
+        ///     By reference: nodes are rebuilt on every refresh, so this only answers for the snapshot
+        ///     that is currently displayed. A caller holding one from an older snapshot gets 0, which is
+        ///     the honest answer rather than a stale row.
+        /// </remarks>
+        public int FindIdForNode(WidgetTreeSnapshot.Node node)
+        {
+            if (node == null)
+            {
+                return 0;
+            }
+
+            foreach (var pair in _nodeById)
+            {
+                if (ReferenceEquals(pair.Value, node))
+                {
+                    return pair.Key;
+                }
+            }
+
+            return 0;
         }
 
         public static MultiColumnHeaderState CreateHeaderState() =>
