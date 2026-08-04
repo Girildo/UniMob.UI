@@ -81,6 +81,7 @@ namespace UniMob.UI.Editor
             Selection.selectionChanged += OnSceneSelectionChanged;
             WidgetPicker.Picked += OnPicked;
             WidgetPicker.Hovered += OnHovered;
+            WidgetPicker.Exited += HighlightSelection;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
 
             Refresh();
@@ -91,6 +92,7 @@ namespace UniMob.UI.Editor
             Selection.selectionChanged -= OnSceneSelectionChanged;
             WidgetPicker.Picked -= OnPicked;
             WidgetPicker.Hovered -= OnHovered;
+            WidgetPicker.Exited -= HighlightSelection;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
 
             // A picker outliving the window that armed it would eat every click in the Game view with
@@ -120,7 +122,39 @@ namespace UniMob.UI.Editor
             Repaint();
         }
 
-        private void Refresh() => _tree?.SetSnapshot(WidgetTreeSnapshot.Take(_maxDepth));
+        private void Refresh()
+        {
+            _tree?.SetSnapshot(WidgetTreeSnapshot.Take(_maxDepth));
+
+            // Re-applied on every refresh rather than only when the selection changes, so the
+            // highlight follows a widget that moves -- a list scrolling, an animation, a relayout --
+            // instead of being left where the widget used to be.
+            HighlightSelection();
+        }
+
+        /// <summary>
+        ///     Lights the selected widget, unless the pointer is in the app and owns the highlight.
+        /// </summary>
+        private void HighlightSelection()
+        {
+            if (!WidgetPicker.IsArmed || WidgetPicker.IsPointerOverApp)
+            {
+                return;
+            }
+
+            var selection = _tree.GetSelection();
+            var node = selection.Count > 0 ? _tree.NodeFor(selection[0]) : null;
+            var rect = WidgetTreeSnapshot.ScreenRectOf(node);
+
+            if (rect.width > 0f || rect.height > 0f)
+            {
+                WidgetPicker.SetHighlight(rect);
+            }
+            else
+            {
+                WidgetPicker.ClearHighlight();
+            }
+        }
 
         private void OnGUI()
         {
@@ -234,18 +268,9 @@ namespace UniMob.UI.Editor
         /// </remarks>
         private void OnNodeSelected(WidgetTreeSnapshot.Node node)
         {
-            // Selecting in the tree lights the widget in the Game view, so the two views answer each
-            // other in both directions. A no-op unless inspect mode is on, which is the only time
-            // there is anything to draw into.
-            var rect = WidgetTreeSnapshot.ScreenRectOf(node);
-            if (rect.width > 0f || rect.height > 0f)
-            {
-                WidgetPicker.SetHighlight(rect);
-            }
-            else
-            {
-                WidgetPicker.ClearHighlight();
-            }
+            // Immediately, rather than waiting for the next refresh tick: a selection that lights up
+            // half a second later reads as not working.
+            HighlightSelection();
 
             if (node?.Target == null)
             {

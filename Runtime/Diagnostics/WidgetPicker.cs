@@ -44,7 +44,20 @@ namespace UniMob.UI.Diagnostics
         /// <summary>The pointer moved, in screen coordinates.</summary>
         public static event Action<Vector2> Hovered;
 
+        /// <summary>The pointer left the app, so whatever it was lighting is no longer the subject.</summary>
+        public static event Action Exited;
+
         public static bool IsArmed => _overlay != null;
+
+        /// <summary>
+        ///     Whether the pointer is over the app, and therefore whether hover owns the highlight.
+        /// </summary>
+        /// <remarks>
+        ///     Two things want to light a widget -- the pointer and the tree selection -- and they must
+        ///     not fight over it. The pointer wins while it is in the app, because that is the more
+        ///     immediate intent; the selection owns it the rest of the time.
+        /// </remarks>
+        public static bool IsPointerOverApp { get; private set; }
 
         public static void Arm()
         {
@@ -111,8 +124,10 @@ namespace UniMob.UI.Diagnostics
             var root = _overlay.transform.parent.gameObject;
 
             _overlay = null;
+            _canvasRect = null;
             _dim = null;
             _border = null;
+            IsPointerOverApp = false;
 
             UnityEngine.Object.DestroyImmediate(root);
         }
@@ -231,12 +246,20 @@ namespace UniMob.UI.Diagnostics
                 IPointerMoveHandler,
                 IPointerExitHandler
         {
-            public void OnPointerMove(PointerEventData eventData) =>
+            public void OnPointerMove(PointerEventData eventData)
+            {
+                IsPointerOverApp = true;
                 Hovered?.Invoke(eventData.position);
+            }
 
-            // Without this the hole stays cut where the pointer last was, so a mouse resting outside
-            // the Game view leaves a lit widget that nothing is pointing at.
-            public void OnPointerExit(PointerEventData eventData) => ClearHighlight();
+            // Hands the highlight back rather than clearing it. Clearing here is what made a tree
+            // selection appear to need a round trip: moving the pointer from the Game view to the
+            // window crosses this boundary, so the selection's highlight was wiped on the way over.
+            public void OnPointerExit(PointerEventData eventData)
+            {
+                IsPointerOverApp = false;
+                Exited?.Invoke();
+            }
 
             // Stays armed. Inspect mode is a mode, held by an explicit toggle and made obvious by the
             // dim, so a click is a pick rather than the end of it -- which is what lets the highlight
