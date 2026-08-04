@@ -1,0 +1,19 @@
+{
+    "name": "UniMob.UI.Editor",
+    "rootNamespace": "UniMob.UI.Editor",
+    "references": [
+        "UniMob",
+        "UniMob.UI"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}
