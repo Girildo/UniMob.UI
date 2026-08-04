@@ -86,6 +86,13 @@ namespace UniMob.UI.Layout
         {
             return new RenderSliverGrid((ISliverGridState) state);
         }
+
+        // See ScrollList.GetDiagnosticInfo: the logical count off the widget, never the built window.
+        public override string GetDiagnosticInfo()
+        {
+            var count = ItemCount ?? Children?.Count ?? 0;
+            return count == 1 ? "1 item" : count + " items";
+        }
     }
 
     // Reactive half of the grid. Like ScrollListState it feeds the render object the full logical shape

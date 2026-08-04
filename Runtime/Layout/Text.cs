@@ -1,6 +1,7 @@
 #nullable enable
 using JetBrains.Annotations;
 using TMPro;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
 
@@ -65,6 +66,10 @@ namespace UniMob.UI.Layout
         {
             return new RenderText((TextState) state);
         }
+
+        // The one label every tree needs: a screen full of Text nodes is otherwise indistinguishable.
+        // Short, because a chain of ancestors carries up to twelve of these on one line.
+        public override string? GetDiagnosticInfo() => DiagnosticNode.Truncate(this.Value, 24);
     }
 
     public class TextState : ViewState<Text>, ITextState
@@ -105,14 +110,6 @@ namespace UniMob.UI.Layout
 
         public override WidgetViewReference View =>
             Widget.ViewReference ?? WidgetViewReference.Resource("Layout/UniMob.Text");
-
-        public override string GetDiagnosticInfo()
-        {
-            var length = this.Value.Length;
-            if (length > 20)
-                return this.Value.Substring(0, 20) + "...";
-            return this.Value;
-        }
     }
 
 

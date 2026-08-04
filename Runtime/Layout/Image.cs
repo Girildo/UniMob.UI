@@ -50,6 +50,14 @@ namespace UniMob.UI.Layout
         {
             return new RenderImage((ImageState) state);
         }
+
+        public override string? GetDiagnosticInfo()
+        {
+            // Unity's != null, never ?., which sees a live CLR reference to a destroyed texture and
+            // throws on .name. A texture built at runtime is usually unnamed, and "" is not a label.
+            var texture = this.Texture;
+            return texture != null && !string.IsNullOrEmpty(texture.name) ? texture.name : null;
+        }
     }
 
     public interface IImageState : IViewState

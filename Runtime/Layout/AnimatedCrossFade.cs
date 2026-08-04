@@ -20,6 +20,11 @@ namespace UniMob.UI.Layout
 
         public override State CreateState() => new AnimatedCrossFadeState();
 
+        // Which of the two children this is meant to be showing. Both are in the tree while the fade
+        // runs, and (with KeepMounted) after it, so the tree alone never answers this.
+        public override string GetDiagnosticInfo() =>
+            CrossFadeState == CrossFadeState.ShowFirst ? "first" : "second";
+
         internal float GetReverseDuration() => ReverseDuration ?? Duration;
     }
 

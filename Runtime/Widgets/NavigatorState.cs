@@ -40,6 +40,29 @@ namespace UniMob.UI.Widgets
         [Atom]
         public Route TopmostRoute => _stack.TopmostRoute;
 
+        /// <summary>
+        ///     How deep the stack is and what is on top of it: <c>"3 routes: room-edit"</c>.
+        /// </summary>
+        /// <remarks>
+        ///     Straight off <see cref="NavigatorStack"/> rather than through the atoms above, because a
+        ///     label must survive being read at moments they do not cover: <c>Count</c> is a plain read,
+        ///     while <c>TopmostRoute</c> peeks and throws on the empty stack this state has between its
+        ///     constructor and <c>InitState</c>.
+        /// </remarks>
+        public override string GetDiagnosticInfo()
+        {
+            var depth = _stack.Count;
+            if (depth == 0)
+            {
+                return "empty";
+            }
+
+            var top = _stack.TopmostRoute?.Key;
+            var routes = depth == 1 ? "1 route" : depth + " routes";
+
+            return string.IsNullOrEmpty(top) ? routes : routes + ": " + top;
+        }
+
         public override void InitState()
         {
             base.InitState();

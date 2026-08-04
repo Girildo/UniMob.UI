@@ -86,6 +86,24 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
             new RenderAnchoredBox((AnchoredBoxState)state);
+
+        /// <summary>
+        /// What this box is anchored to, which is its whole identity. A geometry key prints as a hash,
+        /// so without this the most placement-specific widget here is the least identifiable one.
+        /// </summary>
+        public override string? GetDiagnosticInfo()
+        {
+            if (this.Anchor is not { } anchor)
+            {
+                return null;
+            }
+
+            // Untracked by construction (CurrentRawWidget reads the binding under NoWatch), and an
+            // unbound key is the ordinary first-frame state, not a fault -- but it is exactly what you
+            // are looking at when nothing renders, so it says so rather than reading as unanchored.
+            var target = anchor.CurrentRawWidget;
+            return target == null ? "-> unbound" : "-> " + target.GetType().Name;
+        }
     }
 
     public class AnchoredBoxState : ViewState<AnchoredBox>, IAnchoredBoxState

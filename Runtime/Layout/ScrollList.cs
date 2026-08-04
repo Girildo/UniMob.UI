@@ -72,6 +72,15 @@ namespace UniMob.UI.Layout
         {
             return new RenderSliverList((ISliverState) state);
         }
+
+        // The logical count, off the widget's own fields. Not the visible window: the state's Children
+        // is a computed atom that BUILDS the states it returns, and NoWatch suppresses the dependency,
+        // not the work. A list is also the one widget whose emptiness explains a whole blank screen.
+        public override string GetDiagnosticInfo()
+        {
+            var count = ItemCount ?? Children?.Count ?? 0;
+            return count == 1 ? "1 item" : count + " items";
+        }
     }
 
 
