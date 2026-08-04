@@ -1,7 +1,7 @@
-using System.Collections.Generic;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Widgets;
 using UnityEditor;
+using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace UniMob.UI.Editor
@@ -23,26 +23,30 @@ namespace UniMob.UI.Editor
     /// </remarks>
     public sealed class WidgetHierarchyWindow : EditorWindow
     {
-        private const float RowHeight = 18f;
-        private const float IndentWidth = 14f;
+        [SerializeField]
+        private TreeViewState _treeState;
 
-        private WidgetTreeSnapshot _snapshot;
-        private Vector2 _scroll;
-        private int _maxDepth = 24;
+        [SerializeField]
+        private MultiColumnHeaderState _headerState;
+
+        private WidgetTreeView _tree;
+        private SearchField _search;
+
+        /// <summary>
+        ///     A guard against runaway recursion, not a display choice. Real pages already reach the
+        ///     mid-twenties, so a ceiling anywhere near that truncates them instead of protecting
+        ///     anything.
+        /// </summary>
+        private int _maxDepth = 100;
+
         private bool _autoRefresh = true;
-        private bool _issuesOnly;
         private double _nextRefreshAt;
 
         /// <summary>
-        ///     Collapsed state, keyed by path rather than by node, because every refresh builds new
-        ///     nodes. Keying on the objects themselves would silently reset the tree on every tick.
+        ///     Set while this window is the one changing <see cref="Selection"/>, so the change it
+        ///     causes does not come back around and re-select what the user just clicked.
         /// </summary>
-        private readonly HashSet<string> _collapsed = new HashSet<string>();
-
-        /// <summary>Keyed by path for the same reason <see cref="_collapsed"/> is.</summary>
-        private string _selectedPath;
-
-        private bool _rowIsOdd;
+        private bool _drivingSelection;
 
         [MenuItem("Window/UniMob/Widget Hierarchy")]
         private static void Open()
@@ -54,10 +58,38 @@ namespace UniMob.UI.Editor
 
         private void OnEnable()
         {
-            // Hover has to track the pointer, and without this the window only hears about the mouse
-            // when something else already caused a repaint.
-            this.wantsMouseMove = true;
+            _treeState ??= new TreeViewState();
+
+            var freshHeader = WidgetTreeView.CreateHeaderState();
+            if (
+                _headerState != null
+                && MultiColumnHeaderState.CanOverwriteSerializedFields(_headerState, freshHeader)
+            )
+            {
+                // Carries the user's column widths across a domain reload, but only when the columns
+                // are still the same ones.
+                MultiColumnHeaderState.OverwriteSerializedFields(_headerState, freshHeader);
+            }
+
+            _headerState = freshHeader;
+
+            _tree = new WidgetTreeView(_treeState, new MultiColumnHeader(_headerState));
+            _tree.NodeSelected += OnNodeSelected;
+            _search = new SearchField();
+
+            Selection.selectionChanged += OnSceneSelectionChanged;
+
             Refresh();
+        }
+
+        private void OnDisable()
+        {
+            Selection.selectionChanged -= OnSceneSelectionChanged;
+
+            if (_tree != null)
+            {
+                _tree.NodeSelected -= OnNodeSelected;
+            }
         }
 
         private void Update()
@@ -75,43 +107,28 @@ namespace UniMob.UI.Editor
             Repaint();
         }
 
-        private void Refresh() => _snapshot = WidgetTreeSnapshot.Take(_maxDepth);
+        private void Refresh() => _tree?.SetSnapshot(WidgetTreeSnapshot.Take(_maxDepth));
 
         private void OnGUI()
         {
             DrawToolbar();
 
-            if (_snapshot == null || _snapshot.Roots.Count == 0)
-            {
-                EditorGUILayout.HelpBox(
-                    "No live widget tree. Enter play mode, or open a scene containing a ViewPanel.",
-                    MessageType.Info
-                );
-                return;
-            }
-
-            if (Event.current.type == EventType.MouseMove)
-            {
-                Repaint();
-            }
-
-            _rowIsOdd = false;
-
-            _scroll = EditorGUILayout.BeginScrollView(_scroll);
-
-            for (var i = 0; i < _snapshot.Roots.Count; i++)
-            {
-                DrawNode(_snapshot.Roots[i], depth: 0, path: i.ToString());
-            }
-
-            EditorGUILayout.EndScrollView();
+            var rect = GUILayoutUtility.GetRect(
+                0,
+                100000,
+                0,
+                100000,
+                GUILayout.ExpandWidth(true),
+                GUILayout.ExpandHeight(true)
+            );
+            _tree.OnGUI(rect);
         }
 
         private void DrawToolbar()
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(60)))
+                if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, GUILayout.Width(58)))
                 {
                     Refresh();
                 }
@@ -120,156 +137,110 @@ namespace UniMob.UI.Editor
                     _autoRefresh,
                     "Auto",
                     EditorStyles.toolbarButton,
-                    GUILayout.Width(44)
+                    GUILayout.Width(42)
                 );
 
-                _issuesOnly = GUILayout.Toggle(
-                    _issuesOnly,
+                var issuesOnly = GUILayout.Toggle(
+                    _tree.IssuesOnly,
                     "Issues only",
                     EditorStyles.toolbarButton,
-                    GUILayout.Width(78)
+                    GUILayout.Width(74)
                 );
 
-                GUILayout.Space(8);
-                GUILayout.Label("Depth", EditorStyles.miniLabel, GUILayout.Width(38));
-                _maxDepth = EditorGUILayout.IntSlider(_maxDepth, 2, 40, GUILayout.Width(140));
+                if (issuesOnly != _tree.IssuesOnly)
+                {
+                    _tree.IssuesOnly = issuesOnly;
+                    Refresh();
+                }
+
+                if (GUILayout.Button("Expand", EditorStyles.toolbarButton, GUILayout.Width(54)))
+                {
+                    _tree.ExpandAll();
+                }
+
+                if (GUILayout.Button("Collapse", EditorStyles.toolbarButton, GUILayout.Width(60)))
+                {
+                    _tree.CollapseAll();
+                }
+
+                GUILayout.Space(6);
+                _tree.searchString = _search.OnToolbarGUI(_tree.searchString);
 
                 GUILayout.FlexibleSpace();
 
                 // The text dump, free: same walk, same node renderer, pasteable into a bug report.
-                if (GUILayout.Button("Copy tree", EditorStyles.toolbarButton, GUILayout.Width(70)))
+                if (GUILayout.Button("Copy tree", EditorStyles.toolbarButton, GUILayout.Width(68)))
                 {
                     CopyTreeToClipboard();
                 }
-
-                GUILayout.Label(
-                    _snapshot == null ? string.Empty : $"{_snapshot.NodeCount} nodes",
-                    EditorStyles.miniLabel
-                );
             }
         }
 
-        private void DrawNode(WidgetTreeSnapshot.Node node, int depth, string path)
-        {
-            if (_issuesOnly && !node.SubtreeHasIssue)
-            {
-                return;
-            }
-
-            var collapsed = _collapsed.Contains(path);
-            var row = GUILayoutUtility.GetRect(0, RowHeight, GUILayout.ExpandWidth(true));
-
-            // Backgrounds, weakest to strongest, so the stronger signal always wins the row. Without
-            // any of these a deep tree is a wall of text at forty indentation levels and the eye has
-            // nothing to track along a line.
-            if (_rowIsOdd)
-            {
-                EditorGUI.DrawRect(row, new Color(1f, 1f, 1f, 0.025f));
-            }
-
-            if (node.HasIssue)
-            {
-                EditorGUI.DrawRect(row, new Color(0.85f, 0.65f, 0.1f, 0.20f));
-            }
-
-            if (row.Contains(Event.current.mousePosition))
-            {
-                EditorGUI.DrawRect(row, new Color(1f, 1f, 1f, 0.05f));
-            }
-
-            if (path == _selectedPath)
-            {
-                EditorGUI.DrawRect(row, new Color(0.24f, 0.48f, 0.90f, 0.35f));
-            }
-
-            _rowIsOdd = !_rowIsOdd;
-
-            var x = row.x + depth * IndentWidth;
-
-            if (node.Children.Count > 0)
-            {
-                var foldout = new Rect(x, row.y, 14f, row.height);
-                if (GUI.Button(foldout, collapsed ? "▸" : "▾", EditorStyles.label))
-                {
-                    if (!_collapsed.Remove(path))
-                    {
-                        _collapsed.Add(path);
-                    }
-                }
-            }
-
-            x += 16f;
-
-            // The badge on an ancestor is what makes a collapsed tree navigable: it says which branch
-            // is worth opening, instead of leaving you to expand everything and read.
-            if (node.SubtreeHasIssue)
-            {
-                var badge = new Rect(x, row.y + 4f, 8f, 8f);
-                EditorGUI.DrawRect(
-                    badge,
-                    node.HasIssue ? new Color(0.9f, 0.55f, 0.1f) : new Color(0.6f, 0.45f, 0.15f)
-                );
-            }
-
-            x += 12f;
-
-            var label = node.Index >= 0 ? $"[{node.Index}] {node.Label}" : node.Label;
-            var numbers = string.IsNullOrEmpty(node.Size)
-                ? string.Empty
-                : $"{node.Constraints}  ->  {node.Size}";
-
-            var numbersWidth = Mathf.Min(340f, row.width * 0.45f);
-            var labelRect = new Rect(x, row.y, row.width - x - numbersWidth, row.height);
-            var numbersRect = new Rect(row.xMax - numbersWidth, row.y, numbersWidth, row.height);
-
-            var style = node.Target == null ? EditorStyles.label : EditorStyles.boldLabel;
-            GUI.Label(labelRect, label, style);
-            GUI.Label(numbersRect, numbers, EditorStyles.miniLabel);
-
-            // The whole row, not just the label. At this indentation the label is a narrow target in
-            // the middle of a wide row, and everything left and right of it looks equally clickable.
-            if (
-                Event.current.type == EventType.MouseDown
-                && row.Contains(Event.current.mousePosition)
-            )
-            {
-                _selectedPath = path;
-                Select(node);
-                Event.current.Use();
-                Repaint();
-            }
-
-            if (collapsed)
-            {
-                return;
-            }
-
-            for (var i = 0; i < node.Children.Count; i++)
-            {
-                DrawNode(node.Children[i], depth + 1, path + "/" + i);
-            }
-        }
-
-        /// <summary>
-        ///     Selects a node's GameObject, where it has one.
-        /// </summary>
+        /// <summary>Window to scene.</summary>
         /// <remarks>
         ///     A build-only widget has no GameObject, and silently selecting the nearest descendant that
-        ///     does would point at something the user did not click. Better to say so.
+        ///     does would point at something the user did not click. Better to say so and select
+        ///     nothing.
         /// </remarks>
-        private void Select(WidgetTreeSnapshot.Node node)
+        private void OnNodeSelected(WidgetTreeSnapshot.Node node)
         {
-            if (node.Target == null)
+            if (node?.Target == null)
             {
-                ShowNotification(
-                    new GUIContent("Build-only widget: no GameObject to select."),
-                    0.8f
-                );
+                if (node != null)
+                {
+                    ShowNotification(
+                        new GUIContent("Build-only widget: no GameObject to select."),
+                        0.7f
+                    );
+                }
+
                 return;
             }
 
-            Selection.activeGameObject = node.Target;
-            EditorGUIUtility.PingObject(node.Target);
+            _drivingSelection = true;
+            try
+            {
+                Selection.activeGameObject = node.Target;
+                EditorGUIUtility.PingObject(node.Target);
+            }
+            finally
+            {
+                _drivingSelection = false;
+            }
+        }
+
+        /// <summary>Scene or Hierarchy to window.</summary>
+        /// <remarks>
+        ///     Walks up from the selected GameObject to the nearest one this tree knows about. Landing
+        ///     on the nearest view-backed ancestor is the point rather than a shortcoming: the
+        ///     build-only widgets around it are then visible in this window, which is the only place
+        ///     they ever are.
+        /// </remarks>
+        private void OnSceneSelectionChanged()
+        {
+            if (_drivingSelection || _tree == null)
+            {
+                return;
+            }
+
+            var selected = Selection.activeGameObject;
+
+            while (selected != null)
+            {
+                var id = _tree.FindIdForGameObject(selected);
+                if (id != 0)
+                {
+                    // Deliberately without FireSelectionChanged. Firing it would run the window-to-scene
+                    // handler, which would then write back the ancestor we walked up to -- quietly
+                    // moving the user's selection off whatever they actually clicked.
+                    _tree.SetSelection(new[] { id }, TreeViewSelectionOptions.RevealAndFrame);
+                    Repaint();
+                    return;
+                }
+
+                var parent = selected.transform.parent;
+                selected = parent == null ? null : parent.gameObject;
+            }
         }
 
         private void CopyTreeToClipboard()
@@ -285,12 +256,15 @@ namespace UniMob.UI.Editor
                     )
                 )
                 {
-                    text += LayoutTree.Describe(panel.LayoutRoot, _maxDepth);
+                    if (panel.LayoutRoot != null)
+                    {
+                        text += LayoutTree.Describe(panel.LayoutRoot, _maxDepth);
+                    }
                 }
             }
 
             EditorGUIUtility.systemCopyBuffer = text;
-            ShowNotification(new GUIContent("Layout tree copied."), 0.8f);
+            ShowNotification(new GUIContent("Layout tree copied."), 0.7f);
         }
     }
 }
