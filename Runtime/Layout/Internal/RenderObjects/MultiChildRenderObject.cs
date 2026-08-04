@@ -46,6 +46,35 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
         }
 
+        /// <summary>
+        ///     Adds the geometric check to the postcondition: after positioning, no child may lie
+        ///     outside this box unless overhanging is what this render object is for.
+        /// </summary>
+        protected override void ValidateLayout(LayoutConstraints constraints)
+        {
+            base.ValidateLayout(constraints);
+
+#if UNIMOB_UI_DIAGNOSTICS
+            if (this.ChildrenMayOverhang)
+            {
+                return;
+            }
+
+            var size = PeekSize();
+
+            for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
+            {
+                var layout = ChildrenLayoutBuffer[i];
+                var axes = Overhang(layout.Position, layout.Size, size, out var amount);
+
+                if (axes != LayoutAxes.None)
+                {
+                    ReportChildOutOfBounds(i, axes, amount, SomethingHereIsBiggerThanItsBox);
+                }
+            }
+#endif
+        }
+
         /// <inheritdoc/>
         protected override IState ChildAt(int index)
         {

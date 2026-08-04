@@ -48,6 +48,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly IAnchoredBoxState state;
 
+        /// <summary>Anchoring a box to something else is placing it outside this one by definition.</summary>
+        protected override bool ChildrenMayOverhang => true;
+
         public RenderAnchoredBox(IAnchoredBoxState state)
             : base(state)
         {

@@ -23,6 +23,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly ITabsLayoutState _state;
 
 
+        /// <summary>Pages are laid out side by side and scrolled through, so all but one sit outside.</summary>
+        protected override bool ChildrenMayOverhang => true;
+
         public RenderTabs(ITabsLayoutState state) : base(state)
         {
             _state = state;

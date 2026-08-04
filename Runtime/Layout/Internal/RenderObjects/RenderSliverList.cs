@@ -129,6 +129,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private float _lazyWindowScrollOffset;
         private readonly List<Vector2> _lazyWindowSizes = new();
 
+        /// <summary>A scrollable positions its children beyond the viewport; that is what scrolling is.</summary>
+        protected override bool ChildrenMayOverhang => true;
+
         public RenderSliverList(ISliverState state) : base(state)
         {
             _state = state;

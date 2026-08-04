@@ -22,6 +22,19 @@ namespace UniMob.UI.Diagnostics
         /// </remarks>
         ContentOverflow,
 
+        /// <summary>
+        ///     A child was positioned partly or wholly outside its parent's box, and will be drawn
+        ///     there, because this layout layer does not clip.
+        /// </summary>
+        /// <remarks>
+        ///     The only check here made of the finished geometry rather than of an algorithm's
+        ///     intentions. <see cref="Overflow"/> asks whether a flex's arithmetic went negative and
+        ///     <see cref="ContentOverflow"/> asks whether a render object clamped its own answer; both
+        ///     can be satisfied by a pass that still puts a child outside the box, because both trust
+        ///     the same measurements. This one trusts nothing and reads the result.
+        /// </remarks>
+        ChildOutOfBounds,
+
         /// <summary>An axis reached something that cannot work without a bound.</summary>
         UnboundedConstraint,
 

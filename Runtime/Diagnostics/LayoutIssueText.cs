@@ -29,7 +29,10 @@ namespace UniMob.UI.Diagnostics
         {
             // Both overflows are a layout that still renders, wrongly and visibly. The other three are
             // a widget that will not render at all.
-            return code is LayoutIssueCode.Overflow or LayoutIssueCode.ContentOverflow
+            return code
+                is LayoutIssueCode.Overflow
+                    or LayoutIssueCode.ContentOverflow
+                    or LayoutIssueCode.ChildOutOfBounds
                 ? LogType.Warning
                 : LogType.Error;
         }
@@ -45,6 +48,13 @@ namespace UniMob.UI.Diagnostics
                 {
                     case LayoutIssueCode.Overflow:
                         return $"{subject} overflowed by {issue.Amount:F1}px on the {where}.";
+
+                    case LayoutIssueCode.ChildOutOfBounds:
+                        var strayChild = issue.Culprit is null
+                            ? "A child"
+                            : DiagnosticNode.NameOf(issue.Culprit);
+                        return $"{strayChild} is drawn {issue.Amount:F1}px outside {subject} "
+                            + $"on the {where}.";
 
                     case LayoutIssueCode.ContentOverflow:
                         return $"{subject} needs {issue.Amount:F1}px more on the {where} "

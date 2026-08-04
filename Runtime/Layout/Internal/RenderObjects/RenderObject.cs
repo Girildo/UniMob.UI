@@ -477,6 +477,91 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 #endif
         }
 
+        /// <summary>
+        ///     Whether a child drawn outside this render object's box is intended rather than a fault.
+        /// </summary>
+        /// <remarks>
+        ///     True for the render objects whose whole purpose involves painting outside themselves: a
+        ///     scrollable, whose children are positioned beyond the viewport by definition; a stack with
+        ///     positioned children; anything that anchors a box to something else. False everywhere
+        ///     else, because a child outside its parent is drawn there -- this layer does not clip -- and
+        ///     nothing else about the pass will say so.
+        /// </remarks>
+        protected virtual bool ChildrenMayOverhang => false;
+
+        /// <summary>A child ended up positioned outside this render object's box.</summary>
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        protected void ReportChildOutOfBounds(
+            int childIndex,
+            LayoutAxes axes,
+            float amount,
+            string remedy
+        )
+        {
+#if UNIMOB_UI_DIAGNOSTICS
+            MarkCulprit(childIndex, LayoutIssueCode.ChildOutOfBounds);
+
+            Emit(
+                new LayoutIssue(
+                    LayoutIssueCode.ChildOutOfBounds,
+                    this.Owner,
+                    axes,
+                    remedy,
+                    ChildAt(childIndex),
+                    _constraints.Value,
+                    size: _size,
+                    amount: amount
+                )
+            );
+#endif
+        }
+
+        /// <summary>
+        ///     How far <paramref name="childPosition"/>/<paramref name="childSize"/> sticks out of a box
+        ///     of <paramref name="size"/>, per axis, and by how much at worst.
+        /// </summary>
+        /// <remarks>
+        ///     Positions are top-left origin with y increasing downwards, so a child occupies
+        ///     [x, x + w] by [y, y + h] inside [0, width] by [0, height]. Overhang is counted on both
+        ///     edges: a centred child that does not fit escapes at the near edge as well as the far one,
+        ///     which is precisely the case that looks like "the content is shifted down".
+        /// </remarks>
+        private protected static LayoutAxes Overhang(
+            Vector2 childPosition,
+            Vector2 childSize,
+            Vector2 size,
+            out float amount
+        )
+        {
+            amount = 0f;
+            var axes = LayoutAxes.None;
+
+            var horizontal = Mathf.Max(
+                -childPosition.x,
+                childPosition.x + childSize.x - size.x
+            );
+            if (float.IsFinite(horizontal) && horizontal > LayoutConstants.OverflowTolerance)
+            {
+                axes |= LayoutAxes.Horizontal;
+                amount = Mathf.Max(amount, horizontal);
+            }
+
+            var vertical = Mathf.Max(-childPosition.y, childPosition.y + childSize.y - size.y);
+            if (float.IsFinite(vertical) && vertical > LayoutConstants.OverflowTolerance)
+            {
+                axes |= LayoutAxes.Vertical;
+                amount = Mathf.Max(amount, vertical);
+            }
+
+            return axes;
+        }
+
+        private protected const string SomethingHereIsBiggerThanItsBox =
+            "This child is drawn outside its parent, which does not clip. Give the parent more room, "
+            + "make the child smaller, or let the content scroll.";
+
         /// <summary>An axis reached something that cannot work without a bound.</summary>
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]

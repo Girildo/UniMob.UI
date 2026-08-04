@@ -102,6 +102,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             public float MainExtent { get; }
         }
 
+        /// <summary>A scrollable positions its children beyond the viewport; that is what scrolling is.</summary>
+        protected override bool ChildrenMayOverhang => true;
+
         public RenderSliverGrid(ISliverGridState state) : base(state)
         {
             _state = state;

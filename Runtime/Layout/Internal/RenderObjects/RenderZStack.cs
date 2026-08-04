@@ -9,6 +9,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly IZStackState _state;
 
 
+        /// <summary>A positioned child is placed relative to the stack and may sit outside it on purpose.</summary>
+        protected override bool ChildrenMayOverhang => true;
+
         public RenderZStack(IZStackState state) : base(state)
         {
             _state = state;
