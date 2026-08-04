@@ -37,6 +37,7 @@ namespace UniMob.UI.Editor
         ///     mid-twenties, so a ceiling anywhere near that truncates them instead of protecting
         ///     anything.
         /// </summary>
+        [SerializeField]
         private int _maxDepth = 100;
 
         private bool _autoRefresh = true;
@@ -200,6 +201,16 @@ namespace UniMob.UI.Editor
                 if (GUILayout.Button("Collapse", EditorStyles.toolbarButton, GUILayout.Width(60)))
                 {
                     _tree.CollapseAll();
+                }
+
+                GUILayout.Space(6);
+                GUILayout.Label("Depth", EditorStyles.miniLabel, GUILayout.Width(36));
+
+                var depth = EditorGUILayout.IntSlider(_maxDepth, 4, 400, GUILayout.Width(130));
+                if (depth != _maxDepth)
+                {
+                    _maxDepth = depth;
+                    Refresh();
                 }
 
                 GUILayout.Space(6);

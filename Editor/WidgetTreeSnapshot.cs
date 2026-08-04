@@ -127,11 +127,48 @@ namespace UniMob.UI.Editor
 
             if (depth >= maxDepth)
             {
-                node.Children.Add(new Node { Label = "..." });
+                // Named rather than an anonymous "...", because a truncated tree and a tree that
+                // genuinely ends look identical otherwise, and the difference is the whole question
+                // when widgets are reported missing.
+                this.NodeCount++;
+                node.Children.Add(
+                    new Node
+                    {
+                        Label = $"<depth limit {maxDepth} reached -- raise it to see deeper>",
+                        Depth = depth + 1,
+                        HasIssue = true,
+                    }
+                );
+                node.SubtreeHasIssue = true;
                 return node;
             }
 
-            var children = Guarded(() => LayoutTree.ChildrenOf(state), Array.Empty<IState>());
+            // Read without a guard that swallows. Everything else here degrades to a placeholder
+            // because one unreadable label must not cost a row, but children are different in kind: a
+            // failure here removes an entire subtree, and doing that silently makes the window lie
+            // about what the app contains -- which is the one thing it exists not to do. A virtualized
+            // list's children are an atom recompute, so this is a live risk rather than a theoretical
+            // one.
+            IReadOnlyList<IState> children;
+            try
+            {
+                children = LayoutTree.ChildrenOf(state);
+            }
+            catch (Exception ex)
+            {
+                this.NodeCount++;
+                node.Children.Add(
+                    new Node
+                    {
+                        Label = $"<children threw: {ex.GetType().Name}: {ex.Message}>",
+                        Depth = depth + 1,
+                        HasIssue = true,
+                    }
+                );
+                node.SubtreeHasIssue = true;
+                return node;
+            }
+
             for (var i = 0; i < children.Count; i++)
             {
                 // An index only earns its place where there are siblings to tell apart. On an only
