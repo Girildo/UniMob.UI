@@ -87,6 +87,46 @@ namespace UniMob.UI.Tests
             Assert.AreEqual("LabelledBox#submit \"Add to cart\"", DiagnosticNode.Describe(state));
         }
 
+        // The half of the contract that is enforced rather than trusted. A node is one line in all
+        // three readers, and the label most likely to contain a newline -- a Text echoing content the
+        // app did not write -- is exactly the one that would break them.
+        [Test]
+        public void Describe_FlattensAMultiLineLabel_OntoOneLine()
+        {
+            var state = TestHarness.Mount(
+                new LabelledBox { WidgetLabel = "first\r\nsecond\tthird" }
+            );
+
+            Assert.AreEqual("LabelledBox \"first  second third\"", DiagnosticNode.Describe(state));
+        }
+
+        // The backstop, not a budget: it sits far above any deliberate label, and catches only a
+        // widget echoing a paragraph, which would otherwise eat a whole ancestor chain.
+        [Test]
+        public void Describe_CutsAPathologicallyLongLabel()
+        {
+            var state = TestHarness.Mount(new LabelledBox { WidgetLabel = new string('x', 500) });
+
+            var described = DiagnosticNode.Describe(state);
+
+            Assert.AreEqual("LabelledBox \"" + new string('x', 120) + "...\"", described);
+        }
+
+        [Test]
+        public void Truncate_LeavesAValueThatFits_Untouched()
+        {
+            Assert.AreEqual("Add to cart", DiagnosticNode.Truncate("Add to cart", 24));
+            Assert.IsNull(DiagnosticNode.Truncate(null, 24));
+        }
+
+        // Cutting silently would make two nodes sharing a prefix look identical, which is the failure
+        // a label exists to prevent, so a cut is always visible.
+        [Test]
+        public void Truncate_MarksTheCut()
+        {
+            Assert.AreEqual("Add to...", DiagnosticNode.Truncate("Add to cart", 6));
+        }
+
         // A label is author code called mid-layout. Losing it must not cost the type name or the key
         // as well, which is the whole reason the guards are per channel.
         [Test]

@@ -29,7 +29,16 @@ namespace UniMob.UI
         /// <list type="bullet">
         ///     <item>
         ///         <description>
-        ///             One line, no newlines. A console entry shows only its first line in the list.
+        ///             One line. Control characters are flattened to spaces on the way out, so a label
+        ///             cannot break the ancestor chain, a console entry's first line, or a tree row.
+        ///         </description>
+        ///     </item>
+        ///     <item>
+        ///         <description>
+        ///             Short, and the author's job to keep so: a label is printed up to twelve deep on
+        ///             one line. Call <c>DiagnosticNode.Truncate</c> when echoing content you do not
+        ///             control. There is a 120-character backstop, which is a limit on the pathological
+        ///             case rather than a budget to spend.
         ///         </description>
         ///     </item>
         ///     <item>

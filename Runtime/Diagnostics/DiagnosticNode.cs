@@ -128,6 +128,27 @@ namespace UniMob.UI.Diagnostics
             }
         }
 
+        /// <summary>
+        ///     Cuts <paramref name="value"/> to <paramref name="max"/> characters, marking the cut.
+        ///     What an author calls when their label echoes content they do not control.
+        /// </summary>
+        /// <remarks>
+        ///     Length is the author's call, not this renderer's: the right cut differs per widget, and
+        ///     a tight central cap would make two nodes sharing a prefix indistinguishable -- the exact
+        ///     failure a label exists to prevent. <see cref="Sanitize"/> only backstops the pathological
+        ///     case.
+        /// </remarks>
+        [CanBeNull]
+        public static string Truncate([CanBeNull] string value, int max)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length <= max || max < 0)
+            {
+                return value;
+            }
+
+            return value.Substring(0, max) + "...";
+        }
+
         // Channels 2 and 3: what the widget, or the state that beat it to it, says about itself.
         private static void AppendLabel(StringBuilder builder, IState state)
         {
@@ -144,8 +165,35 @@ namespace UniMob.UI.Diagnostics
 
             if (!string.IsNullOrEmpty(label))
             {
-                builder.Append(" \"").Append(label).Append('"');
+                builder.Append(" \"").Append(Sanitize(label)).Append('"');
             }
+        }
+
+        // The half of the label contract that has no legitimate exception. A node is one line
+        // everywhere it is read -- an ancestor chain, a console entry's first line, a tree row -- so a
+        // newline is not a long label, it is a broken one. The length backstop sits far above any
+        // deliberate label and catches only a widget echoing a paragraph of content it did not write.
+        private const int MaxLabelLength = 120;
+
+        private static string Sanitize(string label)
+        {
+            var truncated = Truncate(label, MaxLabelLength);
+
+            StringBuilder cleaned = null;
+            for (var i = 0; i < truncated.Length; i++)
+            {
+                var c = truncated[i];
+                if (!char.IsControl(c))
+                {
+                    cleaned?.Append(c);
+                    continue;
+                }
+
+                cleaned ??= new StringBuilder(truncated.Length).Append(truncated, 0, i);
+                cleaned.Append(' ');
+            }
+
+            return cleaned?.ToString() ?? truncated;
         }
 
         private static string PrettyTypeName(Type type)
