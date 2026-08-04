@@ -79,6 +79,7 @@ namespace UniMob.UI.Editor
 
             Selection.selectionChanged += OnSceneSelectionChanged;
             WidgetPicker.Picked += OnPicked;
+            WidgetPicker.Hovered += OnHovered;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
 
             Refresh();
@@ -88,6 +89,7 @@ namespace UniMob.UI.Editor
         {
             Selection.selectionChanged -= OnSceneSelectionChanged;
             WidgetPicker.Picked -= OnPicked;
+            WidgetPicker.Hovered -= OnHovered;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
 
             // A picker outliving the window that armed it would eat every click in the Game view with
@@ -278,6 +280,27 @@ namespace UniMob.UI.Editor
                 var parent = selected.transform.parent;
                 selected = parent == null ? null : parent.gameObject;
             }
+        }
+
+        /// <summary>Lights the widget under the pointer while inspect mode is on.</summary>
+        /// <remarks>
+        ///     Hit tested against the snapshot already on screen rather than a fresh one. This fires on
+        ///     every pointer move inside a running app, and re-walking the whole tree at that rate would
+        ///     make the thing it is inspecting stutter. The timer refresh is what keeps it current;
+        ///     being at most half a second stale is invisible for a highlight and would not be for a
+        ///     frame rate.
+        /// </remarks>
+        private void OnHovered(Vector2 screenPoint)
+        {
+            var hit = _tree?.Snapshot?.HitTest(screenPoint);
+
+            if (hit == null)
+            {
+                WidgetPicker.ClearHighlight();
+                return;
+            }
+
+            WidgetPicker.SetHighlight(WidgetTreeSnapshot.ScreenRectOf(hit));
         }
 
         /// <summary>Game view to window: a click in the running UI selects the widget under it.</summary>

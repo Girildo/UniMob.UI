@@ -170,21 +170,60 @@ namespace UniMob.UI.Editor
             return best;
         }
 
+        /// <summary>
+        ///     Where <paramref name="node"/> is on screen, or <see cref="Rect.zero"/> if it is nowhere.
+        /// </summary>
+        /// <remarks>
+        ///     From the corners rather than from the layout size, because the question the highlight
+        ///     answers is "where is this drawn", and any scale or rotation between here and the canvas
+        ///     is part of that answer.
+        /// </remarks>
+        public static Rect ScreenRectOf(Node node)
+        {
+            if (node?.Target == null || node.Target.transform is not RectTransform rect)
+            {
+                return Rect.zero;
+            }
+
+            var camera = CameraFor(node.Target);
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+
+            var min = RectTransformUtility.WorldToScreenPoint(camera, corners[0]);
+            var max = min;
+
+            for (var i = 1; i < corners.Length; i++)
+            {
+                var point = RectTransformUtility.WorldToScreenPoint(camera, corners[i]);
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
+        /// <summary>
+        ///     A Screen Space - Overlay canvas resolves against no camera; anything else needs the one
+        ///     its canvas renders through, or points land in the wrong space entirely.
+        /// </summary>
+        private static Camera CameraFor(GameObject target)
+        {
+            var canvas = target.GetComponentInParent<Canvas>();
+            return canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay
+                ? null
+                : canvas.worldCamera;
+        }
+
         private static void HitTest(Node node, Vector2 screenPoint, ref Node best)
         {
             if (node.Target != null && node.Target.transform is RectTransform rect)
             {
-                // A Screen Space - Overlay canvas resolves against no camera; anything else needs the
-                // one its canvas renders through, or the point lands in the wrong space entirely.
-                var canvas = node.Target.GetComponentInParent<Canvas>();
-                var camera =
-                    canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay
-                        ? null
-                        : canvas.worldCamera;
-
                 if (
-                    RectTransformUtility.RectangleContainsScreenPoint(rect, screenPoint, camera)
-                    && (best == null || node.Depth > best.Depth)
+                    RectTransformUtility.RectangleContainsScreenPoint(
+                        rect,
+                        screenPoint,
+                        CameraFor(node.Target)
+                    ) && (best == null || node.Depth > best.Depth)
                 )
                 {
                     best = node;
