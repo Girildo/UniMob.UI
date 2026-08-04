@@ -4,6 +4,7 @@
     "references": [
         "UniMob",
         "UniMob.UI",
+        "UniMob.UI.Editor",
         "UniMob.UI.Tests.Shared",
         "Unity.TextMeshPro",
         "Unity.Addressables",
