@@ -187,6 +187,48 @@ public override string GetDiagnosticInfo() =>
 
 The contract on a label lives on `Widget.GetDiagnosticInfo`: one line, describes the instance rather than the type, may read reactive state freely (it is invoked under `Atom.NoWatch`), and must tolerate being called mid-layout, before anything has been laid out, and on a disposed state.
 
+## Inspecting a running app
+
+`Window > UniMob > Widget Hierarchy` shows the tree as you wrote it. Unity's own Hierarchy cannot: a
+GameObject exists only where a state has a view, so every build-only widget — `HocState`, and
+everything owning a `RenderProxy` (`Flexible`, `Positioned`, `Opacity`, `Clickable`,
+`GestureDetector`, …) — is invisible in it, and those are disproportionately the ones that cause
+layout faults. Rows come from `DiagnosticNode` and fault badges from `RenderObject.HasLayoutIssue`,
+so the window agrees with the console by construction.
+
+**Select** works like a browser's element picker, and deliberately so — it is the interaction people
+already have in their fingers. `Ctrl/Cmd+Shift+C` toggles it from anywhere and opens the window if it
+is closed, the same chord DevTools uses; it is listed in Edit > Shortcuts as *UniMob/Toggle Widget
+Picker* and can be rebound there, and the Select button's tooltip always names the current binding.
+
+- Arming it lays a faint wash over the app — the only persistent sign that your clicks are being
+  swallowed. The widget under the pointer is marked and outlined, and **the row follows the pointer**,
+  so you read the tree while sweeping rather than clicking blind.
+- Clicking picks and *ends the hunt*: the dim goes, the app gets its input back, and the outline
+  stays on what you found. The toggle turns itself off.
+- The outline outlives picking, so selecting a row still lights that widget in the app afterwards.
+  That is the other half of the loop and the reason a pick does not tear the overlay down.
+
+**A pick asks uGUI what a click would hit**, which is the only thing that knows about masks, canvas
+sorting and what actually paints. Two consequences worth knowing before they confuse you:
+
+- **A widget that paints nothing is never the direct answer.** You land on a painted descendant and
+  walk up — the same move as in a browser, and the reason this window exists.
+- **A widget that takes no input cannot be picked at all**: anything below an `IgnorePointer` (whose
+  view drops `blocksRaycasts`), a `CustomPaint` (whose image sets `raycastTarget = false`), or any
+  Graphic with raycasting off. The raycast lands on whatever is *behind* it rather than failing, so
+  nothing announces this.
+
+That second case is what the **Boxes** toggle beside Select is for: it hit-tests layout boxes
+instead, reaching widgets no click can. **Alt** does the same while you keep hovering. The toggle
+exists because a held modifier is not something anyone discovers — and holding Alt presses it, which
+is how the shortcut teaches itself to whoever found the button first.
+
+**The outline turns violet whenever boxes are deciding**, by either route. A mode with different
+answers and no indicator is how a tool earns a reputation for being random, and while you are picking
+you are looking at the app rather than at a toolbar — so the mode has to be legible on the outline
+itself.
+
 ## Reporting a fault from a render object
 
 Never `Debug.Log` at the call site. Call a facade — `ReportOverflow`, `ReportContentOverflow`, `ReportUnboundedConstraint`, `ReportNonFiniteChildSize`, `ReportNonFiniteSize` — and pass a `const string` remedy declared next to the algorithm that knows the fix.

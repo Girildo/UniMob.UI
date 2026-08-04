@@ -4,6 +4,7 @@ using UniMob.UI.Diagnostics;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Widgets;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace UniMob.UI.Editor
 {
@@ -50,17 +51,25 @@ namespace UniMob.UI.Editor
             /// <summary>Null for a build-only widget, which has no GameObject to select.</summary>
             public GameObject Target;
 
-            /// <summary>
-            ///     Depth from the root, so a hit test can prefer the innermost widget under the
-            ///     pointer. Nested rects all contain the point; only depth says which one you meant.
-            /// </summary>
-            public int Depth;
-
             public int Index = -1;
             public readonly List<Node> Children = new List<Node>();
         }
 
         public readonly List<Node> Roots = new List<Node>();
+
+        /// <summary>
+        ///     The node owning each mounted GameObject, for turning a raycast hit back into a widget.
+        /// </summary>
+        /// <remarks>
+        ///     A wrapper and the state it wraps resolve to the same view, so several nodes can claim one
+        ///     GameObject. Capture is pre-order, so the last write is the deepest of them -- which is the
+        ///     one that actually owns the view, and the more useful answer.
+        /// </remarks>
+        private readonly Dictionary<GameObject, Node> _byTarget =
+            new Dictionary<GameObject, Node>();
+
+        private static readonly List<RaycastResult> SharedRaycastResults =
+            new List<RaycastResult>();
 
         public int NodeCount { get; private set; }
 
@@ -104,13 +113,18 @@ namespace UniMob.UI.Editor
                 return new Node { Label = "<not built>", Index = index };
             }
 
-            var node = new Node { Index = index, Depth = depth };
+            var node = new Node { Index = index };
             this.NodeCount++;
 
             // Each channel guarded on its own. A state can be mid-construction or disposed, and one
             // member throwing must not cost the whole row.
             node.Label = Guarded(() => DiagnosticNode.Describe(state), "<label threw>");
             node.Target = Guarded(() => state.InnerViewState?.MountedView?.gameObject, null);
+
+            if (node.Target != null)
+            {
+                _byTarget[node.Target] = node;
+            }
 
             var render = Guarded(() => state.RenderObject, null);
             if (render != null)
@@ -135,7 +149,6 @@ namespace UniMob.UI.Editor
                     new Node
                     {
                         Label = $"<depth limit {maxDepth} reached -- raise it to see deeper>",
-                        Depth = depth + 1,
                         HasIssue = true,
                     }
                 );
@@ -161,7 +174,6 @@ namespace UniMob.UI.Editor
                     new Node
                     {
                         Label = $"<children threw: {ex.GetType().Name}: {ex.Message}>",
-                        Depth = depth + 1,
                         HasIssue = true,
                     }
                 );
@@ -183,28 +195,68 @@ namespace UniMob.UI.Editor
         }
 
         /// <summary>
-        ///     The innermost widget whose box contains <paramref name="screenPoint"/>, or null.
+        ///     The widget the pointer is actually on, or null.
         /// </summary>
         /// <remarks>
-        ///     Deliberately not an <c>EventSystem</c> raycast. That only reports Graphics with
-        ///     <c>raycastTarget</c> set, so it would miss every widget that paints nothing -- which is
-        ///     most of a layout tree, and disproportionately the ones worth inspecting. Testing the
-        ///     boxes directly finds a Column or a Padding exactly as readily as a button.
+        ///     <b>uGUI's own raycast decides this, which is the whole point.</b> Comparing boxes cannot
+        ///     answer "what am I pointing at": a box says where a widget would be if it were drawn, and
+        ///     knows nothing about masks, canvas sorting, or whether anything paints there. A scroll
+        ///     grid is the case that proves it -- its cards are clipped by a mask the boxes cannot see,
+        ///     so a box test hands you whatever large thing happens to overlap them.
         ///     <para>
-        ///         Deepest wins, because every ancestor's rect contains the point too and only depth
-        ///         distinguishes what the user was aiming at.
+        ///         The raycast returns what a real click would hit, topmost first, so the answer already
+        ///         accounts for every one of those. Results that belong to no widget -- the picker's own
+        ///         click-catcher, most obviously -- map to nothing and are skipped, which is why the
+        ///         overlay does not have to be torn down to ask this question.
+        ///     </para>
+        ///     <para>
+        ///         The cost is that it only reports Graphics with <c>raycastTarget</c> set, so a widget
+        ///         that paints nothing is never the answer. That is the correct trade for a picker and it
+        ///         is what a browser's element picker does too: you point at something painted and walk
+        ///         up the tree from there, which this window is for. The box walk below still covers the
+        ///         points a raycast cannot answer.
         ///     </para>
         /// </remarks>
-        public Node HitTest(Vector2 screenPoint)
+        /// <param name="geometric">
+        ///     Skip the raycast and go by layout boxes alone. The escape hatch for the widgets a click
+        ///     cannot reach: anything below an <c>IgnorePointer</c> (its view drops
+        ///     <c>blocksRaycasts</c>, and the raycast then lands on whatever is behind it rather than
+        ///     coming back empty, so the fallback never fires), a <c>CustomPaint</c> (its image sets
+        ///     <c>raycastTarget = false</c>), and anything else that paints without accepting input.
+        /// </param>
+        public Node HitTest(Vector2 screenPoint, bool geometric = false)
         {
-            Node best = null;
+            var painted = geometric ? null : RaycastForNode(screenPoint);
+            if (painted != null)
+            {
+                return painted;
+            }
+
+            // Nothing painted under the pointer, or asked for boxes. Topmost leaf first: only leaves
+            // claim a point, so a positioning container -- an Align with no size factor is a full-screen
+            // box around a 120px rail -- passes through instead of swallowing the screen.
+            for (var i = this.Roots.Count - 1; i >= 0; i--)
+            {
+                var leaf = HitLeaf(this.Roots[i], screenPoint);
+                if (leaf != null)
+                {
+                    return leaf;
+                }
+            }
+
+            // Nothing under the pointer bottoms out in a leaf -- the gap inside a container, mostly.
+            // Falling back to the deepest containing node keeps every point answerable, and makes this
+            // strictly an improvement: where there is a leaf you get the topmost one, and where there
+            // is not you get the same node this window has always given.
+            Node deepest = null;
+            var deepestLevel = -1;
 
             foreach (var root in this.Roots)
             {
-                HitTest(root, screenPoint, ref best);
+                HitDeepest(root, screenPoint, 0, ref deepest, ref deepestLevel);
             }
 
-            return best;
+            return deepest;
         }
 
         /// <summary>
@@ -299,26 +351,110 @@ namespace UniMob.UI.Editor
             return root.worldCamera != null ? root.worldCamera : Camera.main;
         }
 
-        private static void HitTest(Node node, Vector2 screenPoint, ref Node best)
+        /// <summary>
+        ///     What a click at <paramref name="screenPoint"/> would land on, as a widget.
+        /// </summary>
+        private Node RaycastForNode(Vector2 screenPoint)
         {
-            if (node.Target != null && node.Target.transform is RectTransform rect)
+            var events = EventSystem.current;
+            if (events == null)
             {
-                if (
-                    RectTransformUtility.RectangleContainsScreenPoint(
-                        rect,
-                        screenPoint,
-                        CameraFor(node.Target)
-                    ) && (best == null || node.Depth > best.Depth)
-                )
+                return null;
+            }
+
+            SharedRaycastResults.Clear();
+            events.RaycastAll(
+                new PointerEventData(events) { position = screenPoint },
+                SharedRaycastResults
+            );
+
+            // Topmost first. The first result belonging to a widget wins; earlier ones that belong to
+            // nothing in this tree are the picker's own pieces and anything else the scene draws on top.
+            for (var i = 0; i < SharedRaycastResults.Count; i++)
+            {
+                var node = NodeForGameObject(SharedRaycastResults[i].gameObject);
+                if (node != null)
                 {
-                    best = node;
+                    return node;
                 }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     The widget owning <paramref name="target"/>, or the nearest one above it.
+        /// </summary>
+        /// <remarks>
+        ///     A raycast reports the GameObject carrying the Graphic, which is often a piece of a view's
+        ///     own prefab rather than the view root a widget is mapped to. Walking up finds the widget
+        ///     that owns it instead of answering "no widget here".
+        /// </remarks>
+        private Node NodeForGameObject(GameObject target)
+        {
+            for (var t = target != null ? target.transform : null; t != null; t = t.parent)
+            {
+                if (_byTarget.TryGetValue(t.gameObject, out var node))
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     The last leaf, in paint order, whose box contains the point.
+        /// </summary>
+        /// <remarks>
+        ///     Children last-first and returning on the first hit, so the first answer found is the one
+        ///     drawn last. Nothing is pruned on a parent's box: a positioned child or an anchored box
+        ///     may sit outside its parent on purpose, and pruning would make those unpickable.
+        /// </remarks>
+        private static Node HitLeaf(Node node, Vector2 screenPoint)
+        {
+            for (var i = node.Children.Count - 1; i >= 0; i--)
+            {
+                var hit = HitLeaf(node.Children[i], screenPoint);
+                if (hit != null)
+                {
+                    return hit;
+                }
+            }
+
+            return node.Children.Count == 0 && Contains(node, screenPoint) ? node : null;
+        }
+
+        private static void HitDeepest(
+            Node node,
+            Vector2 screenPoint,
+            int level,
+            ref Node best,
+            ref int bestLevel
+        )
+        {
+            if (Contains(node, screenPoint) && level > bestLevel)
+            {
+                best = node;
+                bestLevel = level;
             }
 
             foreach (var child in node.Children)
             {
-                HitTest(child, screenPoint, ref best);
+                HitDeepest(child, screenPoint, level + 1, ref best, ref bestLevel);
             }
+        }
+
+        /// <summary>False for a build-only widget, which has no box of its own to contain anything.</summary>
+        private static bool Contains(Node node, Vector2 screenPoint)
+        {
+            return node.Target != null
+                && node.Target.transform is RectTransform rect
+                && RectTransformUtility.RectangleContainsScreenPoint(
+                    rect,
+                    screenPoint,
+                    CameraFor(node.Target)
+                );
         }
 
         private static T Guarded<T>(Func<T> read, T fallback)

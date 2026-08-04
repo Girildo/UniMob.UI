@@ -2,6 +2,7 @@ using UniMob.UI.Diagnostics;
 using UniMob.UI.Widgets;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
 namespace UniMob.UI.Editor
@@ -44,10 +45,35 @@ namespace UniMob.UI.Editor
         private double _nextRefreshAt;
 
         /// <summary>
+        ///     Hit test by layout box rather than by what paints. A toggle rather than only the Alt
+        ///     shortcut, because a held modifier is not something anyone discovers -- and the widgets
+        ///     this reaches are exactly the ones a newcomer will be confused about failing to click.
+        /// </summary>
+        private bool _geometric;
+
+        /// <summary>Alt does the same thing without leaving the pointer, for whoever already knows.</summary>
+        private bool Geometric => _geometric || WidgetPicker.IsAltHeld;
+
+        /// <summary>Last drawn Alt state, so the toolbar can be repainted the moment it changes.</summary>
+        private bool _altWasHeld;
+
+        /// <summary>
         ///     Set while this window is the one changing <see cref="Selection"/>, so the change it
         ///     causes does not come back around and re-select what the user just clicked.
         /// </summary>
         private bool _drivingSelection;
+
+        /// <summary>
+        ///     What the pointer was last over, so a move that stays on the same widget costs nothing.
+        /// </summary>
+        /// <remarks>
+        ///     Compared by reference, and the snapshot is rebuilt twice a second, so this stops matching
+        ///     after a refresh and the next move re-syncs. That is the intent: a stale node is not the
+        ///     row to leave selected.
+        /// </remarks>
+        private WidgetTreeSnapshot.Node _hovered;
+
+        private const string ToggleShortcutId = "UniMob/Toggle Widget Picker";
 
         [MenuItem("Window/UniMob/Widget Hierarchy")]
         private static void Open()
@@ -57,9 +83,77 @@ namespace UniMob.UI.Editor
             window.Show();
         }
 
+        /// <summary>
+        ///     Opens the window and starts picking, the way a browser's inspect shortcut does.
+        /// </summary>
+        /// <remarks>
+        ///     Registered through <see cref="ShortcutAttribute"/> rather than as a menu accelerator, so
+        ///     it is listed in Edit &gt; Shortcuts and can be rebound. That matters more than the default
+        ///     chosen here: <c>Ctrl/Cmd+Shift+C</c> is the one every web developer already has in their
+        ///     fingers, and it is also close to Unity's own bindings, so a profile that already uses it
+        ///     will show the clash there and take one click to settle.
+        ///     <para>
+        ///         Global rather than scoped to this window. Scoping it would be tidier, but the moment
+        ///         you want to inspect something is the moment after clicking around the app, when focus
+        ///         is on the Game view -- a shortcut that works only sometimes is worse than none.
+        ///     </para>
+        /// </remarks>
+        [Shortcut(ToggleShortcutId, KeyCode.C, ShortcutModifiers.Action | ShortcutModifiers.Shift)]
+        private static void TogglePicking()
+        {
+            var window = GetWindow<WidgetHierarchyWindow>();
+            window.titleContent = new GUIContent("Widgets");
+            window.Show();
+
+            // The picker works by putting a click-catcher into the running scene, so there is nothing
+            // to arm outside play mode. Say so rather than appearing to do nothing.
+            if (!EditorApplication.isPlaying)
+            {
+                window.ShowNotification(new GUIContent("Enter play mode to pick a widget."), 0.7f);
+                window.Repaint();
+                return;
+            }
+
+            if (WidgetPicker.IsPicking)
+            {
+                WidgetPicker.Disarm();
+            }
+            else
+            {
+                WidgetPicker.Arm();
+            }
+
+            window.Repaint();
+        }
+
+        /// <summary>
+        ///     The Select button's label, carrying whatever the shortcut is currently bound to.
+        /// </summary>
+        /// <remarks>
+        ///     Read from <see cref="ShortcutManager"/> rather than written out, so a rebound shortcut is
+        ///     described correctly instead of the tooltip quietly lying. Built once: a rebind is rare
+        ///     and reopening the window picks it up.
+        /// </remarks>
+        private GUIContent _selectLabel;
+
+        private static GUIContent BuildSelectLabel()
+        {
+            var tooltip = "Click a widget in the Game view to select it here.";
+
+            var binding = ShortcutManager.instance.GetShortcutBinding(ToggleShortcutId).ToString();
+            if (!string.IsNullOrEmpty(binding))
+            {
+                tooltip +=
+                    $"\n\n{binding} toggles this from anywhere; rebind it in Edit > Shortcuts.";
+            }
+
+            return new GUIContent("Select", tooltip);
+        }
+
         private void OnEnable()
         {
             _treeState ??= new TreeViewState();
+            _selectLabel = BuildSelectLabel();
 
             var freshHeader = WidgetTreeView.CreateHeaderState();
             if (
@@ -81,7 +175,7 @@ namespace UniMob.UI.Editor
             Selection.selectionChanged += OnSceneSelectionChanged;
             WidgetPicker.Picked += OnPicked;
             WidgetPicker.Hovered += OnHovered;
-            WidgetPicker.Exited += HighlightSelection;
+            WidgetPicker.Exited += OnPointerLeftApp;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
 
             Refresh();
@@ -92,7 +186,7 @@ namespace UniMob.UI.Editor
             Selection.selectionChanged -= OnSceneSelectionChanged;
             WidgetPicker.Picked -= OnPicked;
             WidgetPicker.Hovered -= OnHovered;
-            WidgetPicker.Exited -= HighlightSelection;
+            WidgetPicker.Exited -= OnPointerLeftApp;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
 
             // A picker outliving the window that armed it would eat every click in the Game view with
@@ -107,8 +201,33 @@ namespace UniMob.UI.Editor
 
         private void OnPlayModeChanged(PlayModeStateChange change) => WidgetPicker.Disarm();
 
+        /// <summary>
+        ///     This window has the pointer, so the app does not. Without this the hover latch inside the
+        ///     picker never lowers -- see <see cref="WidgetPicker.ReleasePointer"/> -- and every row you
+        ///     click here is ignored because hover still owns the highlight.
+        /// </summary>
+        private void OnFocus()
+        {
+            WidgetPicker.ReleasePointer();
+            _hovered = null;
+            HighlightSelection();
+        }
+
         private void Update()
         {
+            // Alt is a mode, and a mode the toolbar shows has to be shown while it is held rather than
+            // at the next refresh -- half a second of the toggle disagreeing with the outline is worse
+            // than not showing it at all. Only while picking, so this is not polling input at idle.
+            if (WidgetPicker.IsPicking)
+            {
+                var alt = WidgetPicker.IsAltHeld;
+                if (alt != _altWasHeld)
+                {
+                    _altWasHeld = alt;
+                    Repaint();
+                }
+            }
+
             // Polled on a timer rather than driven by a reaction. An Atom.Reaction from an editor
             // window would make the window a participant in the app's dependency graph, which is the
             // one thing a debugging tool must never become.
@@ -129,6 +248,17 @@ namespace UniMob.UI.Editor
             // Re-applied on every refresh rather than only when the selection changes, so the
             // highlight follows a widget that moves -- a list scrolling, an animation, a relayout --
             // instead of being left where the widget used to be.
+            HighlightSelection();
+        }
+
+        /// <summary>
+        ///     The pointer left the app, so hover stops owning the highlight and the selection takes it
+        ///     back. Forgetting what was hovered matters: coming back in over the same widget has to
+        ///     re-light it, and a stale match would leave the highlight wherever the selection put it.
+        /// </summary>
+        private void OnPointerLeftApp()
+        {
+            _hovered = null;
             HighlightSelection();
         }
 
@@ -180,16 +310,13 @@ namespace UniMob.UI.Editor
                 using (new EditorGUI.DisabledScope(!EditorApplication.isPlaying))
                 {
                     var armed = GUILayout.Toggle(
-                        WidgetPicker.IsArmed,
-                        new GUIContent(
-                            "Select",
-                            "Click a widget in the Game view to select it here"
-                        ),
+                        WidgetPicker.IsPicking,
+                        _selectLabel,
                         EditorStyles.toolbarButton,
                         GUILayout.Width(52)
                     );
 
-                    if (armed != WidgetPicker.IsArmed)
+                    if (armed != WidgetPicker.IsPicking)
                     {
                         if (armed)
                         {
@@ -198,6 +325,36 @@ namespace UniMob.UI.Editor
                         else
                         {
                             WidgetPicker.Disarm();
+                        }
+                    }
+
+                    // Shown pressed and disabled while Alt forces it: the window must not claim a mode
+                    // the picker is not in, and seeing the button move is how the shortcut teaches
+                    // itself to whoever found the button first.
+                    var altHeld = WidgetPicker.IsAltHeld;
+
+                    using (new EditorGUI.DisabledScope(altHeld))
+                    {
+                        var geometric = GUILayout.Toggle(
+                            _geometric || altHeld,
+                            new GUIContent(
+                                "Boxes",
+                                "Pick by layout box instead of by what paints.\n\n"
+                                    + "Select normally asks what a click would hit, so it cannot reach "
+                                    + "a widget that takes no input: anything under an IgnorePointer, a "
+                                    + "CustomPaint, or any image with raycastTarget off. This reaches "
+                                    + "those, at the cost of picking things you cannot see.\n\n"
+                                    + "Hold Alt for the same thing without leaving the pointer. The "
+                                    + "outline turns violet whenever boxes are deciding."
+                            ),
+                            EditorStyles.toolbarButton,
+                            GUILayout.Width(48)
+                        );
+
+                        // Never while Alt is driving it, or releasing Alt would leave the mode stuck on.
+                        if (!altHeld)
+                        {
+                            _geometric = geometric;
                         }
                     }
                 }
@@ -331,17 +488,34 @@ namespace UniMob.UI.Editor
             }
         }
 
-        /// <summary>Lights the widget under the pointer while inspect mode is on.</summary>
+        /// <summary>
+        ///     Lights the widget under the pointer while inspect mode is on, and brings the row with it.
+        /// </summary>
         /// <remarks>
-        ///     Hit tested against the snapshot already on screen rather than a fresh one. This fires on
-        ///     every pointer move inside a running app, and re-walking the whole tree at that rate would
-        ///     make the thing it is inspecting stutter. The timer refresh is what keeps it current;
-        ///     being at most half a second stale is invisible for a highlight and would not be for a
-        ///     frame rate.
+        ///     The row moving is what makes sweeping the app readable: a rectangle changing size says
+        ///     almost nothing on its own, and without it the window sits still until you commit to a
+        ///     click. Selecting rather than merely scrolling, because the selected row is the one the
+        ///     eye finds.
+        ///     <para>
+        ///         Hit tested against the snapshot already on screen rather than a fresh one. This fires
+        ///         on every pointer move inside a running app, and re-walking the whole tree at that rate
+        ///         would make the thing it is inspecting stutter. The timer refresh is what keeps it
+        ///         current; being at most half a second stale is invisible for a highlight and would not
+        ///         be for a frame rate.
+        ///     </para>
         /// </remarks>
         private void OnHovered(Vector2 screenPoint)
         {
-            var hit = _tree?.Snapshot?.HitTest(screenPoint);
+            var hit = _tree?.Snapshot?.HitTest(screenPoint, this.Geometric);
+
+            // Most moves land on the widget already lit. Doing the work anyway would re-frame the tree
+            // and repaint the window at pointer-move rate for no change on screen.
+            if (ReferenceEquals(hit, _hovered))
+            {
+                return;
+            }
+
+            _hovered = hit;
 
             if (hit == null)
             {
@@ -349,7 +523,19 @@ namespace UniMob.UI.Editor
                 return;
             }
 
-            WidgetPicker.SetHighlight(WidgetTreeSnapshot.ScreenRectOf(hit));
+            WidgetPicker.SetHighlight(WidgetTreeSnapshot.ScreenRectOf(hit), this.Geometric);
+
+            var id = _tree.FindIdForNode(hit);
+            if (id == 0)
+            {
+                return;
+            }
+
+            // Deliberately without FireSelectionChanged. That runs the window-to-scene handler, which
+            // writes Selection.activeGameObject and pings it -- fine once per click, unbearable once
+            // per mouse move.
+            _tree.SetSelection(new[] { id }, TreeViewSelectionOptions.RevealAndFrame);
+            Repaint();
         }
 
         /// <summary>Game view to window: a click in the running UI selects the widget under it.</summary>
@@ -363,7 +549,7 @@ namespace UniMob.UI.Editor
             Refresh();
 
             var snapshot = _tree?.Snapshot;
-            var hit = snapshot?.HitTest(screenPoint);
+            var hit = snapshot?.HitTest(screenPoint, this.Geometric);
 
             if (hit == null)
             {
@@ -371,6 +557,12 @@ namespace UniMob.UI.Editor
                 Repaint();
                 return;
             }
+
+            // The hunt ends here, as it does in a browser's element picker: the app gets its input
+            // back and the dim goes, while the outline stays on what was found. Before selecting,
+            // because StopPicking also lowers the hover latch that would otherwise suppress it.
+            WidgetPicker.StopPicking();
+            _hovered = null;
 
             var id = _tree.FindIdForNode(hit);
             if (id != 0)
