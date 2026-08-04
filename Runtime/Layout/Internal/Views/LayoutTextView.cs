@@ -79,6 +79,15 @@ namespace UniMob.UI.Layout.Internal.Views
         [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
         private void NoteTextThatDoesNotFit()
         {
+            // An auto-sizing text fits its box by construction -- that is what auto-sizing is -- so
+            // there is no divergence to find. Asking it for a preferred height against an unbounded
+            // one is the same circular question that made the icon prefabs measure at their 32767
+            // font cap: it answers with how tall it could grow, not with how tall it will be drawn.
+            if (text.enableAutoSizing)
+            {
+                return;
+            }
+
             if (State.MaxLines != int.MaxValue)
             {
                 return;
