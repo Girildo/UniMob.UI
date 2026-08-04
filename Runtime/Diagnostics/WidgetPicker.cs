@@ -38,7 +38,7 @@ namespace UniMob.UI.Diagnostics
         private static RectTransform[] _dim;
         private static RectTransform[] _border;
 
-        /// <summary>A captured click, in screen coordinates. Arming is single-shot.</summary>
+        /// <summary>A captured click, in screen coordinates. Fires for as long as the mode is on.</summary>
         public static event Action<Vector2> Picked;
 
         /// <summary>The pointer moved, in screen coordinates.</summary>
@@ -238,15 +238,11 @@ namespace UniMob.UI.Diagnostics
             // the Game view leaves a lit widget that nothing is pointing at.
             public void OnPointerExit(PointerEventData eventData) => ClearHighlight();
 
-            public void OnPointerClick(PointerEventData eventData)
-            {
-                var position = eventData.position;
-
-                // Disarm before reporting: the handler selects a widget, which repaints and may
-                // re-enter, and a picker that outlives its own click keeps eating input.
-                Disarm();
-                Picked?.Invoke(position);
-            }
+            // Stays armed. Inspect mode is a mode, held by an explicit toggle and made obvious by the
+            // dim, so a click is a pick rather than the end of it -- which is what lets the highlight
+            // keep answering the tree afterwards. The app receives nothing while it is on; that is
+            // what the toggle is for.
+            public void OnPointerClick(PointerEventData eventData) => Picked?.Invoke(eventData.position);
         }
     }
 }

@@ -234,6 +234,19 @@ namespace UniMob.UI.Editor
         /// </remarks>
         private void OnNodeSelected(WidgetTreeSnapshot.Node node)
         {
+            // Selecting in the tree lights the widget in the Game view, so the two views answer each
+            // other in both directions. A no-op unless inspect mode is on, which is the only time
+            // there is anything to draw into.
+            var rect = WidgetTreeSnapshot.ScreenRectOf(node);
+            if (rect.width > 0f || rect.height > 0f)
+            {
+                WidgetPicker.SetHighlight(rect);
+            }
+            else
+            {
+                WidgetPicker.ClearHighlight();
+            }
+
             if (node?.Target == null)
             {
                 if (node != null)

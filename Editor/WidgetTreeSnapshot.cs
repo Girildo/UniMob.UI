@@ -217,9 +217,39 @@ namespace UniMob.UI.Editor
         /// </remarks>
         public static Rect ScreenRectOf(Node node)
         {
-            if (node?.Target == null || node.Target.transform is not RectTransform rect)
+            if (node == null)
             {
                 return Rect.zero;
+            }
+
+            if (node.Target == null || node.Target.transform is not RectTransform rect)
+            {
+                // A build-only widget has no rect of its own, and those are most of the interesting
+                // ones -- Expanded, Positioned, GestureDetector and the rest. Its extent on screen is
+                // the union of the view-backed widgets beneath it, which for a proxy is exactly its
+                // child's box and for a wrapper is the area it governs.
+                var union = Rect.zero;
+
+                foreach (var child in node.Children)
+                {
+                    var childRect = ScreenRectOf(child);
+                    if (childRect.width <= 0f && childRect.height <= 0f)
+                    {
+                        continue;
+                    }
+
+                    union =
+                        union.width <= 0f && union.height <= 0f
+                            ? childRect
+                            : Rect.MinMaxRect(
+                                Mathf.Min(union.xMin, childRect.xMin),
+                                Mathf.Min(union.yMin, childRect.yMin),
+                                Mathf.Max(union.xMax, childRect.xMax),
+                                Mathf.Max(union.yMax, childRect.yMax)
+                            );
+                }
+
+                return union;
             }
 
             var camera = CameraFor(node.Target);
