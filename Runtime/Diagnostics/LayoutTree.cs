@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using JetBrains.Annotations;
 using UniMob.UI.Layout;
@@ -75,6 +76,34 @@ namespace UniMob.UI.Diagnostics
             AppendChildren(builder, state, depth, maxDepth);
         }
 
+        /// <summary>
+        ///     The children of <paramref name="state"/> in order, or an empty list where it has none.
+        /// </summary>
+        /// <remarks>
+        ///     Entries may be null: a virtualized list hands back its realized window, and an index in
+        ///     it that has not been built yet is null. Callers must render those honestly rather than
+        ///     skipping them, or the numbering stops meaning what it says.
+        ///     <para>
+        ///         Shared so that everything describing the tree walks it the same way. Reading a
+        ///         virtualized list's children is an atom recompute, so this belongs on demand, never
+        ///         inside a pass, and callers are responsible for their own <c>Atom.NoWatch</c>.
+        ///     </para>
+        /// </remarks>
+        public static IReadOnlyList<IState> ChildrenOf([CanBeNull] IState state)
+        {
+            switch (state)
+            {
+                case IMultiChildLayoutState multiChild:
+                    return multiChild.Children;
+
+                case ISingleChildLayoutState singleChild:
+                    return new[] { singleChild.Child };
+
+                default:
+                    return Array.Empty<IState>();
+            }
+        }
+
         private static void AppendChildren(
             StringBuilder builder,
             IState state,
@@ -84,20 +113,10 @@ namespace UniMob.UI.Diagnostics
         {
             try
             {
-                switch (state)
+                var children = ChildrenOf(state);
+                for (var i = 0; i < children.Count; i++)
                 {
-                    case IMultiChildLayoutState multiChild:
-                        var children = multiChild.Children;
-                        for (var i = 0; i < children.Length; i++)
-                        {
-                            Append(builder, children[i], depth + 1, maxDepth, i);
-                        }
-
-                        break;
-
-                    case ISingleChildLayoutState singleChild:
-                        Append(builder, singleChild.Child, depth + 1, maxDepth, index: 0);
-                        break;
+                    Append(builder, children[i], depth + 1, maxDepth, i);
                 }
             }
             catch (Exception ex)

@@ -36,6 +36,9 @@ namespace UniMob.UI
         public bool HasState => _currentState != null;
         protected TState State => _currentState;
 
+        /// <inheritdoc/>
+        IState IView.Source => _currentState;
+
         internal virtual bool TriggerViewMountEvents => true;
 
         // ReSharper disable once InconsistentNaming

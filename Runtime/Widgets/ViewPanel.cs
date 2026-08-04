@@ -22,6 +22,18 @@ namespace UniMob.UI.Widgets
         // not: a render before any caller has passed a state at all.
         private IState _layoutRoot;
 
+        /// <summary>
+        ///     The top of this panel's layout chain, for tools that need to find live widget trees.
+        /// </summary>
+        /// <remarks>
+        ///     <see cref="ViewPanel"/> is a sealed MonoBehaviour, so <c>FindObjectsByType</c> over it
+        ///     enumerates every widget tree in the scene, and this is the entry point into each one.
+        ///     Deliberately the outer state rather than <c>State</c>: a panel wrapping a build-only
+        ///     widget has an outer state owning the chain and an inner one owning the view, and only the
+        ///     outer one has the whole tree beneath it.
+        /// </remarks>
+        public IState LayoutRoot => _layoutRoot;
+
         private ViewMapperBase _mapper;
 
         internal override bool TriggerViewMountEvents => false;

@@ -115,9 +115,13 @@ namespace UniMob.UI.Tests
             public RectTransform rectTransform => _rectTransform;
             public bool IsDestroyed => _rectTransform == null;
 
-            public void SetSource(IState source, bool link) { }
+            // Records what it was given, so it is a truthful inverse of MountedView rather than a
+            // stub that always answers null.
+            public IState Source { get; private set; }
 
-            public void ResetSource() { }
+            public void SetSource(IState source, bool link) => this.Source = source;
+
+            public void ResetSource() => this.Source = null;
         }
     }
 }
