@@ -78,9 +78,9 @@ namespace UniMob.UI.Layout
         public IAnimation<Color> AnimatedColor =>
             Widget.AnimatedColor ?? new ConstAnimation<Color>(Color);
         public int FontSize => Widget.FontSize ?? 14;
-        
+
         public float? FixedSize => Widget.FixedSize;
-        
+
         public TMP_Style Style
         {
             get
@@ -105,6 +105,14 @@ namespace UniMob.UI.Layout
 
         public override WidgetViewReference View =>
             Widget.ViewReference ?? WidgetViewReference.Resource("Layout/UniMob.Text");
+
+        public override string GetDiagnosticInfo()
+        {
+            var length = this.Value.Length;
+            if (length > 20)
+                return this.Value.Substring(0, 20) + "...";
+            return this.Value;
+        }
     }
 
 
@@ -117,9 +125,9 @@ namespace UniMob.UI.Layout
         IAnimation<Color> AnimatedColor { get; }
 
         int FontSize { get; }
-        
+
         TMP_Style Style { get; }
-        
+
         FontWeight FontWeight { get; }
         HorizontalTextAlignment HorizontalTextAlign { get; }
 
