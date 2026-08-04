@@ -34,6 +34,7 @@ namespace UniMob.UI.Diagnostics
         private static readonly Color BorderColour = new Color(0.35f, 0.72f, 1f, 0.95f);
 
         private static Overlay _overlay;
+        private static RectTransform _canvasRect;
         private static RectTransform[] _dim;
         private static RectTransform[] _border;
 
@@ -60,10 +61,16 @@ namespace UniMob.UI.Diagnostics
             var canvas = root.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
-            // Above anything the app can plausibly use, so neither the dim nor the capture is occluded.
+            // Above anything the app can plausibly use, so neither the dim nor the capture is
+            // occluded. Layer first: a sorting layer beats a sorting order outright, so being at the
+            // top of the wrong layer would lose to anything on a higher one.
+            var layers = SortingLayer.layers;
+            canvas.sortingLayerID = layers[layers.Length - 1].id;
             canvas.sortingOrder = short.MaxValue;
 
             root.AddComponent<GraphicRaycaster>();
+
+            _canvasRect = (RectTransform) root.transform;
 
             // The dim goes down first so the border and the click surface sit above it.
             _dim = new RectTransform[Bands];
@@ -126,13 +133,20 @@ namespace UniMob.UI.Diagnostics
                 return;
             }
 
-            var w = Screen.width;
-            var h = Screen.height;
+            // Everything below works in the canvas's own units, not in screen pixels. They coincide
+            // for an unscaled overlay canvas and stop coinciding the moment anything is not, and a dim
+            // that is a few percent short leaves an undimmed strip down the edge of the screen.
+            var size = _canvasRect.rect.size;
+            var min = ToCanvas(screenRect.min);
+            var max = ToCanvas(screenRect.max);
 
-            var left = Mathf.Clamp(screenRect.xMin, 0, w);
-            var right = Mathf.Clamp(screenRect.xMax, 0, w);
-            var bottom = Mathf.Clamp(screenRect.yMin, 0, h);
-            var top = Mathf.Clamp(screenRect.yMax, 0, h);
+            var w = size.x;
+            var h = size.y;
+
+            var left = Mathf.Clamp(min.x, 0, w);
+            var right = Mathf.Clamp(max.x, 0, w);
+            var bottom = Mathf.Clamp(min.y, 0, h);
+            var top = Mathf.Clamp(max.y, 0, h);
 
             Place(_dim[0], Rect.MinMaxRect(0, top, w, h));
             Place(_dim[1], Rect.MinMaxRect(0, 0, w, bottom));
@@ -154,15 +168,32 @@ namespace UniMob.UI.Diagnostics
                 return;
             }
 
-            Place(_dim[0], new Rect(0, 0, Screen.width, Screen.height));
+            Place(_dim[0], new Rect(Vector2.zero, _canvasRect.rect.size));
 
             for (var i = 1; i < Bands; i++)
             {
                 Place(_dim[i], Rect.zero);
-                Place(_border[i], Rect.zero);
             }
 
-            Place(_border[0], Rect.zero);
+            for (var i = 0; i < Bands; i++)
+            {
+                Place(_border[i], Rect.zero);
+            }
+        }
+
+        /// <summary>A screen point in canvas units, measured from the canvas's bottom-left corner.</summary>
+        private static Vector2 ToCanvas(Vector2 screenPoint)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _canvasRect,
+                screenPoint,
+                null,
+                out var local
+            );
+
+            // Local space is measured from the pivot, which sits in the middle. Everything else here
+            // places pieces from the bottom-left, so rebase once and be done with it.
+            return local - _canvasRect.rect.min;
         }
 
         private static RectTransform CreatePiece(Transform parent, string name, Color colour)
@@ -194,10 +225,18 @@ namespace UniMob.UI.Diagnostics
             );
         }
 
-        private sealed class Overlay : MonoBehaviour, IPointerClickHandler, IPointerMoveHandler
+        private sealed class Overlay
+            : MonoBehaviour,
+                IPointerClickHandler,
+                IPointerMoveHandler,
+                IPointerExitHandler
         {
             public void OnPointerMove(PointerEventData eventData) =>
                 Hovered?.Invoke(eventData.position);
+
+            // Without this the hole stays cut where the pointer last was, so a mouse resting outside
+            // the Game view leaves a lit widget that nothing is pointing at.
+            public void OnPointerExit(PointerEventData eventData) => ClearHighlight();
 
             public void OnPointerClick(PointerEventData eventData)
             {

@@ -209,9 +209,19 @@ namespace UniMob.UI.Editor
         private static Camera CameraFor(GameObject target)
         {
             var canvas = target.GetComponentInParent<Canvas>();
-            return canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay
-                ? null
-                : canvas.worldCamera;
+            if (canvas == null)
+            {
+                return null;
+            }
+
+            // The ROOT canvas, not the nearest one. A scroll view nests a canvas for batching, and a
+            // nested canvas reports its own serialized renderMode -- ScreenSpaceOverlay by default --
+            // whatever the root is actually doing. Reading the nearest one therefore resolves a null
+            // camera for precisely those subtrees, converting their points into the wrong space, and
+            // every hit test inside a scrollable silently misses.
+            var root = canvas.rootCanvas;
+
+            return root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
         }
 
         private static void HitTest(Node node, Vector2 screenPoint, ref Node best)
