@@ -40,9 +40,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var selfWidth = shrinkWrapWidth ? ChildSize.x * (_state.WidthFactor ?? 1f) : float.PositiveInfinity;
             var selfHeight = shrinkWrapHeight ? ChildSize.y * (_state.HeightFactor ?? 1f) : float.PositiveInfinity;
 
+            var desired = new Vector2(selfWidth, selfHeight);
+
+            // Only a size factor can put this over: without one the box either hugs a child that was
+            // laid out against this same maximum, or asks for infinity to fill. A factor above 1 asks
+            // for a multiple of the child and can genuinely exceed the box.
+            ReportContentOverflow(constraints, desired, LowerTheSizeFactor);
+
             // Finally, constrain the calculated size to the parent's limits.
-            return constraints.Constrain(new Vector2(selfWidth, selfHeight));
+            return constraints.Constrain(desired);
         }
+
+        private const string LowerTheSizeFactor =
+            "The size factor asks for more room than this box allows. Lower WidthFactor/HeightFactor, "
+            + "or give the box more room.";
 
 
         protected override void PerformPositioning(Vector2 size)

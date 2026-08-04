@@ -419,10 +419,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
+        /// <param name="considered">
+        ///     The axes on which falling short is a fault at all. Defaults to both. Narrow it where an
+        ///     axis has a legitimate reason to come up short -- a text that was told not to wrap is
+        ///     meant to be too wide for its box -- so that the report keeps meaning something.
+        /// </param>
         protected void ReportContentOverflow(
             LayoutConstraints constraints,
             Vector2 desired,
-            string remedy
+            string remedy,
+            LayoutAxes considered = LayoutAxes.Both
         )
         {
 #if UNIMOB_UI_DIAGNOSTICS
@@ -433,14 +439,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // IsFinite, so both of the legal shapes fall out without being special-cased. A NaN desire
             // reports nothing here: that is ValidateLayout's fault to name, not this one's.
             var overWidth = desired.x - constraints.MaxWidth;
-            if (float.IsFinite(desired.x) && overWidth > LayoutConstants.OverflowTolerance)
+            if ((considered & LayoutAxes.Horizontal) != 0
+                && float.IsFinite(desired.x)
+                && overWidth > LayoutConstants.OverflowTolerance)
             {
                 axes |= LayoutAxes.Horizontal;
                 amount = Mathf.Max(amount, overWidth);
             }
 
             var overHeight = desired.y - constraints.MaxHeight;
-            if (float.IsFinite(desired.y) && overHeight > LayoutConstants.OverflowTolerance)
+            if ((considered & LayoutAxes.Vertical) != 0
+                && float.IsFinite(desired.y)
+                && overHeight > LayoutConstants.OverflowTolerance)
             {
                 axes |= LayoutAxes.Vertical;
                 amount = Mathf.Max(amount, overHeight);

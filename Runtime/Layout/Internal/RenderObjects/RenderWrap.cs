@@ -99,8 +99,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var finalWidth = Direction == Axis.Horizontal ? maxOverallMain : totalCross;
             var finalHeight = Direction == Axis.Horizontal ? totalCross : maxOverallMain;
+            var desired = new Vector2(finalWidth, finalHeight);
 
-            return constraints.Constrain(new Vector2(finalWidth, finalHeight));
+            // Both axes, and both are reachable. A run always accepts its first child, so one child
+            // wider than the whole wrap overflows the main axis; and nothing bounds the number of
+            // runs, so enough of them overflow the cross axis.
+            ReportContentOverflow(constraints, desired, MakeRoomForTheRuns);
+
+            return constraints.Constrain(desired);
         }
 
         protected override void PerformPositioning(Vector2 size)
@@ -251,5 +257,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return PerformSizing(constraints).y;
             }
         }
+
+        private const string MakeRoomForTheRuns =
+            "The runs need more room than this box allows. Give the Wrap a larger box, let it "
+            + "scroll, or reduce the children's size along the run direction.";
     }
 }

@@ -73,8 +73,19 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 width = height * _aspectRatio;
             }
 
-            return constraints.Constrain(new Vector2(width, height));
+            var desired = new Vector2(width, height);
+
+            // The four adjustments above run in order, so raising one axis to its minimum can push the
+            // other back over its maximum: an aspect ratio is not satisfiable inside every box. Where
+            // it is not, Constrain keeps the box and silently breaks the ratio.
+            ReportContentOverflow(constraints, desired, TheRatioDoesNotFit);
+
+            return constraints.Constrain(desired);
         }
+
+        private const string TheRatioDoesNotFit =
+            "This aspect ratio cannot be satisfied inside the given box, so the box wins and the ratio "
+            + "is broken. Loosen the box's minimum on one axis, or change the ratio.";
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {

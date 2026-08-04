@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using TMPro;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Widgets;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -196,8 +197,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // this method under-measured -- visibly cutting the extra line(s) off. Matches
             // ComputeIntrinsicHeight below, which already always measures unbounded for the same reason.
             var preferredSize = GetPreferredSize(constraints.MaxWidth, float.PositiveInfinity);
+
+            // Vertical only. The height above is what the lines this text intends to show actually
+            // need -- MaxLines is already applied inside GetPreferredSize -- so falling short of it
+            // means whole lines disappear with nothing in the source saying they should. Width is a
+            // different matter: wrapping has already fitted it to MaxWidth, and where wrapping is off
+            // being wider than the box is the point, not the fault.
+            ReportContentOverflow(constraints, preferredSize, GiveTheTextRoom, LayoutAxes.Vertical);
+
             return constraints.Constrain(preferredSize);
         }
+
+        private const string GiveTheTextRoom =
+            "An ancestor bounds this text's height more tightly than its lines need. Give it a flex "
+            + "share instead of a fixed height, lower MaxLines, or let it scroll.";
 
         protected override float ComputeIntrinsicHeight(float width)
         {

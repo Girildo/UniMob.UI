@@ -18,21 +18,33 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if(_state.Child == null)
             {
                 // If there is no child, the size is simply the padding size.
-                var width = padding.Horizontal;
-                var height = padding.Vertical;
-                return constraints.Constrain(new Vector2(width, height));
+                var empty = new Vector2(padding.Horizontal, padding.Vertical);
+                ReportContentOverflow(constraints, empty, TrimThePadding);
+                return constraints.Constrain(empty);
             }
 
             var innerConstraints = constraints.Deflate(padding);
 
             ChildSize = LayoutChild(_state.Child, innerConstraints);
 
-            var finalWidth = ChildSize.x + padding.Horizontal;
-            var finalHeight = ChildSize.y + padding.Vertical;
+            // Deflate floors the inner maximum at zero, so padding wider than the box does not hand
+            // the child a negative one -- it squeezes the child out and leaves the padding itself
+            // overflowing. That is the shape this reports; when the padding does fit, the child was
+            // bounded by the deflated maximum and the sum cannot exceed the original.
+            var desired = new Vector2(
+                ChildSize.x + padding.Horizontal,
+                ChildSize.y + padding.Vertical
+            );
+
+            ReportContentOverflow(constraints, desired, TrimThePadding);
 
             // Ensure the final size still respects the original parent constraints.
-            return constraints.Constrain(new Vector2(finalWidth, finalHeight));
+            return constraints.Constrain(desired);
         }
+
+        private const string TrimThePadding =
+            "The child plus its padding needs more room than this box allows. Reduce the padding, or "
+            + "give the Padding a larger box.";
 
         protected override void PerformPositioning(Vector2 size)
         {

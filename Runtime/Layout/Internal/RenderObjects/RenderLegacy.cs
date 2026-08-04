@@ -16,8 +16,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             if(_state.StateLifetime.IsDisposed)
                 return Vector2.zero;
             var legacySize = _state.Size;
-            return constraints.Constrain(legacySize.GetSizeUnbounded());
+            var desired = legacySize.GetSizeUnbounded();
+
+            // An infinite axis here is the bridge's way of saying "I expand", and is skipped. A finite
+            // one is a legacy widget stating a concrete size that does not fit the slot it was put in.
+            ReportContentOverflow(constraints, desired, GiveTheLegacyWidgetItsSize);
+
+            return constraints.Constrain(desired);
         }
+
+        private const string GiveTheLegacyWidgetItsSize =
+            "This legacy widget states a size larger than the slot it was given. Enlarge the slot, or "
+            + "let the widget expand instead of naming a size.";
         
 
         protected override float ComputeIntrinsicWidth(float height)

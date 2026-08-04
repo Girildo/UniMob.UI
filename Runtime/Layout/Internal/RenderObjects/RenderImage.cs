@@ -64,8 +64,23 @@ namespace UniMob.UI.Layout.Internal
                     break;
             }
 
+            // FitWidth and FitHeight pin one axis and derive the other from the texture's ratio, so
+            // the derived axis can land outside the box. ImageFit.None states that the texture keeps
+            // its own size whatever the box says, so exceeding it is that mode working rather than
+            // failing -- handing the facade the largest allowed size excuses it without leaving an if
+            // block that is empty in a release build.
+            ReportContentOverflow(
+                constraints,
+                Fit == ImageFit.None ? constraints.Largest : desiredSize,
+                ChooseAFitThatFits
+            );
+
             return constraints.Constrain(desiredSize);
         }
+
+        private const string ChooseAFitThatFits =
+            "This fit mode derives one axis from the other, and the result is larger than the box. "
+            + "Use Contain to fit both axes, or give the image a box matching its ratio.";
 
         private Vector2 CalculateScaleToFit(Vector2 src, LayoutConstraints constraints)
         {
