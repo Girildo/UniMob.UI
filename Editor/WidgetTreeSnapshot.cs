@@ -221,7 +221,15 @@ namespace UniMob.UI.Editor
             // every hit test inside a scrollable silently misses.
             var root = canvas.rootCanvas;
 
-            return root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
+            if (root.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return null;
+            }
+
+            // A world-space canvas often leaves worldCamera unset and is drawn by whatever camera
+            // happens to see it. Guessing the main one is better than passing null, which would be
+            // read as "overlay" and put every point in the wrong space.
+            return root.worldCamera != null ? root.worldCamera : Camera.main;
         }
 
         private static void HitTest(Node node, Vector2 screenPoint, ref Node best)
