@@ -52,7 +52,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             base.ValidateLayout(constraints);
 
 #if UNIMOB_UI_DIAGNOSTICS
-            if (Child is null || this.ChildrenMayOverhang)
+            // Silent once anything else has spoken this pass: this check is the net under the others,
+            // not a second opinion on what they already caught.
+            if (Child is null || this.ChildrenMayOverhang || this.HasLayoutIssue)
             {
                 return;
             }

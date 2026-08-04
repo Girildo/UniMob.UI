@@ -55,7 +55,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             base.ValidateLayout(constraints);
 
 #if UNIMOB_UI_DIAGNOSTICS
-            if (this.ChildrenMayOverhang)
+            // Silent once anything else has spoken this pass. A flex that overflows always has
+            // children lying outside it as well, so this would repeat, in vaguer words, a fault the
+            // algorithm already named precisely -- and MarkCulprit would overwrite the more specific
+            // code on the very child the stripe is pointing at. This check is the net under the
+            // others, not a second opinion on what they caught.
+            if (this.ChildrenMayOverhang || this.HasLayoutIssue)
             {
                 return;
             }

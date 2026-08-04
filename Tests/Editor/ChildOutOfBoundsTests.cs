@@ -12,8 +12,6 @@ namespace UniMob.UI.Tests
     // reports nothing while putting a child outside the box. This reads the result instead.
     public class ChildOutOfBoundsTests
     {
-        private const string Remedy = "Give it more room.";
-
         private sealed class OwnerState : FakeState { }
 
         /// <summary>Answers with a fixed size and puts its one child wherever it is told.</summary>
@@ -23,12 +21,14 @@ namespace UniMob.UI.Tests
             private readonly Vector2 _childPosition;
             private readonly Vector2 _childSize;
             private readonly bool _mayOverhang;
+            private readonly bool _alsoReportsOverflow;
 
             public Placer(
                 Vector2 size,
                 Vector2 childPosition,
                 Vector2 childSize,
-                bool mayOverhang = false
+                bool mayOverhang = false,
+                bool alsoReportsOverflow = false
             )
                 : base(new OwnerState())
             {
@@ -36,6 +36,7 @@ namespace UniMob.UI.Tests
                 _childPosition = childPosition;
                 _childSize = childSize;
                 _mayOverhang = mayOverhang;
+                _alsoReportsOverflow = alsoReportsOverflow;
             }
 
             protected override bool ChildrenMayOverhang => _mayOverhang;
@@ -44,16 +45,23 @@ namespace UniMob.UI.Tests
             {
                 ChildrenLayoutBuffer.Clear();
                 ChildrenLayoutBuffer.Add(new LayoutInfo { Size = _childSize });
+
+                if (_alsoReportsOverflow)
+                {
+                    ReportOverflow(LayoutAxes.Vertical, 30f, 0, "Stand in for a real flex.");
+                }
+
                 return constraints.Constrain(_size);
             }
 
             protected override void PerformPositioning(Vector2 size)
             {
-                ChildrenLayoutBuffer[0] = new LayoutInfo
-                {
-                    Size = _childSize,
-                    Position = _childPosition,
-                };
+                // Read-modify-write, as every real render object does. Constructing a fresh LayoutInfo
+                // here silently drops whatever MarkCulprit wrote during sizing, which is the documented
+                // way to make the in-scene stripe disappear while every other assertion still passes.
+                var layout = ChildrenLayoutBuffer[0];
+                layout.Position = _childPosition;
+                ChildrenLayoutBuffer[0] = layout;
             }
 
             protected override float ComputeIntrinsicWidth(float height) => 0f;
@@ -100,7 +108,27 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(LayoutIssueCode.ChildOutOfBounds, issue.Code);
             Assert.AreEqual(LayoutAxes.Vertical, issue.Axes);
             Assert.AreEqual(30f, issue.Amount, 0.001f);
-            Assert.AreEqual(Remedy, issue.Remedy ?? Remedy);
+            Assert.IsNotEmpty(issue.Remedy);
+        }
+
+        // The net under the other checks, not a second opinion on what they caught. A flex that
+        // overflows always has children outside it too, so without this the console says the same
+        // thing twice and the culprit's more specific code gets overwritten on the way.
+        [Test]
+        public void ARenderObjectThatAlreadyReported_DoesNotAlsoReportGeometry()
+        {
+            using var log = RecordingReporter.Capture();
+
+            var placer = new Placer(
+                new Vector2(100, 100),
+                Vector2.zero,
+                new Vector2(100, 130),
+                alsoReportsOverflow: true
+            );
+            Lay(placer);
+
+            Assert.AreEqual(LayoutIssueCode.Overflow, log.Single().Code);
+            Assert.AreEqual(LayoutIssueCode.Overflow, placer.IssueOnChild);
         }
 
         // The case that started this: content taller than its box, centred, escapes at BOTH edges. A
