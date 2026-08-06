@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using TMPro;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Widgets;
@@ -15,7 +16,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private static Dictionary<WidgetViewReference, TextMeshProUGUI?> s_textMeshProMeasurers = new();
         private static TMP_StyleSheet? s_styleSheet;
 
-        private static readonly Dictionary<PreferredSizeCacheKey, Vector2> s_sizeCache = new();
+        // Measured sizes are cached across layout passes, but the key space is unbounded: MaxWidth is a
+        // continuous float, so every frame of a window drag or a reflow mints a fresh generation of keys
+        // that nothing would ever reclaim. Hence two generations rather than one dictionary -- when the
+        // live one fills it is demoted and an empty one takes over, which bounds residency at
+        // 2 * SizeCacheGenerationCapacity while still letting a working set larger than one generation
+        // survive a rollover, since a hit in the demoted generation is promoted back. Reads stay a plain
+        // dictionary lookup: an LRU's touch-on-read bookkeeping would sit on the hottest path in layout.
+        private const int SizeCacheGenerationCapacity = 2048;
+
+        private static Dictionary<PreferredSizeCacheKey, Vector2> s_sizeCache = new();
+        private static Dictionary<PreferredSizeCacheKey, Vector2> s_demotedSizeCache = new();
 
         // TMP's own default for TMP_Text.maxVisibleLines -- used to reset the shared measurer
         // when a widget doesn't clamp its line count.
@@ -61,7 +72,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 measurerCanvas.renderMode = RenderMode.WorldSpace;
                 go.transform.position = new Vector3(1_000_000f, 1_000_000f, 1_000_000f);
 
-                s_textMeshProMeasurers.Add(viewRefence, behaviour);
+                // Assign, don't Add: the branch above is also taken when the key is already present but
+                // its measurer was destroyed (Unity's fake-null), and Add on a live key throws.
+                s_textMeshProMeasurers[viewRefence] = behaviour;
                 s_styleSheet = TMP_Settings.defaultStyleSheet;
             }
         }
@@ -83,9 +96,76 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             s_textMeshProMeasurers.Clear();
             s_styleSheet = null;
-            s_sizeCache.Clear();
+            ClearSizeCache();
+
+            SubscribeToStyleChanges();
         }
+
+        private static bool s_subscribedToStyleChanges;
+
+        /// <summary>
+        ///     Drops cached sizes when an edit changes what the measurer would report.
+        /// </summary>
+        /// <remarks>
+        ///     Editor-only because that is the whole scope of these events: TMP raises them exclusively
+        ///     from its own editor code, and its components subscribe under the same guard. Editing a font
+        ///     asset, a style, or TMP's settings mutates definitions in place, so every size measured
+        ///     against the old ones is stale while the keys still match. A style can change at runtime too,
+        ///     via <see cref="UniMob.UI.Layout.Text.StyleSheet" />, but that hands over a different
+        ///     <see cref="TMP_Style" /> instance and the cache key discriminates on identity -- so there is
+        ///     nothing for a runtime flush to do.
+        ///     <para>
+        ///         Subscribing once is guarded by a static that shares its lifetime with the subscription
+        ///         itself: a domain reload clears both, and entering play mode without one keeps both.
+        ///     </para>
+        /// </remarks>
+        private static void SubscribeToStyleChanges()
+        {
+            if (s_subscribedToStyleChanges) return;
+
+            s_subscribedToStyleChanges = true;
+
+            TMPro_EventManager.FONT_PROPERTY_EVENT.Add(OnFontPropertyChanged);
+            TMPro_EventManager.TEXT_STYLE_PROPERTY_EVENT.Add(OnTextStylePropertyChanged);
+            TMPro_EventManager.TMP_SETTINGS_PROPERTY_EVENT.Add(ClearSizeCache);
+        }
+
+        private static void OnFontPropertyChanged(bool isChanged, Object font) => ClearSizeCache();
+
+        private static void OnTextStylePropertyChanged(bool isChanged) => ClearSizeCache();
 #endif
+
+        private static void ClearSizeCache()
+        {
+            s_sizeCache.Clear();
+            s_demotedSizeCache.Clear();
+        }
+
+        private static bool TryGetCachedSize(in PreferredSizeCacheKey key, out Vector2 size)
+        {
+            if (s_sizeCache.TryGetValue(key, out size)) return true;
+
+            if (!s_demotedSizeCache.TryGetValue(key, out size)) return false;
+
+            // Still being measured despite the rollover, so carry it into the live generation rather
+            // than letting the next one drop it.
+            StoreCachedSize(key, size);
+            return true;
+        }
+
+        private static void StoreCachedSize(in PreferredSizeCacheKey key, Vector2 size)
+        {
+            if (s_sizeCache.Count >= SizeCacheGenerationCapacity)
+            {
+                // Demote instead of clearing outright: whatever is still in use gets promoted back on its
+                // next lookup, so a working set wider than one generation degrades to occasional
+                // re-measurement rather than measuring everything again on every rollover.
+                (s_sizeCache, s_demotedSizeCache) = (s_demotedSizeCache, s_sizeCache);
+                s_sizeCache.Clear();
+            }
+
+            s_sizeCache[key] = size;
+        }
 
         private Vector2 GetPreferredSize(float maxWidth, float maxHeight)
         {
@@ -99,10 +179,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 FontWeight = _state.FontWeight,
                 Style = _state.Style,
                 MaxLines = _state.MaxLines,
+                WrappingEnabled = _state.WrappingEnabled,
+                OverflowMode = _state.OverflowMode,
                 ViewReference = _state.View
             };
 
-            if (s_sizeCache.TryGetValue(key, out var cachedSize)) return cachedSize;
+            if (TryGetCachedSize(key, out var cachedSize)) return cachedSize;
 
             var measurer = s_textMeshProMeasurers[_state.View];
             if (measurer == null)
@@ -188,7 +270,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 fullSize = measurer.GetPreferredValues(_state.Value, maxWidth, maxHeight);
             }
 
-            s_sizeCache[key] = fullSize;
+            StoreCachedSize(key, fullSize);
             return fullSize;
         }
 
@@ -232,6 +314,23 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
 
+        /// <summary>
+        ///     Identifies one measurement of one string against one measurer configuration.
+        /// </summary>
+        /// <remarks>
+        ///     The measurer is shared and reconfigured per measurement, so the invariant this key has to
+        ///     hold is exact: every property <see cref="GetPreferredSize" /> pushes onto it belongs here.
+        ///     A property that is pushed but not keyed makes two widgets differing only in that property
+        ///     collide, and whichever measured first hands its size to the other.
+        ///     <para>
+        ///         The invariant is what decides membership, not whether a given field is observably
+        ///         size-affecting right now. <see cref="OverflowMode" /> is the case in point: TMP reads it
+        ///         while measuring, yet every wrapping/MaxLines/overflow combination lays out identically,
+        ///         because <see cref="PerformSizing" /> clamps the measured width back to the box. It is
+        ///         keyed anyway -- the cache stores the raw, pre-clamp measurement, and resting on a
+        ///         coincidence of clamping is how the collision this key already had got written.
+        ///     </para>
+        /// </remarks>
         private struct PreferredSizeCacheKey : IEquatable<PreferredSizeCacheKey>
         {
             public string Text { get; set; }
@@ -242,12 +341,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             public TMP_Style? Style { get; set; }
             public WidgetViewReference ViewReference { get; set; }
             public int MaxLines { get; set; }
+            public bool WrappingEnabled { get; set; }
+            public TextOverflowModes OverflowMode { get; set; }
 
             public bool Equals(PreferredSizeCacheKey other)
             {
                 return Text == other.Text && MaxWidth.Equals(other.MaxWidth) && MaxHeight.Equals(other.MaxHeight) &&
                        FontSize == other.FontSize && FontWeight == other.FontWeight
-                       && Style?.hashCode == other.Style?.hashCode && MaxLines == other.MaxLines &&
+                       // By identity, not by hashCode: that is the hash of the style's *name*, so styles
+                       // named alike in two different sheets would share an entry despite defining
+                       // different fonts, sizes and line heights. TMP_Style is a plain class and both
+                       // sources of one -- TMP_StyleSheet.GetStyle and TMP_Style.NormalStyle -- return a
+                       // stable instance, so identity is both safe to rely on and strictly sharper.
+                       && ReferenceEquals(Style, other.Style) && MaxLines == other.MaxLines &&
+                       WrappingEnabled == other.WrappingEnabled && OverflowMode == other.OverflowMode &&
                        ViewReference.Equals(other.ViewReference);
             }
 
@@ -258,8 +365,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(Text, MaxWidth, MaxHeight, FontSize, (int) FontWeight, Style?.hashCode,
-                    MaxLines, ViewReference);
+                var hash = new HashCode();
+                hash.Add(Text);
+                hash.Add(MaxWidth);
+                hash.Add(MaxHeight);
+                hash.Add(FontSize);
+                hash.Add((int) FontWeight);
+                hash.Add(Style == null ? 0 : RuntimeHelpers.GetHashCode(Style));
+                hash.Add(MaxLines);
+                hash.Add(WrappingEnabled);
+                hash.Add((int) OverflowMode);
+                hash.Add(ViewReference);
+                return hash.ToHashCode();
             }
         }
     }
