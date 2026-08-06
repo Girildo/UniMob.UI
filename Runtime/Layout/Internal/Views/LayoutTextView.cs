@@ -17,6 +17,55 @@ namespace UniMob.UI.Layout.Internal.Views
     {
         [SerializeField] private UniMobTextMeshProBehaviour text;
 
+        private void Awake()
+        {
+            // Registered once per component, not once per activation: the callback list is append-only
+            // and is never cleared, so re-registering would grow it for the life of the view.
+            AddActivationCallback(DiscardInheritedGeometry);
+        }
+
+        /// <summary>
+        ///     Hands this view to its new state carrying none of the previous one's glyphs.
+        /// </summary>
+        /// <remarks>
+        ///     Works around a TMP defect that otherwise resurrects discarded text on a window resize or a
+        ///     device rotation, permanently.
+        ///     <para>
+        ///         TMP ends its empty-text generation in <c>ClearMesh()</c>, which is only
+        ///         <c>canvasRenderer.SetMesh(null)</c> -- the geometry itself survives in the mesh info.
+        ///         Anything that later measures a non-empty string against this component repopulates the
+        ///         character buffer guarding <c>InternalUpdate</c> without disturbing the character count,
+        ///         the dirty flag or the mesh. A lossy-scale change past TMP's 20% threshold then reaches
+        ///         <c>UpdateSDFScale</c>, whose last act is an unconditional
+        ///         <c>canvasRenderer.SetMesh(m_mesh)</c>, and the discarded glyphs are on screen again with
+        ///         nothing left to describe the fault: character count already 0, dirty flag already
+        ///         false, so no rebuild is ever scheduled. Only a large resize crosses that threshold,
+        ///         which is why it tracks maximising and rotating rather than dragging an edge.
+        ///     </para>
+        ///     <para>
+        ///         The string is reset alongside the geometry, and that pairing is load-bearing:
+        ///         <see cref="Render" />'s assignment is a no-op when the incoming value equals the
+        ///         outgoing one, so discarding geometry on its own would leave such a view permanently
+        ///         blank. Emptying the text first guarantees the assignment that follows always differs.
+        ///     </para>
+        ///     <para>
+        ///         Cleared through TMP's own <c>ClearMeshInfo</c> rather than <c>Mesh.Clear()</c>, which
+        ///         is a trap: dropping the vertices leaves the UV array longer than them, and the stray
+        ///         upload writes UVs before it uploads, so every resize would throw "Mesh.uv is out of
+        ///         bounds" instead. TMP zeroes its vertices in place, keeping the arrays the same length.
+        ///     </para>
+        /// </remarks>
+        private void DiscardInheritedGeometry()
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.text = string.Empty;
+            text.textInfo?.ClearMeshInfo(true);
+        }
+
         protected override void Render()
         {
             if (text == null) return;
