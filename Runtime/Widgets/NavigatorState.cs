@@ -260,6 +260,18 @@ namespace UniMob.UI.Widgets
                     await ProcessCommands(_pendingCommands.Dequeue());
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // A transition abandoned rather than failed, which is not an error worth reporting. The
+                // only producer is a route's exit animation being cancelled when the tree disposes the
+                // lifetime it is bound to, so this happens on every unmount that lands mid-transition --
+                // an ordinary shutdown, printed as a red exception. Console noise on a routine path is
+                // worse than useless: it teaches people to stop reading the console.
+                //
+                // Caught separately rather than filtered inside the general handler so that control flow
+                // is provably unchanged: both catches sit outside the loop, so either way the remaining
+                // queued commands are abandoned.
+            }
             catch (Exception e)
             {
                 Debug.LogException(e);

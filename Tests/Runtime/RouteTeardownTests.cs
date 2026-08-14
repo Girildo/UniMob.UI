@@ -51,13 +51,10 @@ namespace UniMob.UI.Tests
         [UnityTest]
         public IEnumerator Unmount_WhileAnExitAnimationIsRunning_StillCompletesPopTask()
         {
-            // Disposal cancels the pending Atom.When, and the resulting cancellation surfaces through
-            // ProcessCommandsLoop's catch as a logged exception. That is pre-existing behaviour on this
-            // path rather than something teardown introduces -- the same cancellation happens today, it
-            // simply used to leave PopTask pending as well. Phase 3 is where the abandoned pop stops
-            // being an exception at all.
-            LogAssert.ignoreFailingMessages = true;
-
+            // Deliberately does not suppress log assertions. Disposal cancels the pending Atom.When, and
+            // that cancellation used to reach the console as a red exception on every unmount landing
+            // mid-transition. This fixture passing is the evidence that it no longer does: Unity fails a
+            // test on any unexpected logged exception.
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
 
