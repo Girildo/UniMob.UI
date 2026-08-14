@@ -326,6 +326,11 @@ namespace UniMob.UI.Widgets
         {
             if (_stack.Count > 0)
             {
+                // Deliberately not committed the way PopInternal and PopToInternal are. Those two cannot
+                // empty the stack -- they refuse below depth 1 -- whereas a replace removes before it
+                // adds, so committing the removal against a throwing destroy would abort the command with
+                // an empty navigator, which is worse than the route it would have left behind. Replace is
+                // made atomic by initializing the incoming route before touching the stack at all.
                 await _stack.Peek().ApplyScreenEvent(ScreenEvent.Destroy);
                 _stack.Pop();
 
@@ -369,8 +374,16 @@ namespace UniMob.UI.Widgets
                     await UnpauseScreens(skip: 1);
                 }
 
-                await destroyTask;
-                _stack.Pop();
+                // Per iteration, for the reason given in PopInternal. A throw part-way through still
+                // leaves every route it already removed removed, and stops at the one that failed.
+                try
+                {
+                    await destroyTask;
+                }
+                finally
+                {
+                    _stack.Pop();
+                }
             }
         }
 
@@ -392,8 +405,22 @@ namespace UniMob.UI.Widgets
                 await UnpauseScreens(skip: 1);
             }
 
-            await destroyTask;
-            _stack.Pop();
+            // The removal commits even if the transition does not. TriggerStateMachine assigns the next
+            // state before running the handler, so by the time this awaits, the route already reports
+            // Destroyed -- and it is still on the stack, still rendered, and still what TopmostRoute,
+            // HandleBack and PopIfTopmost answer with. Letting a throw skip the pop leaves the machine and
+            // the stack permanently disagreeing about a route that has already said it is finished.
+            //
+            // Removals commit; additions do not. The mirror of this on the push side would be wrong:
+            // nothing has committed before a push, so a throw there should correctly leave it undone.
+            try
+            {
+                await destroyTask;
+            }
+            finally
+            {
+                _stack.Pop();
+            }
         }
 
         private async Task PauseScreens()

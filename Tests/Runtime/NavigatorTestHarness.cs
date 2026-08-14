@@ -27,6 +27,21 @@ namespace UniMob.UI.Tests
         Plain,
         InstantPage,
         AnimatedPage,
+
+        /// <summary>
+        ///     A plain route whose destroy handler throws immediately. The failure never reaches the
+        ///     navigator: ExecuteTransitionInternal only awaits a handler's task when it is not already
+        ///     completed, and a synchronously faulted task is completed, so the exception is dropped.
+        /// </summary>
+        ThrowsOnDestroy,
+
+        /// <summary>
+        ///     A plain route whose destroy handler throws after yielding. This is the failure the
+        ///     navigator can actually see, because the handler's task is still incomplete when the
+        ///     transition checks it and therefore gets awaited. The real instance of it is
+        ///     <see cref="PageRoute"/>'s exit-animation wait being cancelled by disposal.
+        /// </summary>
+        ThrowsAsyncOnDestroy,
     }
 
     /// <summary>
@@ -134,14 +149,28 @@ namespace UniMob.UI.Tests
         }
     }
 
+    /// <summary>
+    ///     How a tracing route's destroy handler fails, if at all. The distinction is not cosmetic: only
+    ///     an asynchronous failure is visible to the navigator.
+    /// </summary>
+    internal enum DestroyFailure
+    {
+        None,
+        Synchronous,
+        Asynchronous,
+    }
+
     internal sealed class TracingRoute : Route
     {
         private readonly RouteTracer _tracer;
+        private readonly DestroyFailure _destroyFailure;
 
-        public TracingRoute(NavigatorTrace trace, string key, RouteModalType modalType)
+        public TracingRoute(NavigatorTrace trace, string key, RouteModalType modalType,
+            DestroyFailure destroyFailure = DestroyFailure.None)
             : base(new RouteSettings(key, modalType))
         {
             _tracer = new RouteTracer(trace, key);
+            _destroyFailure = destroyFailure;
         }
 
         public override Widget Build(BuildContext context) => new Empty();
@@ -182,10 +211,26 @@ namespace UniMob.UI.Tests
             return base.OnPause();
         }
 
-        protected override Task OnDestroy()
+        // Thrown before base.OnDestroy in both failing cases, so the pop completer is never set either:
+        // the route has failed to end in every sense a caller can observe.
+        protected override async Task OnDestroy()
         {
             _tracer.Record("OnDestroy");
-            return base.OnDestroy();
+
+            if (_destroyFailure == DestroyFailure.Asynchronous)
+            {
+                // Yield first so the returned task is still incomplete when the transition inspects it.
+                // That is the whole difference: without the yield the fault is dropped.
+                await Task.Yield();
+                throw new InvalidOperationException("route failed to destroy");
+            }
+
+            if (_destroyFailure == DestroyFailure.Synchronous)
+            {
+                throw new InvalidOperationException("route failed to destroy");
+            }
+
+            await base.OnDestroy();
         }
 
         protected override Task OnTeardown()
@@ -369,6 +414,12 @@ namespace UniMob.UI.Tests
 
                 case RouteFlavour.AnimatedPage:
                     return new TracingPageRoute(trace, key, modalType, AnimatedDuration);
+
+                case RouteFlavour.ThrowsOnDestroy:
+                    return new TracingRoute(trace, key, modalType, DestroyFailure.Synchronous);
+
+                case RouteFlavour.ThrowsAsyncOnDestroy:
+                    return new TracingRoute(trace, key, modalType, DestroyFailure.Asynchronous);
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(flavour), flavour, "Unknown route flavour");
