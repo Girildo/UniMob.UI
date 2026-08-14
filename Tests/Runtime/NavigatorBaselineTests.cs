@@ -51,11 +51,12 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
-        ///     The scenario Phase 4's reorder is expected to move: today the route below is fully paused
-        ///     before the incoming route is initialized.
+        ///     The incoming route is built before anything on screen is disturbed, so the screen the user
+        ///     is looking at is not paused while the next one loads, and a route that fails to build
+        ///     leaves the navigator untouched.
         /// </summary>
         [UnityTest]
-        public IEnumerator PushFullscreenOverFullscreen_PausesBelowBeforeInitializingAbove()
+        public IEnumerator PushFullscreenOverFullscreen_InitializesAboveBeforePausingBelow()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
@@ -74,9 +75,9 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B fullscreen",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
@@ -107,8 +108,8 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B popup",
-                "  A OnFocusLost",
                 "  B OnInitialize",
+                "  A OnFocusLost",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
@@ -144,15 +145,15 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B popup",
-                "  A OnFocusLost",
                 "  B OnInitialize",
+                "  A OnFocusLost",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
                 "  stack: [B, A]",
                 "push C popup",
-                "  B OnFocusLost",
                 "  C OnInitialize",
+                "  B OnFocusLost",
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
@@ -184,9 +185,9 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B fullscreen",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
@@ -265,17 +266,17 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B fullscreen",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
                 "  stack: [B, A]",
                 "push C fullscreen",
+                "  C OnInitialize",
                 "  B OnFocusLost",
                 "  B OnPause",
-                "  C OnInitialize",
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
@@ -326,9 +327,9 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B fullscreen",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
@@ -344,12 +345,12 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
-        ///     Replace destroys the outgoing route before initializing the incoming one, which is the
-        ///     ordering defect 4 is about: if the incoming route's initialization throws, the outgoing one
-        ///     is already gone.
+        ///     Replace builds the incoming route before destroying the outgoing one, which is what makes
+        ///     it atomic: an incoming route that fails to initialize leaves the stack untouched, where
+        ///     previously the outgoing one was already destroyed and popped with nothing to replace it.
         /// </summary>
         [UnityTest]
-        public IEnumerator Replace_AtDepthOne_DestroysOldBeforeInitializingNew()
+        public IEnumerator Replace_AtDepthOne_InitializesNewBeforeDestroyingOld()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
@@ -368,10 +369,10 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "replace with B",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
                 "  A OnDestroy",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
@@ -408,19 +409,19 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B fullscreen",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
                 "  stack: [B, A]",
                 "replace B with C popup",
+                "  C OnInitialize",
                 "  B OnFocusLost",
                 "  B OnPause",
                 "  B OnDestroy",
                 "  A OnResume",
-                "  C OnInitialize",
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
@@ -459,17 +460,17 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B popup",
-                "  A OnFocusLost",
                 "  B OnInitialize",
+                "  A OnFocusLost",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
                 "  stack: [B, A]",
                 "replace B with C fullscreen",
+                "  C OnInitialize",
                 "  B OnFocusLost",
                 "  B OnPause",
                 "  B OnDestroy",
-                "  C OnInitialize",
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
@@ -506,9 +507,9 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B fullscreen",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
@@ -518,9 +519,9 @@ namespace UniMob.UI.Tests
                 "  B OnPause",
                 "  B OnDestroy",
                 "  A OnResume",
+                "  C OnInitialize",
                 "  A OnPause",
                 "  A OnDestroy",
-                "  C OnInitialize",
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
@@ -560,9 +561,9 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "push B animated",
+                "  B OnInitialize",
                 "  A OnFocusLost",
                 "  A OnPause",
-                "  B OnInitialize",
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",

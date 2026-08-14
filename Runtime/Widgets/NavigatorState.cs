@@ -306,7 +306,16 @@ namespace UniMob.UI.Widgets
 
         private async Task PushInternal(NavigatorCommand.Push push)
         {
-            if (push.Route.ModalType == RouteModalType.Fullscreen)
+            var screen = push.Route;
+
+            // Built before anything already on screen is disturbed. OnInitialize is virtual, async and
+            // supplied by the route, so it is the one step here that can fail or take arbitrarily long,
+            // and doing it first means a route that cannot be built leaves the navigator exactly as it
+            // was instead of part-way through a transition. It also stops the screen the user is looking
+            // at being paused while the next one loads.
+            await InitializeScreen(screen);
+
+            if (screen.ModalType == RouteModalType.Fullscreen)
             {
                 await PauseScreens();
             }
@@ -315,22 +324,27 @@ namespace UniMob.UI.Widgets
                 await _stack.Peek().ApplyScreenEvent(ScreenEvent.Unfocus);
             }
 
-            var screen = push.Route;
-            await InitializeScreen(push.Route);
-
             _stack.Push(screen);
             await screen.ApplyScreenEvent(ScreenEvent.Create);
         }
 
         private async Task ReplaceInternal(NavigatorCommand.Replace replace)
         {
+            var screen = replace.Route;
+
+            // Built before the outgoing route is touched, which is what makes a replace atomic. Building
+            // it last meant the old route had already been destroyed and popped by the time the new one
+            // was initialized, so a route that could not be built left the navigator permanently one
+            // shorter with nothing in its place.
+            await InitializeScreen(screen);
+
             if (_stack.Count > 0)
             {
-                // Deliberately not committed the way PopInternal and PopToInternal are. Those two cannot
-                // empty the stack -- they refuse below depth 1 -- whereas a replace removes before it
-                // adds, so committing the removal against a throwing destroy would abort the command with
-                // an empty navigator, which is worse than the route it would have left behind. Replace is
-                // made atomic by initializing the incoming route before touching the stack at all.
+                // The removal is deliberately not committed the way PopInternal and PopToInternal commit
+                // theirs. Those two cannot empty the stack, since both refuse below depth 1, whereas a
+                // replace removes before it adds: committing against a failing destroy would abort the
+                // command with an empty navigator and a TopmostRoute that throws, which is worse than the
+                // route it would have left behind.
                 await _stack.Peek().ApplyScreenEvent(ScreenEvent.Destroy);
                 _stack.Pop();
 
@@ -349,9 +363,6 @@ namespace UniMob.UI.Widgets
                     }
                 }
             }
-
-            var screen = replace.Route;
-            await InitializeScreen(screen);
 
             _stack.Push(screen);
             await screen.ApplyScreenEvent(ScreenEvent.Create);
