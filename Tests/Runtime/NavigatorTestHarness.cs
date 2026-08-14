@@ -29,18 +29,21 @@ namespace UniMob.UI.Tests
         AnimatedPage,
 
         /// <summary>
-        ///     A plain route whose destroy handler throws immediately. The failure never reaches the
-        ///     navigator: ExecuteTransitionInternal only awaits a handler's task when it is not already
-        ///     completed, and a synchronously faulted task is completed, so the exception is dropped.
+        ///     A plain route whose destroy handler throws immediately, without yielding first.
         /// </summary>
         ThrowsOnDestroy,
 
         /// <summary>
-        ///     A plain route whose destroy handler throws after yielding. This is the failure the
-        ///     navigator can actually see, because the handler's task is still incomplete when the
-        ///     transition checks it and therefore gets awaited. The real instance of it is
-        ///     <see cref="PageRoute"/>'s exit-animation wait being cancelled by disposal.
+        ///     A plain route whose destroy handler throws after yielding, which is the shape of the only
+        ///     failure the package produces on its own: <see cref="PageRoute"/>'s exit-animation wait
+        ///     being cancelled by disposal.
         /// </summary>
+        /// <remarks>
+        ///     Kept distinct from <see cref="ThrowsOnDestroy"/> so a fixture can hold the two to the same
+        ///     outcome. They used to differ entirely: a transition only awaited a handler's task when it
+        ///     was not already completed, and a synchronously faulted task is completed, so failing
+        ///     without yielding meant failing invisibly.
+        /// </remarks>
         ThrowsAsyncOnDestroy,
     }
 
@@ -150,8 +153,8 @@ namespace UniMob.UI.Tests
     }
 
     /// <summary>
-    ///     How a tracing route's destroy handler fails, if at all. The distinction is not cosmetic: only
-    ///     an asynchronous failure is visible to the navigator.
+    ///     How a tracing route's destroy handler fails, if at all. Both failing modes must now look the
+    ///     same to the navigator; the enum exists so a fixture can prove it.
     /// </summary>
     internal enum DestroyFailure
     {
@@ -219,8 +222,8 @@ namespace UniMob.UI.Tests
 
             if (_destroyFailure == DestroyFailure.Asynchronous)
             {
-                // Yield first so the returned task is still incomplete when the transition inspects it.
-                // That is the whole difference: without the yield the fault is dropped.
+                // Yields first, so the returned task is still incomplete when the transition inspects it.
+                // That difference used to decide whether the failure was seen at all.
                 await Task.Yield();
                 throw new InvalidOperationException("route failed to destroy");
             }

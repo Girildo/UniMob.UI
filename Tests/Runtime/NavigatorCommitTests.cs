@@ -14,11 +14,11 @@ namespace UniMob.UI.Tests
     ///     skipped, the route stays on the stack announcing that it has finished, and TopmostRoute,
     ///     HandleBack and PopIfTopmost all keep answering with it.
     ///     <para>
-    ///         Only an <i>asynchronous</i> failure can reach the navigator, which is why these use
-    ///         <see cref="RouteFlavour.ThrowsAsyncOnDestroy"/>. See
-    ///         <see cref="Destroy_FailingSynchronously_IsSwallowedByTheTransition"/> for the other half.
-    ///         The real instance of an asynchronous failure is PageRoute's exit-animation wait being
-    ///         cancelled when disposal destroys the lifetime it is bound to.
+    ///         These use <see cref="RouteFlavour.ThrowsAsyncOnDestroy"/> because that is the shape of the
+    ///         only failure the package produces on its own: PageRoute's exit-animation wait being
+    ///         cancelled when disposal destroys the lifetime it is bound to. A handler that fails without
+    ///         yielding must behave identically, which
+    ///         <see cref="Destroy_FailingSynchronously_IsReportedLikeAnAsynchronousFailure"/> holds it to.
     ///     </para>
     ///     <para>
     ///         Only removals commit. Additions must still be able to fail without leaving anything behind,
@@ -104,22 +104,23 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
-        ///     A destroy handler that fails without yielding first fails silently, and the navigator
-        ///     proceeds as though it succeeded.
+        ///     Whether a destroy handler yields before failing must make no difference to what the
+        ///     navigator sees.
         /// </summary>
         /// <remarks>
-        ///     ExecuteTransitionInternal guards each await with <c>!IsCompleted</c>, and a synchronously
-        ///     faulted task is completed, so the fault is never observed and never propagates. The route
-        ///     is popped normally and nothing is logged, but its OnDestroy never reached the completer, so
-        ///     PopTask is left pending forever -- a stranded awaiter with no diagnostic anywhere.
-        ///     <para>
-        ///         Pinned as current behaviour, not endorsed. Deliberately does not suppress log
-        ///         assertions: the fixture passing is itself the evidence that nothing was reported.
-        ///     </para>
+        ///     It used to make all the difference. ExecuteTransitionInternal guarded each await with
+        ///     <c>!IsCompleted</c>, and a synchronously faulted task is completed, so a handler that
+        ///     failed without yielding had its exception dropped: the transition reported success,
+        ///     nothing was logged, and the route's PopTask was left pending forever. Since every handler
+        ///     in the package completes synchronously, that was the default path rather than an edge
+        ///     case. This fixture is the pair of
+        ///     <see cref="Pop_WhenDestroyFailsAsynchronously_StillRemovesTheRoute"/>; the two must agree.
         /// </remarks>
         [UnityTest]
-        public IEnumerator Destroy_FailingSynchronously_IsSwallowedByTheTransition()
+        public IEnumerator Destroy_FailingSynchronously_IsReportedLikeAnAsynchronousFailure()
         {
+            LogAssert.ignoreFailingMessages = true;
+
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
 
@@ -130,10 +131,10 @@ namespace UniMob.UI.Tests
             host.Navigator.Pop();
             yield return host.Settle();
 
-            Assert.AreEqual(1, host.Navigator.NavigationStack.Count,
-                "the navigator saw no failure, so the pop completed as usual");
-            Assert.IsFalse(failing.PopTask.IsCompleted,
-                "OnDestroy threw before completing the pop, stranding every awaiter of PopTask");
+            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,
+                "a route whose destroy failed must still leave the stack");
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+            AssertNoFinishedRouteOnTheStack(host);
         }
 
         private static void AssertNoFinishedRouteOnTheStack(NavigatorHost host)

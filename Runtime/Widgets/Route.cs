@@ -98,16 +98,29 @@ namespace UniMob.UI.Widgets
         private Func<Task, Task> ExecTransition(Func<Task> handler, ScreenEvent? screenEvent = null) =>
             previous => ExecuteTransitionInternal(previous, handler, screenEvent);
 
+        /// <remarks>
+        ///     Every task here is awaited unconditionally. Skipping the await when a task was already
+        ///     finished looks like an optimisation and is a correctness hole: <c>IsCompleted</c> is true
+        ///     for a faulted task as well as a successful one, and awaiting is the only thing that
+        ///     rethrows. Guarding on it left a failed handler's exception sealed inside its task, so the
+        ///     transition reported success, the navigator carried on removing the route, and nothing ever
+        ///     completed its <see cref="PopTask"/> -- a permanent hang with no diagnostic anywhere, for
+        ///     every handler that failed without yielding first, which is all of them.
+        ///     <para>
+        ///         Awaiting a task that has already completed successfully does not yield, so the guards
+        ///         were buying nothing to begin with.
+        ///     </para>
+        /// </remarks>
         private async Task ExecuteTransitionInternal(Task previous, Func<Task> handler, ScreenEvent? screenEvent)
         {
-            if (previous != null && !previous.IsCompleted)
+            if (previous != null)
             {
                 await previous;
             }
 
             var current = handler();
 
-            if (current != null && !current.IsCompleted)
+            if (current != null)
             {
                 await current;
             }
@@ -116,7 +129,7 @@ namespace UniMob.UI.Widgets
             {
                 var next = _machine.Trigger(screenEvent.Value);
 
-                if (next != null && !next.IsCompleted)
+                if (next != null)
                 {
                     await next;
                 }
