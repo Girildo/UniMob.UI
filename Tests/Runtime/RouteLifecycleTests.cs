@@ -222,6 +222,73 @@ namespace UniMob.UI.Tests
                 "the subscriber after the failing one still heard both");
         }
 
+        /// <summary>
+        ///     A subscriber reading <see cref="Route.ScreenState"/> from inside its callback must not leave
+        ///     whoever drove the transition depending on that route.
+        /// </summary>
+        /// <remarks>
+        ///     Reading the state is the obvious thing for a subscriber to do -- it is the atom this very
+        ///     notification was published alongside -- and transitions run on the stack of whatever called
+        ///     <c>ApplyScreenEvent</c>. Untracked dispatch is the only thing between those two facts and a
+        ///     computation that silently starts re-running for every later transition, because something
+        ///     was listening.
+        ///     <para>
+        ///         <b>The setup is deliberately abnormal</b>, and log assertions are suppressed for it:
+        ///         driving a transition from a watched scope invalidates an atom inside one, which UniMob
+        ///         reports as dangerous on its own. It reports it and carries on, which is the point --
+        ///         the loud failure is not a reason to also allow a silent one.
+        ///     </para>
+        /// </remarks>
+        [UnityTest]
+        public IEnumerator ScreenEventApplied_DoesNotLeakTheRoutesStateIntoTheCaller()
+        {
+            // The transition driven from inside the reaction writes ScreenState while a watched scope is
+            // active, which UniMob reports. See the remarks: that is the premise, not a side effect.
+            LogAssert.ignoreFailingMessages = true;
+
+            var trace = new NavigatorTrace();
+            var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
+
+            // Reads the state the notification was published alongside, which is what a real subscriber
+            // wanting to act on where the route now is would do.
+            route.ScreenEventApplied += screenEvent => { _ = route.ScreenState; };
+
+            var runs = 0;
+            var unrelated = Atom.Value(0);
+            var lifetime = new LifetimeController();
+
+            try
+            {
+                Atom.Reaction(lifetime.Lifetime, () =>
+                {
+                    runs++;
+                    _ = unrelated.Value;
+
+                    if (runs == 1)
+                    {
+                        route.ApplyScreenEvent(ScreenEvent.Create);
+                    }
+                });
+
+                yield return null;
+                yield return null;
+
+                Assert.AreEqual(1, runs, "the reaction has run once, and drove a transition from inside it");
+
+                route.ApplyScreenEvent(ScreenEvent.Destroy);
+
+                yield return null;
+                yield return null;
+
+                Assert.AreEqual(1, runs,
+                    "a later transition the reaction had nothing to do with must not re-run it");
+            }
+            finally
+            {
+                lifetime.Dispose();
+            }
+        }
+
         private static void Record(List<string> endings, string key, ScreenEvent screenEvent)
         {
             if (screenEvent == ScreenEvent.Teardown || screenEvent == ScreenEvent.Destroy)

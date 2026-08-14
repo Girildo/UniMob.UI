@@ -339,6 +339,110 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
+        ///     Observing must not perturb what is observed: an observer reading the navigator's atoms from
+        ///     inside its callback must not graft that dependency onto whoever started the navigation.
+        /// </summary>
+        /// <remarks>
+        ///     A navigation whose handlers all complete synchronously -- every one that does not animate --
+        ///     runs to its last callback while still on the stack of whatever started it. If that was a
+        ///     computation, then an observer reading the incoming route's <c>ScreenState</c>, which is the
+        ///     obvious thing for one to read, would leave the computation depending on that route, and the
+        ///     next push -- which pauses it -- would re-run the computation. Something re-running because
+        ///     something else was listening is the one effect a listener must never have.
+        ///     <para>
+        ///         <b>The setup is deliberately abnormal.</b> Navigating from a watched scope is already
+        ///         reported by UniMob as dangerous, because navigation invalidates atoms and
+        ///         <c>AtomBase.Invalidate</c> logs whenever it runs inside one -- which is why this fixture
+        ///         suppresses log assertions. That is exactly why it is worth pinning: the report is a
+        ///         logged error, not a stop, so execution continues. Untracked dispatch is what stops a
+        ///         second, silent failure being laid on top of the loud one.
+        ///     </para>
+        ///     <para>
+        ///         The rebuild at the end covers the other half, which needs no observer to misbehave at
+        ///         all: the observer list is read off the widget, and the widget is itself an atom, so
+        ///         notifying would otherwise leave the caller depending on it whether or not any observer
+        ///         read anything.
+        ///     </para>
+        /// </remarks>
+        [UnityTest]
+        public IEnumerator AnObserverReadingRouteState_DoesNotMakeTheCallerDependOnIt()
+        {
+            // Both the reaction's push and the later ones invalidate atoms while a watched scope is
+            // active, which UniMob reports. See the remarks: that is the premise, not a side effect.
+            LogAssert.ignoreFailingMessages = true;
+
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain,
+                new StateReadingObserver());
+            yield return host.Settle();
+
+            var runs = 0;
+            var unrelated = Atom.Value(0);
+            var lifetime = new LifetimeController();
+
+            try
+            {
+                Atom.Reaction(lifetime.Lifetime, () =>
+                {
+                    runs++;
+
+                    // A real dependency, so the reaction is a genuine computation rather than one that
+                    // could never re-run for want of anything to watch.
+                    _ = unrelated.Value;
+
+                    if (runs == 1)
+                    {
+                        host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                    }
+                });
+
+                yield return host.Settle();
+
+                Assert.AreEqual(1, runs, "the reaction has run once, and pushed from inside that run");
+
+                host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                yield return host.Settle();
+
+                Assert.AreEqual(1, runs,
+                    "a push the reaction had nothing to do with must not re-run it: the observer's read of B's " +
+                    "ScreenState must not have been recorded against the reaction");
+
+                host.Rebuild();
+                yield return host.Settle();
+
+                Assert.AreEqual(1, runs,
+                    "nor may reading the observer list off the widget leave the reaction depending on it");
+            }
+            finally
+            {
+                lifetime.Dispose();
+            }
+        }
+
+        /// <summary>
+        ///     Reads the navigator's reactive state from inside a callback, which is the ordinary thing for
+        ///     an observer to do and the thing that must stay invisible to whoever started the navigation.
+        /// </summary>
+        private sealed class StateReadingObserver : INavigatorObserver
+        {
+            public void WillPush(Route route, Route previousRoute) => Read(route);
+
+            public void DidPush(Route route, Route previousRoute) => Read(route);
+
+            public void WillPop(Route route, Route previousRoute) => Read(route);
+
+            public void DidPop(Route route, Route previousRoute) => Read(route);
+
+            public void WillReplace(Route newRoute, Route oldRoute) => Read(newRoute);
+
+            public void DidReplace(Route newRoute, Route oldRoute) => Read(newRoute);
+
+            private static void Read(Route route)
+            {
+                _ = route.ScreenState;
+            }
+        }
+
+        /// <summary>
         ///     Records each callback as <c>Name(route, otherRoute)</c>, which is enough to state both which
         ///     callback fired and which pair of routes it named.
         /// </summary>

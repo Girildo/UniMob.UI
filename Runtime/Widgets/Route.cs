@@ -167,15 +167,24 @@ namespace UniMob.UI.Widgets
             // and aborts the transition, nor costs the subscribers after it their notification. Walking a
             // copy of the invocation list is also what makes a subscriber that unsubscribes from inside
             // its own callback harmless.
-            foreach (var subscriber in subscribers.GetInvocationList())
+            //
+            // Untracked, so that listening cannot perturb what is listened to. Transitions are driven from
+            // whatever called ApplyScreenEvent, still on that caller's stack, so a subscriber reading
+            // ScreenState -- the obvious thing to read, and the atom this very method just wrote -- would
+            // otherwise graft that dependency onto whatever computation was running and have it re-run on
+            // the next transition. ClickExtensions runs bound handlers the same way.
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var subscriber in subscribers.GetInvocationList())
                 {
-                    ((Action<ScreenEvent>) subscriber).Invoke(screenEvent);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        ((Action<ScreenEvent>) subscriber).Invoke(screenEvent);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }

@@ -605,10 +605,22 @@ namespace UniMob.UI.Widgets
         ///     widget can be replaced. Reading the list again at the Did edge would let an observer hear
         ///     the end of something it never heard the start of, and let another hear the start of
         ///     something it never hears the end of.
+        ///     <para>
+        ///         Untracked, because <c>Widget</c> is an atom and this read is the navigator's own
+        ///         bookkeeping. A navigation started from inside a computation -- a reaction that routes on
+        ///         some condition is an ordinary thing to write -- would otherwise come away with a
+        ///         dependency on the navigator's widget purely because notifying is a thing the navigator
+        ///         now does, and rebuild whenever that widget was replaced.
+        ///     </para>
         /// </remarks>
         private INavigatorObserver[] SnapshotObservers()
         {
-            var observers = Widget.Observers;
+            IReadOnlyList<INavigatorObserver> observers;
+
+            using (Atom.NoWatch)
+            {
+                observers = Widget.Observers;
+            }
 
             if (observers == null || observers.Count == 0)
             {
@@ -625,99 +637,127 @@ namespace UniMob.UI.Widgets
             return snapshot;
         }
 
-        // Every callback is dispatched the same way, and the shape is the point: iterate the snapshot the
-        // operation began with, and contain each observer separately. An observer that throws is logged
-        // and the rest still hear the callback, matching how Zone contains a ticker that throws -- the
-        // navigator's job is to navigate, and a consumer of notifications must not be able to stop it. The
-        // snapshot is what makes an observer that unregisters itself mid-callback harmless as well, since
-        // what is being walked is no longer the list it removed itself from.
+        // Every callback is dispatched the same way, and the shape is the point.
+        //
+        // Iterate the snapshot the operation began with, and contain each observer separately. An observer
+        // that throws is logged and the rest still hear the callback, matching how Zone contains a ticker
+        // that throws -- the navigator's job is to navigate, and a consumer of notifications must not be
+        // able to stop it. The snapshot is also what makes an observer that unregisters itself
+        // mid-callback harmless, since what is being walked is no longer the list it removed itself from.
+        //
+        // The whole walk is untracked, so that observing cannot perturb what it observes. An operation
+        // reaches here still on the caller's stack whenever its handlers complete synchronously, which is
+        // every navigation that does not animate, and navigating from inside a computation -- a reaction
+        // that routes on some condition -- is an ordinary thing to write. Without this, an observer that
+        // read NavigationStack or a route's ScreenState in its callback would silently graft that
+        // dependency onto that computation, and the next navigation would invalidate it: a reaction would
+        // start re-running because something was listening, which is the one thing a listener must never
+        // cause. Same reasoning as ClickExtensions, which runs every bound handler under NoWatch.
 
         private void NotifyWillPush(INavigatorObserver[] observers, Route route, Route previousRoute)
         {
-            foreach (var observer in observers)
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var observer in observers)
                 {
-                    observer.WillPush(route, previousRoute);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        observer.WillPush(route, previousRoute);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
 
         private void NotifyDidPush(INavigatorObserver[] observers, Route route, Route previousRoute)
         {
-            foreach (var observer in observers)
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var observer in observers)
                 {
-                    observer.DidPush(route, previousRoute);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        observer.DidPush(route, previousRoute);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
 
         private void NotifyWillPop(INavigatorObserver[] observers, Route route, Route previousRoute)
         {
-            foreach (var observer in observers)
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var observer in observers)
                 {
-                    observer.WillPop(route, previousRoute);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        observer.WillPop(route, previousRoute);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
 
         private void NotifyDidPop(INavigatorObserver[] observers, Route route, Route previousRoute)
         {
-            foreach (var observer in observers)
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var observer in observers)
                 {
-                    observer.DidPop(route, previousRoute);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        observer.DidPop(route, previousRoute);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
 
         private void NotifyWillReplace(INavigatorObserver[] observers, Route newRoute, Route oldRoute)
         {
-            foreach (var observer in observers)
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var observer in observers)
                 {
-                    observer.WillReplace(newRoute, oldRoute);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        observer.WillReplace(newRoute, oldRoute);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
 
         private void NotifyDidReplace(INavigatorObserver[] observers, Route newRoute, Route oldRoute)
         {
-            foreach (var observer in observers)
+            using (Atom.NoWatch)
             {
-                try
+                foreach (var observer in observers)
                 {
-                    observer.DidReplace(newRoute, oldRoute);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
+                    try
+                    {
+                        observer.DidReplace(newRoute, oldRoute);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
@@ -759,6 +799,18 @@ namespace UniMob.UI.Widgets
         private readonly Stack<Route> _stack = new Stack<Route>();
         private readonly List<Widget> _widgets = new List<Widget>();
         private readonly MutableAtom<int> _version = Atom.Value(int.MinValue);
+
+        /// <summary>
+        ///     The version counter itself, kept beside the atom that publishes it.
+        /// </summary>
+        /// <remarks>
+        ///     Counted here rather than as <c>_version.Value++</c>, because that is a read as well as a
+        ///     write: the getter subscribes whatever computation is running, and the setter then
+        ///     invalidates it. Mutating the stack from inside a computation therefore made that computation
+        ///     depend on the stack and immediately obsoleted it, so it re-ran for a change it had made
+        ///     itself. Publishing a value computed outside the atom leaves the write a write.
+        /// </remarks>
+        private int _revision = int.MinValue;
 
         public int Count => _stack.Count;
 
@@ -822,7 +874,7 @@ namespace UniMob.UI.Widgets
         {
             _widgets.RemoveAt(_widgets.Count - 1);
             var result = _stack.Pop();
-            _version.Value++;
+            _version.Value = ++_revision;
             return result;
         }
 
@@ -834,7 +886,7 @@ namespace UniMob.UI.Widgets
                 OnDispose = screen.Dispose,
             });
             _stack.Push(screen);
-            _version.Value++;
+            _version.Value = ++_revision;
         }
 
         public IEnumerator<Route> GetEnumerator() => _stack.GetEnumerator();
