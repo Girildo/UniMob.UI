@@ -72,6 +72,26 @@ namespace UniMob.UI.Widgets
                 .Allow(ScreenState.Created, ScreenState.Destroyed, ExecTransition(OnDestroy))
                 .Allow(ScreenState.Destroyed, ScreenState.Destroyed);
 
+            // Teardown is how a route ends when the tree it lives in is going away, as opposed to Destroy,
+            // which is how it ends when navigation removed it. Every live state goes straight to Destroyed
+            // rather than chaining through OnFocusLost and OnPause: those steps exist to hand the screen
+            // back to whatever was underneath, and at teardown there is nothing underneath to hand it to.
+            // Going direct is also what keeps this synchronous -- the chain through OnPause is what starts
+            // a PageRoute's exit animation, and OnDestroy is what then waits for it, so a route torn down
+            // this way has nothing to wait for and no animation to run.
+            //
+            // Destroyed is included, and carries the handler rather than being a bare self-transition,
+            // because a route caught part-way through an ordinary destroy is already in that state while it
+            // waits out its exit animation. That wait is abandoned when the tree disposes its lifetime, so
+            // without a handler here the one route that most needs closing out would be the only one to
+            // silently keep its callers waiting forever.
+            fsm.On(ScreenEvent.Teardown)
+                .Allow(ScreenState.Initializing, ScreenState.Destroyed, ExecTransition(OnTeardown))
+                .Allow(ScreenState.Created, ScreenState.Destroyed, ExecTransition(OnTeardown))
+                .Allow(ScreenState.Resumed, ScreenState.Destroyed, ExecTransition(OnTeardown))
+                .Allow(ScreenState.Focused, ScreenState.Destroyed, ExecTransition(OnTeardown))
+                .Allow(ScreenState.Destroyed, ScreenState.Destroyed, ExecTransition(OnTeardown));
+
             return fsm;
         }
 
@@ -140,9 +160,46 @@ namespace UniMob.UI.Widgets
 
         protected virtual Task OnDestroy()
         {
-            Zone.Current.NextFrame(() => _popCompleter.SetResult(_popResult));
+            CompletePop();
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        ///     Ends the route because the tree it lives in is going away, rather than because navigation
+        ///     removed it.
+        /// </summary>
+        /// <remarks>
+        ///     Deliberately not <see cref="OnDestroy"/>: a subclass overrides that to finish a transition,
+        ///     and there is no transition to finish here. <see cref="PageRoute"/> is the case that makes
+        ///     the distinction necessary -- its OnDestroy waits for an exit animation whose lifetime is
+        ///     destroyed moments later, so routing teardown through it would strand every caller waiting
+        ///     on <see cref="PopTask"/>.
+        /// </remarks>
+        protected virtual Task OnTeardown()
+        {
+            CompletePop();
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        ///     Answers everyone waiting on <see cref="PopTask"/>, from whichever ending got here first.
+        /// </summary>
+        /// <remarks>
+        ///     Deferred through the zone rather than completed inline, because both endings can be reached
+        ///     from inside disposal, and disposal runs within <c>Atom.NoWatch</c> (see
+        ///     <c>BuilderState.Dispose</c>). A continuation resumed there would read atoms without
+        ///     registering a dependency and build reactions that never fire, failing silently. The next
+        ///     frame is the first moment the call stack has unwound and tracking is live again.
+        ///     <para>
+        ///         TrySetResult rather than SetResult: the two endings are not mutually exclusive in
+        ///         principle, and a route that has already answered must not throw when asked again.
+        ///     </para>
+        /// </remarks>
+        private void CompletePop()
+        {
+            Zone.Current.NextFrame(() => _popCompleter.TrySetResult(_popResult));
         }
 
         public bool HandleBack() => _backAction?.Invoke() ?? false;
@@ -174,6 +231,12 @@ namespace UniMob.UI.Widgets
         Unfocus = 3,
         Pause = 4,
         Destroy = 5,
+
+        /// <summary>
+        ///     The route is ending because the tree it lives in is being disposed, not because navigation
+        ///     removed it.
+        /// </summary>
+        Teardown = 6,
     }
 
     public enum ScreenState

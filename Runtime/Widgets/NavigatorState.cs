@@ -70,6 +70,39 @@ namespace UniMob.UI.Widgets
             PushNamed(Widget.InitialRoute);
         }
 
+        /// <summary>
+        ///     Ends every route still on the stack before the state tree takes them apart.
+        /// </summary>
+        /// <remarks>
+        ///     Without this, unmounting a navigator disposes its routes without ever destroying them: the
+        ///     widgets leave the tree, <c>Builder.OnDispose</c> reaches <c>Route.Dispose</c>, and the state
+        ///     machine is simply abandoned wherever it stood. Nothing runs <c>OnDestroy</c>, so nothing
+        ///     completes <c>PopTask</c>, and every caller awaiting one waits forever. Pop, PopTo and
+        ///     Replace all destroy a route before it is disposed; this is what makes unmount agree with
+        ///     them.
+        ///     <para>
+        ///         Safe to do synchronously because every handler on the teardown path completes
+        ///         synchronously by construction, which is the reason teardown is its own event rather than
+        ///         a reuse of Destroy. Dispose cannot await, and Destroy can block on an exit animation.
+        ///     </para>
+        /// </remarks>
+        public override void Dispose()
+        {
+            TearDownRoutes();
+
+            base.Dispose();
+        }
+
+        private void TearDownRoutes()
+        {
+            foreach (var route in _stack)
+            {
+                // Completes synchronously; the returned task is already finished. Nothing on this path
+                // mutates the stack, so enumerating it while triggering is safe.
+                route.ApplyScreenEvent(ScreenEvent.Teardown);
+            }
+        }
+
         private Route CreateRoute(string name)
         {
             if (!Widget.Routes.TryGetValue(name, out var routeBuilder))
@@ -197,6 +230,10 @@ namespace UniMob.UI.Widgets
                         _stack.Pop();
                     }
 
+                    break;
+
+                case ScreenEvent.Teardown:
+                    TearDownRoutes();
                     break;
 
                 default:
