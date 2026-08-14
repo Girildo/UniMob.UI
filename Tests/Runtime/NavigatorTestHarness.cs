@@ -98,6 +98,19 @@ namespace UniMob.UI.Tests
             _lines.Add("  " + routeKey + " " + what);
         }
 
+        /// <summary>
+        ///     Records an observer callback, marked so it reads apart from a route's own lifecycle.
+        /// </summary>
+        /// <remarks>
+        ///     Into the same sequence as everything else on purpose. Where a callback fires relative to
+        ///     each <c>OnPause</c>, <c>OnDestroy</c> and stack mutation is the whole of what
+        ///     <see cref="INavigatorObserver"/> promises, and only one interleaved trace can state it.
+        /// </remarks>
+        public void Observer(string call)
+        {
+            _lines.Add("  > " + call);
+        }
+
         public void Stack(NavigatorState navigator)
         {
             var keys = new List<string>();
@@ -345,6 +358,39 @@ namespace UniMob.UI.Tests
     }
 
     /// <summary>
+    ///     Writes every observer callback into the trace, so the goldens pin where each one fires relative
+    ///     to the lifecycle handlers around it.
+    /// </summary>
+    internal sealed class TracingObserver : INavigatorObserver
+    {
+        private readonly NavigatorTrace _trace;
+
+        public TracingObserver(NavigatorTrace trace)
+        {
+            _trace = trace;
+        }
+
+        public void WillPush(Route route, Route previousRoute) => Record("WillPush", route, previousRoute);
+
+        public void DidPush(Route route, Route previousRoute) => Record("DidPush", route, previousRoute);
+
+        public void WillPop(Route route, Route previousRoute) => Record("WillPop", route, previousRoute);
+
+        public void DidPop(Route route, Route previousRoute) => Record("DidPop", route, previousRoute);
+
+        public void WillReplace(Route newRoute, Route oldRoute) => Record("WillReplace", newRoute, oldRoute);
+
+        public void DidReplace(Route newRoute, Route oldRoute) => Record("DidReplace", newRoute, oldRoute);
+
+        private void Record(string callback, Route route, Route other)
+        {
+            _trace.Observer(callback + "(" + Name(route) + ", " + Name(other) + ")");
+        }
+
+        private static string Name(Route route) => route == null ? "null" : route.Key;
+    }
+
+    /// <summary>
     ///     Mounts a real <see cref="Navigator"/> and drives it a frame at a time, recording what happens.
     /// </summary>
     /// <remarks>
@@ -372,17 +418,33 @@ namespace UniMob.UI.Tests
         private const int QuietFramesRequired = 3;
         private const int MaxFrames = 300;
 
-        private NavigatorHost(NavigatorTrace trace, NavigatorState navigator)
+        private readonly string _rootKey;
+        private readonly Dictionary<string, Func<Route>> _routes;
+        private readonly TracingObserver _recorder;
+
+        private NavigatorHost(NavigatorTrace trace, NavigatorState navigator, string rootKey,
+            Dictionary<string, Func<Route>> routes, TracingObserver recorder)
         {
             Trace = trace;
             Navigator = navigator;
+            _rootKey = rootKey;
+            _routes = routes;
+            _recorder = recorder;
         }
 
         public NavigatorTrace Trace { get; }
 
         public NavigatorState Navigator { get; }
 
-        public static NavigatorHost Mount(string rootKey, RouteModalType rootModal, RouteFlavour rootFlavour)
+        /// <summary>
+        ///     Mounts a navigator whose observers are the trace recorder plus whatever a fixture supplies.
+        /// </summary>
+        /// <remarks>
+        ///     The recorder has to exist before the widget does, because the initial route is pushed from
+        ///     <c>InitState</c> and an observer supplied at construction is expected to hear it.
+        /// </remarks>
+        public static NavigatorHost Mount(string rootKey, RouteModalType rootModal, RouteFlavour rootFlavour,
+            params INavigatorObserver[] observers)
         {
             var trace = new NavigatorTrace();
             trace.Command("mount " + rootKey);
@@ -392,8 +454,35 @@ namespace UniMob.UI.Tests
                 { rootKey, () => Build(trace, rootKey, rootModal, rootFlavour) },
             };
 
-            var state = (NavigatorState) TestHarness.Mount(new Navigator(rootKey, routes));
-            return new NavigatorHost(trace, state);
+            var recorder = new TracingObserver(trace);
+            var widget = CreateWidget(rootKey, routes, recorder, observers);
+
+            var state = (NavigatorState) TestHarness.Mount(widget);
+            return new NavigatorHost(trace, state, rootKey, routes, recorder);
+        }
+
+        /// <summary>
+        ///     Replaces the navigator's widget with one carrying a different observer list, as a parent
+        ///     rebuilding with different configuration would.
+        /// </summary>
+        /// <remarks>
+        ///     A whole new widget rather than a mutated list, because that is the only way observers can
+        ///     change: they are configuration, and the navigator reads them off whichever widget is
+        ///     current. Same key and type, so the state is updated in place and the stack survives.
+        /// </remarks>
+        public void Rebuild(params INavigatorObserver[] observers)
+        {
+            Trace.Command("rebuild with new observers");
+            TestHarness.Update(Navigator, CreateWidget(_rootKey, _routes, _recorder, observers));
+        }
+
+        private static Navigator CreateWidget(string rootKey, Dictionary<string, Func<Route>> routes,
+            TracingObserver recorder, INavigatorObserver[] observers)
+        {
+            var composed = new List<INavigatorObserver> { recorder };
+            composed.AddRange(observers);
+
+            return new Navigator(rootKey, routes, composed);
         }
 
         /// <summary>

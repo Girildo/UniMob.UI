@@ -17,6 +17,20 @@ namespace UniMob.UI.Internal
 
         public TState State { get; private set; }
 
+        /// <summary>
+        ///     Raised for every trigger the machine accepts, after <see cref="State"/> has moved to the
+        ///     new state and before the transition's callback runs.
+        /// </summary>
+        /// <remarks>
+        ///     Published from in here rather than from around <see cref="Trigger"/>, because this is the
+        ///     only point that sees a transition at the moment it happens. A transition's callback is free
+        ///     to trigger the machine again before it returns, and callers of this class do exactly that --
+        ///     a route's lifecycle chains several of its events -- so a wrapper around Trigger would report
+        ///     a chain innermost-first and would read <see cref="State"/> as wherever the chain ended
+        ///     rather than as the state its own transition reached.
+        /// </remarks>
+        public event Action<TState, TTrigger> Transitioned;
+
         public TriggerStateMachine(TState state) => State = state;
 
         public void AddTransition(TState state, TTrigger trigger, TState nextState) =>
@@ -39,6 +53,8 @@ namespace UniMob.UI.Internal
                 throw new InvalidOperationException($"Trigger {trigger} at {State} not allowed");
 
             State = nextState;
+
+            Transitioned?.Invoke(nextState, trigger);
 
             var result = _resultBuilders.TryGetValue(key, out var resultBuilder)
                 ? resultBuilder()

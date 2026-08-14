@@ -15,6 +15,8 @@ namespace UniMob.UI.Widgets
         private readonly TaskCompletionSource<object> _pushCompleter = new TaskCompletionSource<object>();
         private readonly TaskCompletionSource<object> _disposeCompleter = new TaskCompletionSource<object>();
 
+        private readonly MutableAtom<ScreenState> _screenState = Atom.Value(ScreenState.Initializing);
+
         private Func<bool> _backAction;
         private object _popResult = null;
 
@@ -24,7 +26,51 @@ namespace UniMob.UI.Widgets
             _machine = BuildStateMachine();
         }
 
-        public ScreenState ScreenState => _machine.State;
+        /// <summary>
+        ///     Which point of its lifecycle the route has reached.
+        /// </summary>
+        /// <remarks>
+        ///     An atom, so that following it is a reaction rather than a poll. Every other piece of public
+        ///     state in this subsystem already is one -- <c>NavigatorState.Screens</c>,
+        ///     <c>NavigationStack</c> and <c>TopmostRoute</c> -- and a plain getter here left polling as
+        ///     the only way to use a property the package had chosen to publish.
+        ///     <para>
+        ///         Reads "the machine has entered this state", not "the transition has finished": the
+        ///         machine moves before it runs the transition's handler. A <see cref="PageRoute"/> being
+        ///         popped therefore reports <see cref="ScreenState.Destroyed"/> for the whole of its exit
+        ///         animation. Where the edge matters more than the state -- most of all which of the two
+        ///         endings a route reached -- use <see cref="ScreenEventApplied"/> instead.
+        ///     </para>
+        /// </remarks>
+        public ScreenState ScreenState => _screenState.Value;
+
+        /// <summary>
+        ///     Raised for each screen event the route's state machine accepts, as it is applied.
+        /// </summary>
+        /// <remarks>
+        ///     The causes that <see cref="ScreenState"/> cannot report. Two different endings land on the
+        ///     same state -- <c>Created --Destroy--> Destroyed</c> when navigation removed the route, and
+        ///     <c>Created --Teardown--> Destroyed</c> when the tree it lived in went away -- so a consumer
+        ///     that has to tell them apart needs the cause and not the state.
+        ///     <para>
+        ///         One firing per transition the machine accepts, in the order it accepts them, including
+        ///         the self-transitions that change nothing. An event the machine chains onwards produces a
+        ///         firing of its own, so destroying a focused route reports Destroy three times: once for
+        ///         each step down to <see cref="ScreenState.Destroyed"/>.
+        ///     </para>
+        ///     <para>
+        ///         Raised before the transition's handler runs, and therefore before
+        ///         <see cref="ScreenState"/> can move again, so the state read from a subscriber is the one
+        ///         this event has just reached.
+        ///     </para>
+        ///     <para>
+        ///         Subscribers are told, never consulted: each is contained, so one that throws is logged
+        ///         and neither aborts the transition nor costs the subscribers after it their
+        ///         notification. Same terms as <see cref="INavigatorObserver"/>, and for the same reason --
+        ///         a transition already part-way through is not something a listener may cancel.
+        ///     </para>
+        /// </remarks>
+        public event Action<ScreenEvent> ScreenEventApplied;
 
         public RouteModalType ModalType => _settings.ModalType;
 
@@ -43,6 +89,8 @@ namespace UniMob.UI.Widgets
             //                  ↓ ↑
             //                Focused
             var fsm = new TriggerStateMachine<ScreenState, ScreenEvent, Task>(ScreenState.Initializing);
+
+            fsm.Transitioned += PublishTransition;
 
             fsm.On(ScreenEvent.Create)
                 .Allow(ScreenState.Initializing, ScreenState.Created, ExecTransition(OnCreate))
@@ -95,6 +143,43 @@ namespace UniMob.UI.Widgets
             return fsm;
         }
 
+        /// <summary>
+        ///     Mirrors an accepted transition onto the route's two public channels.
+        /// </summary>
+        /// <remarks>
+        ///     Both are published from the one place that knows a transition happened when it happens, so
+        ///     the atom passes through every intermediate state a chained event walks and a subscriber
+        ///     reading <see cref="ScreenState"/> sees the state the event it was handed just reached.
+        /// </remarks>
+        private void PublishTransition(ScreenState state, ScreenEvent screenEvent)
+        {
+            _screenState.Value = state;
+
+            var subscribers = ScreenEventApplied;
+
+            if (subscribers == null)
+            {
+                return;
+            }
+
+            // Walked one at a time rather than invoked as a multicast delegate, so that each subscriber is
+            // contained on its own: a throw neither escapes into the handler that triggered the machine
+            // and aborts the transition, nor costs the subscribers after it their notification. Walking a
+            // copy of the invocation list is also what makes a subscriber that unsubscribes from inside
+            // its own callback harmless.
+            foreach (var subscriber in subscribers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<ScreenEvent>) subscriber).Invoke(screenEvent);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
         private Func<Task, Task> ExecTransition(Func<Task> handler, ScreenEvent? screenEvent = null) =>
             previous => ExecuteTransitionInternal(previous, handler, screenEvent);
 
@@ -143,7 +228,9 @@ namespace UniMob.UI.Widgets
                 return _machine.Trigger(screenEvent) ?? Task.CompletedTask;
             }
 
-            Debug.LogErrorFormat("Cannot {0} scene {1} in {2} state", screenEvent, GetType().Name, ScreenState);
+            // Straight off the machine rather than through the atom: a diagnostic must not make whatever
+            // computation happens to be running depend on this route's lifecycle.
+            Debug.LogErrorFormat("Cannot {0} scene {1} in {2} state", screenEvent, GetType().Name, _machine.State);
             return Task.CompletedTask;
         }
 

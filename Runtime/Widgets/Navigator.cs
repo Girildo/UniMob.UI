@@ -14,13 +14,30 @@ namespace UniMob.UI.Widgets
 
         public Dictionary<string, Func<Route>> Routes { get; }
 
+        /// <summary>
+        ///     Who is told what this navigator does to its stack. May be null.
+        /// </summary>
+        /// <remarks>
+        ///     Configuration, like <see cref="Routes"/>, and read off the current widget the same way, so
+        ///     a rebuild that supplies a different set takes effect from the next operation onwards. Each
+        ///     operation announces to the set it started with, so no observer hears one edge of an
+        ///     operation without the other.
+        ///     <para>
+        ///         Every observer hears the initial route being pushed: the widget is in place before
+        ///         <c>InitState</c> runs, and pushing the initial route is the first thing it does.
+        ///     </para>
+        /// </remarks>
+        public IReadOnlyList<INavigatorObserver> Observers { get; }
+
         public Navigator(
             string initialRoute,
-            Dictionary<string, Func<Route>> routes
+            Dictionary<string, Func<Route>> routes,
+            IReadOnlyList<INavigatorObserver> observers = null
         )
         {
             InitialRoute = initialRoute;
             Routes = routes;
+            Observers = observers;
         }
 
         public override State CreateState() => new NavigatorState();

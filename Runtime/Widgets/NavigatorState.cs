@@ -17,6 +17,7 @@ namespace UniMob.UI.Widgets
         private readonly Stack<Route> _pendingPause = new Stack<Route>();
 
         private Task _task = Task.CompletedTask;
+        private bool _processing;
 
         public override WidgetViewReference View { get; }
             = WidgetViewReference.Resource("$$_Navigator");
@@ -241,18 +242,40 @@ namespace UniMob.UI.Widgets
             }
         }
 
+        /// <summary>
+        ///     Queues a batch of commands, and starts the loop that drains the queue if one is not already
+        ///     running.
+        /// </summary>
+        /// <remarks>
+        ///     Whether a loop is running is tracked by a flag rather than read off <c>_task</c>, because
+        ///     <c>_task</c> is not assigned until <see cref="ProcessCommandsLoop"/> reaches its first real
+        ///     await, and an operation whose every step completes synchronously never gets there. Anything
+        ///     that navigates from inside that window -- an observer callback, a route's
+        ///     <c>OnInitialize</c>, any handler the loop calls before it first yields -- would find
+        ///     <c>_task</c> still holding the previous, completed loop and start a second one on top of the
+        ///     first. Both then walk the same stack, and the inner one acts on routes the outer one has
+        ///     only half moved: pushing from a <c>DidPush</c> reached a route that was on the stack but not
+        ///     yet created, and tried to pause it.
+        /// </remarks>
         private void ApplyCommands([NotNull] params NavigatorCommand[] commands)
         {
             _pendingCommands.Enqueue(commands);
 
-            if (_task.IsCompleted)
+            if (_processing)
             {
-                _task = ProcessCommandsLoop();
+                return;
             }
+
+            _task = ProcessCommandsLoop();
         }
 
         private async Task ProcessCommandsLoop()
         {
+            // Set before the first await, so the synchronous prefix of the loop is covered too. That
+            // prefix is the whole of a navigation whose handlers all complete synchronously, which is
+            // every navigation that does not animate.
+            _processing = true;
+
             try
             {
                 while (_pendingCommands.Count > 0)
@@ -275,6 +298,10 @@ namespace UniMob.UI.Widgets
             catch (Exception e)
             {
                 Debug.LogException(e);
+            }
+            finally
+            {
+                _processing = false;
             }
         }
 
@@ -319,6 +346,17 @@ namespace UniMob.UI.Widgets
         private async Task PushInternal(NavigatorCommand.Push push)
         {
             var screen = push.Route;
+            var observers = SnapshotObservers();
+            var covered = _stack.Count > 0 ? _stack.Peek() : null;
+
+            // Announced before the route is built rather than after. Initialization is the only step of a
+            // push that can take arbitrarily long -- a route that preloads holds this interval open for as
+            // long as it likes -- so a bracket drawn after it would span nothing but the pause of the
+            // routes below, which Route's own lifecycle channel already reports in more detail. The cost
+            // is that a push whose initialization fails leaves WillPush unmatched; replace cannot avoid
+            // that case at all, so the guarantee was never available across the whole interface, and
+            // buying it here would have cost the only interval worth announcing.
+            NotifyWillPush(observers, screen, covered);
 
             // Built before anything already on screen is disturbed. OnInitialize is virtual, async and
             // supplied by the route, so it is the one step here that can fail or take arbitrarily long,
@@ -331,18 +369,61 @@ namespace UniMob.UI.Widgets
             {
                 await PauseScreens();
             }
-            else if (_stack.Count >= 1 && _stack.Peek().ScreenState == ScreenState.Focused)
+            else if (_stack.Count >= 1 && IsTopmostFocused())
             {
                 await _stack.Peek().ApplyScreenEvent(ScreenEvent.Unfocus);
             }
 
             _stack.Push(screen);
+
+            // After the mutation, never before: NavigationStack and TopmostRoute are atoms an observer can
+            // read from inside its own callback, and announcing first would make the two channels
+            // contradict each other for the length of the call.
+            NotifyDidPush(observers, screen, covered);
+
             await screen.ApplyScreenEvent(ScreenEvent.Create);
+        }
+
+        /// <summary>
+        ///     Whether the topmost route currently holds focus, asked without depending on the answer.
+        /// </summary>
+        /// <remarks>
+        ///     <see cref="ScreenState"/> is an atom now, and this is control flow rather than observation:
+        ///     the very next thing this push does is move that route out of the state it just read. Taken
+        ///     outside tracking so that pushing from inside a computation cannot make the computation
+        ///     depend on a route's lifecycle, matching <see cref="NavigatorStack"/>, whose <c>Peek</c> and
+        ///     <c>Count</c> are deliberately untracked beside its atom-backed public properties.
+        /// </remarks>
+        private bool IsTopmostFocused()
+        {
+            using (Atom.NoWatch)
+            {
+                return _stack.Peek().ScreenState == ScreenState.Focused;
+            }
         }
 
         private async Task ReplaceInternal(NavigatorCommand.Replace replace)
         {
             var screen = replace.Route;
+            var observers = SnapshotObservers();
+
+            // A replace with nothing to replace is a push, and which of the two this is can be settled
+            // before anything moves, so the observer hears the operation that actually happens instead of
+            // a replace with no old route to name.
+            var replaced = _stack.Count > 0 ? _stack.Peek() : null;
+
+            // Before the route is built, on the same reasoning as PushInternal, and unmatched on the same
+            // terms. Replace has that exposure regardless of where the bracket is drawn: its removal is
+            // deliberately not committed against a failing destroy, so it can abort before ever reaching
+            // the push half.
+            if (replaced != null)
+            {
+                NotifyWillReplace(observers, screen, replaced);
+            }
+            else
+            {
+                NotifyWillPush(observers, screen, null);
+            }
 
             // Built before the outgoing route is touched, which is what makes a replace atomic. Building
             // it last meant the old route had already been destroyed and popped by the time the new one
@@ -377,11 +458,26 @@ namespace UniMob.UI.Widgets
             }
 
             _stack.Push(screen);
+
+            if (replaced != null)
+            {
+                NotifyDidReplace(observers, screen, replaced);
+            }
+            else
+            {
+                NotifyDidPush(observers, screen, null);
+            }
+
             await screen.ApplyScreenEvent(ScreenEvent.Create);
         }
 
         private async Task PopToInternal(NavigatorCommand.PopTo popTo)
         {
+            // One snapshot for the whole command, not one per iteration: a PopTo is a single operation
+            // that happens to remove several routes, and every route it removes must be announced to the
+            // same set of observers.
+            var observers = SnapshotObservers();
+
             while (_stack.Count > 1)
             {
                 if (popTo.Route != null && _stack.Peek().Key == popTo.Route.Key)
@@ -390,6 +486,10 @@ namespace UniMob.UI.Widgets
                 }
 
                 var first = _stack.Peek();
+                var revealed = _stack.PeekBelow();
+
+                NotifyWillPop(observers, first, revealed);
+
                 var destroyTask = first.ApplyScreenEvent(ScreenEvent.Destroy);
 
                 if (first.ModalType == RouteModalType.Fullscreen)
@@ -406,6 +506,7 @@ namespace UniMob.UI.Widgets
                 finally
                 {
                     _stack.Pop();
+                    NotifyDidPop(observers, first, revealed);
                 }
             }
         }
@@ -417,7 +518,11 @@ namespace UniMob.UI.Widgets
                 return;
             }
 
+            var observers = SnapshotObservers();
             var first = _stack.Peek();
+            var revealed = _stack.PeekBelow();
+
+            NotifyWillPop(observers, first, revealed);
 
             first.SetResult(result);
 
@@ -443,6 +548,10 @@ namespace UniMob.UI.Widgets
             finally
             {
                 _stack.Pop();
+
+                // In the finally, so a pop that commits against a failed transition is still announced.
+                // Every WillPop is matched by a DidPop for exactly that reason.
+                NotifyDidPop(observers, first, revealed);
             }
         }
 
@@ -486,6 +595,131 @@ namespace UniMob.UI.Widgets
         private Task InitializeScreen(Route screen)
         {
             return screen.Initialize();
+        }
+
+        /// <summary>
+        ///     The observers an operation will announce to, fixed for the whole of it.
+        /// </summary>
+        /// <remarks>
+        ///     Observers are configuration on the widget, and an operation spans awaits during which the
+        ///     widget can be replaced. Reading the list again at the Did edge would let an observer hear
+        ///     the end of something it never heard the start of, and let another hear the start of
+        ///     something it never hears the end of.
+        /// </remarks>
+        private INavigatorObserver[] SnapshotObservers()
+        {
+            var observers = Widget.Observers;
+
+            if (observers == null || observers.Count == 0)
+            {
+                return Array.Empty<INavigatorObserver>();
+            }
+
+            var snapshot = new INavigatorObserver[observers.Count];
+
+            for (var index = 0; index < observers.Count; index++)
+            {
+                snapshot[index] = observers[index];
+            }
+
+            return snapshot;
+        }
+
+        // Every callback is dispatched the same way, and the shape is the point: iterate the snapshot the
+        // operation began with, and contain each observer separately. An observer that throws is logged
+        // and the rest still hear the callback, matching how Zone contains a ticker that throws -- the
+        // navigator's job is to navigate, and a consumer of notifications must not be able to stop it. The
+        // snapshot is what makes an observer that unregisters itself mid-callback harmless as well, since
+        // what is being walked is no longer the list it removed itself from.
+
+        private void NotifyWillPush(INavigatorObserver[] observers, Route route, Route previousRoute)
+        {
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    observer.WillPush(route, previousRoute);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        private void NotifyDidPush(INavigatorObserver[] observers, Route route, Route previousRoute)
+        {
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    observer.DidPush(route, previousRoute);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        private void NotifyWillPop(INavigatorObserver[] observers, Route route, Route previousRoute)
+        {
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    observer.WillPop(route, previousRoute);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        private void NotifyDidPop(INavigatorObserver[] observers, Route route, Route previousRoute)
+        {
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    observer.DidPop(route, previousRoute);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        private void NotifyWillReplace(INavigatorObserver[] observers, Route newRoute, Route oldRoute)
+        {
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    observer.WillReplace(newRoute, oldRoute);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        private void NotifyDidReplace(INavigatorObserver[] observers, Route newRoute, Route oldRoute)
+        {
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    observer.DidReplace(newRoute, oldRoute);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
         }
     }
 
@@ -557,6 +791,32 @@ namespace UniMob.UI.Widgets
 
 
         public Route Peek() => _stack.Peek();
+
+        /// <summary>
+        ///     The route that would become topmost if the current one were removed, or null when there is
+        ///     nothing underneath.
+        /// </summary>
+        /// <remarks>
+        ///     Untracked, like <see cref="Peek"/> and <see cref="Count"/>: this answers a question asked
+        ///     while the stack is being mutated, not one a widget observes. Walks the stack's own struct
+        ///     enumerator and stops at the second entry, so asking costs no allocation.
+        /// </remarks>
+        public Route PeekBelow()
+        {
+            var topmostSkipped = false;
+
+            foreach (var route in _stack)
+            {
+                if (topmostSkipped)
+                {
+                    return route;
+                }
+
+                topmostSkipped = true;
+            }
+
+            return null;
+        }
 
         public Route Pop()
         {
