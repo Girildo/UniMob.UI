@@ -22,6 +22,14 @@ namespace UniMob.UI.Layout
         /// The size of the widget that received the gesture at the time of the event.
         /// </summary>
         public Vector2 Size { get; set; }
+
+        /// <summary>
+        /// Contact pressure reported by the device, passed through untouched from the event.
+        /// Pens and pressure-sensitive touchscreens report a value in 0..1; devices that do not
+        /// measure pressure, and input modules that do not fill the field, leave it at 0. Treat 0
+        /// as "not reported" rather than "no contact".
+        /// </summary>
+        public float Pressure { get; set; }
     }
 
     public record TapDetails : GestureDetails

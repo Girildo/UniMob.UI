@@ -106,6 +106,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 LocalPosition = localPosition,
                 GlobalPosition = globalPosition,
                 PointerId = eventData.pointerId,
+                Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
                 Size = (this.transform as RectTransform).rect.size,
             };
@@ -133,6 +134,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 LocalPosition = localPosition,
                 GlobalPosition = globalPosition,
                 PointerId = eventData.pointerId,
+                Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
                 Size = (this.transform as RectTransform).rect.size,
             };
@@ -163,6 +165,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 LocalPosition = localPosition,
                 GlobalPosition = globalPosition,
                 PointerId = eventData.pointerId,
+                Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
                 Size = (this.transform as RectTransform).rect.size,
             };
@@ -208,6 +211,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 LocalDelta = logicalDelta,
 
                 PointerId = eventData.pointerId,
+                Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
 
                 Size = (this.transform as RectTransform).rect.size,
