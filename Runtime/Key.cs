@@ -50,6 +50,17 @@ namespace UniMob.UI
         public bool Equals(GlobalKey<T> other) => ReferenceEquals(other, this);
 
         public T CurrentState => UntypedCurrentState is T state ? state : default;
+
+        /// <summary>
+        ///     <b>[Atom]</b> The bound state, read reactively: a reader created before the key is
+        ///     bound depends on the binding itself and wakes when it is written, rather than sleeping
+        ///     on an empty dependency list.
+        /// </summary>
+        /// <remarks>
+        ///     <see cref="CurrentState"/> stays untracked, so identity reads gain no dependency as a
+        ///     side effect. Pick this one only when the read is meant to be observed.
+        /// </remarks>
+        public T TrackedState => TrackedCurrentState is T state ? state : default;
     }
 
     public abstract class GlobalKey : Key
