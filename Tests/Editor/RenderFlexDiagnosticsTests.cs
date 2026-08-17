@@ -53,6 +53,49 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(LayoutIssueCode.NonFiniteChildSize, row.ChildrenLayout[0].Issue);
         }
 
+        // Stretching needs something to stretch to. Against an unbounded cross axis the request is
+        // dropped rather than pinning every child to a tight infinity, and the flex that asked for it
+        // is what gets named: the children that would then answer infinity are all innocent, so
+        // reporting them instead points at every widget except the one to change.
+        [Test]
+        public void Stretch_AgainstAnUnboundedCrossAxis_IsDropped_AndNamesTheFlex()
+        {
+            using var log = RecordingReporter.Capture();
+
+            var row = new Row { CrossAxisAlignment = CrossAxisAlignment.Stretch };
+            row.Children.Add(Box(180, 40));
+
+            var state = TestHarness.Mount(row);
+            var render = (RenderFlex)state.RenderObject;
+
+            render.Layout(new LayoutConstraints(1344, 0, 1344, Inf));
+
+            var issue = log.Single();
+            Assert.AreEqual(LayoutIssueCode.UnboundedConstraint, issue.Code);
+            Assert.AreEqual(LayoutAxes.Vertical, issue.Axes);
+
+            // Dropped, not honoured: the child keeps its own height.
+            Assert.AreEqual(40f, render.ChildrenLayout[0].Size.y, 0.01f);
+        }
+
+        // A bounded cross axis still stretches, and says nothing.
+        [Test]
+        public void Stretch_AgainstABoundedCrossAxis_StillStretches_AndReportsNothing()
+        {
+            using var log = RecordingReporter.Capture();
+
+            var row = new Row { CrossAxisAlignment = CrossAxisAlignment.Stretch };
+            row.Children.Add(Box(180, 40));
+
+            var state = TestHarness.Mount(row);
+            var render = (RenderFlex)state.RenderObject;
+
+            render.Layout(new LayoutConstraints(1344, 705, 1344, 705));
+
+            Assert.IsEmpty(log);
+            Assert.AreEqual(705f, render.ChildrenLayout[0].Size.y, 0.01f);
+        }
+
         // Site 2: the inflexible children do not fit. The overflow is absorbed by giving the flexible
         // children nothing, and the biggest inflexible child is named -- the 200px box, not the 5px
         // one that merely happened to be last.

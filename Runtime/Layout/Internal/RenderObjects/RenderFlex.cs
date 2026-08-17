@@ -33,6 +33,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private LayoutAxes MainAxis =>
             _axis == Axis.Horizontal ? LayoutAxes.Horizontal : LayoutAxes.Vertical;
 
+        private LayoutAxes CrossAxis =>
+            _axis == Axis.Horizontal ? LayoutAxes.Vertical : LayoutAxes.Horizontal;
+
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
             ChildrenLayoutBuffer.Clear();
@@ -71,7 +74,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var nonFlexConstraints = isHorizontal
                 ? new LayoutConstraints(0, 0, float.PositiveInfinity, maxCrossAxis)
                 : new LayoutConstraints(0, 0, maxCrossAxis, float.PositiveInfinity);
-            var shouldStretchCrossAxis = _state.CrossAxisAlignment == CrossAxisAlignment.Stretch;
+            // Stretch means "be exactly as big as the cross axis", which has no answer when that axis
+            // is unbounded -- Tighten() would pin every child to a tight infinity, and each of them
+            // would then correctly report infinity, which the parent flex zeroes. A row measured for
+            // its natural height (any non-flex child of a Column) is exactly that case, so stretching
+            // is dropped there and the children hug instead. It is reported rather than merely
+            // dropped: the children that go on to answer infinity are all innocent, so without this
+            // the console names every one of them and never the row that asked for the impossible.
+            var wantsStretch = _state.CrossAxisAlignment == CrossAxisAlignment.Stretch;
+            var shouldStretchCrossAxis = wantsStretch && !float.IsInfinity(maxCrossAxis);
+
+            if (wantsStretch && !shouldStretchCrossAxis)
+            {
+                ReportUnboundedConstraint(CrossAxis, constraints, BoundTheCrossAxisOrDoNotStretch);
+            }
 
             foreach (var i in _nonFlexChildrenIndices)
             {
@@ -133,11 +149,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 {
                     var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
 
+                    // Fit decides the MAIN axis only: tight pins the child to its share, loose lets it
+                    // take less. The cross axis is the flex's own box either way, so it is passed on
+                    // whatever the fit -- a child cannot legally be laid out taller than the row it is
+                    // in. Dropping it (as a bare TightFor on the main axis does) hands the child an
+                    // unbounded cross axis, and anything that sizes itself from what it is given --
+                    // a fill-me leaf, a scroll viewport -- then has nothing to resolve against.
                     LayoutConstraints flexConstraints;
                     if (isHorizontal)
                     {
                         flexConstraints = fit == FlexFit.Tight
-                                    ? LayoutConstraints.TightFor(width: flexSpace)
+                                    ? new LayoutConstraints(minWidth: flexSpace, minHeight: 0, maxWidth: flexSpace, maxHeight: maxCrossAxis)
                                     : new LayoutConstraints(minWidth: 0, minHeight: 0, maxWidth: flexSpace, maxHeight: maxCrossAxis);
 
                         flexConstraints = flexConstraints.Tighten(height: shouldStretchCrossAxis ? maxCrossAxis : null);
@@ -145,7 +167,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     else // isVertical
                     {
                         flexConstraints = fit == FlexFit.Tight
-                                    ? LayoutConstraints.TightFor(height: flexSpace)
+                                    ? new LayoutConstraints(minWidth: 0, minHeight: flexSpace, maxWidth: maxCrossAxis, maxHeight: flexSpace)
                                     : new LayoutConstraints(minWidth: 0, minHeight: 0, maxWidth: maxCrossAxis, maxHeight: flexSpace);
 
 
@@ -464,6 +486,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private const string MakeRoomOrScroll =
             "Give the flex a bounded main axis, wrap a child in Expanded/Flexible, or let it scroll.";
+
+        private const string BoundTheCrossAxisOrDoNotStretch =
+            "CrossAxisAlignment.Stretch has nothing to stretch to while the cross axis is unbounded. "
+            + "Bound it from an ancestor (Expanded, SizedBox, or a fixed-size parent), or use "
+            + "CrossAxisAlignment.Start so the children keep their own size.";
 
         private const string BoundTheMainAxis =
             "An ancestor must bound this axis (Expanded, SizedBox, or a fixed-size parent), "

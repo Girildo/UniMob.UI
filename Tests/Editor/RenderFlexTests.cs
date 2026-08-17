@@ -95,16 +95,20 @@ namespace UniMob.UI.Tests
         public void FlexChildren_SplitRemainingSpace_ByFlexRatio()
         {
             var fixedChild = Box(100, 10);
-            var flexChild1 = TestHarness.Mount(new Expanded
-            {
-                Flex = 1,
-                Child = new FixedSizeBox { Size = new Vector2(0, 10) },
-            });
-            var flexChild2 = TestHarness.Mount(new Expanded
-            {
-                Flex = 2,
-                Child = new FixedSizeBox { Size = new Vector2(0, 10) },
-            });
+            var flexChild1 = TestHarness.Mount(
+                new Expanded
+                {
+                    Flex = 1,
+                    Child = new FixedSizeBox { Size = new Vector2(0, 10) },
+                }
+            );
+            var flexChild2 = TestHarness.Mount(
+                new Expanded
+                {
+                    Flex = 2,
+                    Child = new FixedSizeBox { Size = new Vector2(0, 10) },
+                }
+            );
 
             var state = new FakeFlexContainerState
             {
@@ -119,6 +123,62 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(200f, flex.ChildrenLayout[2].Size.x, 0.01f);
         }
 
+        // FlexFit governs the main axis. It must not also decide whether the child is told about the
+        // cross axis: a tight-fit child used to be handed an unbounded one, so anything sizing itself
+        // from what it was given (a fill-me leaf, a scroll viewport) had nothing to resolve against,
+        // and anything with a size of its own overflowed the flex silently. The oversized box below
+        // reports 999 on the cross axis unless the flex's own bound reaches it.
+        [Test]
+        public void Row_TightFlexChild_IsStillBoundedByTheRowsOwnCrossAxis()
+        {
+            var flexChild = TestHarness.Mount(
+                new Expanded { Child = new FixedSizeBox { Size = new Vector2(0, 999) } }
+            );
+
+            var state = new FakeFlexContainerState { Children = new[] { flexChild } };
+
+            var flex = new RenderFlex(state, Axis.Horizontal);
+            flex.Layout(LayoutConstraints.Tight(200, 50));
+
+            Assert.AreEqual(50f, flex.ChildrenLayout[0].Size.y, 0.01f);
+        }
+
+        [Test]
+        public void Column_TightFlexChild_IsStillBoundedByTheColumnsOwnCrossAxis()
+        {
+            var flexChild = TestHarness.Mount(
+                new Expanded { Child = new FixedSizeBox { Size = new Vector2(999, 0) } }
+            );
+
+            var state = new FakeFlexContainerState { Children = new[] { flexChild } };
+
+            var flex = new RenderFlex(state, Axis.Vertical);
+            flex.Layout(LayoutConstraints.Tight(50, 200));
+
+            Assert.AreEqual(50f, flex.ChildrenLayout[0].Size.x, 0.01f);
+        }
+
+        // A loose fit already kept the cross axis, and must go on doing so: the two fits differ on
+        // the main axis alone.
+        [Test]
+        public void Row_LooseFlexChild_KeepsBothTheMainAxisShareAndTheCrossAxisBound()
+        {
+            var flexChild = TestHarness.Mount(
+                new Flexible
+                {
+                    Fit = FlexFit.Loose,
+                    Child = new FixedSizeBox { Size = new Vector2(999, 999) },
+                }
+            );
+
+            var state = new FakeFlexContainerState { Children = new[] { flexChild } };
+
+            var flex = new RenderFlex(state, Axis.Horizontal);
+            flex.Layout(LayoutConstraints.Tight(200, 50));
+
+            Assert.AreEqual(new Vector2(200, 50), flex.ChildrenLayout[0].Size);
+        }
+
         [Test]
         public void Overflow_ClampsFreeSpaceToZero_AndLogsWarning_InsteadOfThrowing()
         {
@@ -129,7 +189,10 @@ namespace UniMob.UI.Tests
 
             var flex = new RenderFlex(state, Axis.Horizontal);
 
-            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("overflowed"));
+            LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex("overflowed")
+            );
 
             Assert.DoesNotThrow(() => flex.Layout(LayoutConstraints.Tight(100, 10)));
         }
@@ -142,7 +205,9 @@ namespace UniMob.UI.Tests
             // WidthProbeBox echoes the width straight back as its "intrinsic height", making that
             // value directly observable.
             var fixedChild = Box(50, 10);
-            var flexChild = TestHarness.Mount(new Expanded { Flex = 1, Child = new WidthProbeBox() });
+            var flexChild = TestHarness.Mount(
+                new Expanded { Flex = 1, Child = new WidthProbeBox() }
+            );
 
             var state = new FakeFlexContainerState { Children = new[] { fixedChild, flexChild } };
             var flex = new RenderFlex(state, Axis.Horizontal);
