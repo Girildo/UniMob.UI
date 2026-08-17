@@ -16,7 +16,11 @@ namespace UniMob.UI.Tests
         public void ForcesChildToBoxConstraints_WhenParentIsLooser()
         {
             var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 10) });
-            var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Tight(50, 50), Child = child };
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Tight(50, 50),
+                Child = child,
+            };
 
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Loose(1000, 1000));
@@ -28,12 +32,79 @@ namespace UniMob.UI.Tests
         public void BoxConstraintsAreClamped_ByAStricterParent()
         {
             var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 10) });
-            var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Tight(200, 200), Child = child };
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Tight(200, 200),
+                Child = child,
+            };
 
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(new Vector2(100, 100), box.PeekSize());
+        }
+
+        // The box states the constraints, so the box decides the answer: a child that reports
+        // something else does not get to speak through the very box meant to bound it. Forwarding the
+        // child's size verbatim let a tight height be contradicted by whatever the child said.
+        [Test]
+        public void TightBoxConstraints_PinTheSize_EvenWhenTheChildDisagrees()
+        {
+            var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 999) });
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.TightFor(height: 84f),
+                Child = child,
+            };
+
+            var box = new RenderConstrainedBox(state);
+            box.Layout(new LayoutConstraints(1136, 0, 1136, float.PositiveInfinity));
+
+            Assert.AreEqual(84f, box.PeekSize().y, 0.01f);
+        }
+
+        // Deliberately NOT collapsed to zero. There is no size to resolve an infinity to here, and
+        // substituting one turns a broken layout into a silently zero-sized widget that looks exactly
+        // like the bug it is hiding. It stays infinite so the view boundary reports it.
+        [Test]
+        public void ExpandingChild_UnderAnUnboundedParent_StaysInfiniteRatherThanSilentlyZero()
+        {
+            var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 10) });
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Expanded(),
+                Child = child,
+            };
+
+            var box = new RenderConstrainedBox(state);
+            box.Layout(new LayoutConstraints(0, 0, 1136, float.PositiveInfinity));
+
+            Assert.AreEqual(
+                1136f,
+                box.PeekSize().x,
+                0.01f,
+                "a bounded axis still expands to its max"
+            );
+            Assert.IsTrue(
+                float.IsPositiveInfinity(box.PeekSize().y),
+                "an unbounded axis must stay reportable, not become a silent zero"
+            );
+        }
+
+        [Test]
+        public void ExpandingChild_StillFillsEveryBoundedAxis()
+        {
+            var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 10) });
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Expanded(),
+                Child = child,
+            };
+
+            var box = new RenderConstrainedBox(state);
+            box.Layout(LayoutConstraints.Loose(1136, 753));
+
+            Assert.AreEqual(new Vector2(1136, 753), box.PeekSize());
         }
 
         [Test]
@@ -54,7 +125,11 @@ namespace UniMob.UI.Tests
         [Test]
         public void NoChild_UnboundedEverywhere_CollapsesToParentMinimum()
         {
-            var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Expanded(), Child = null };
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Expanded(),
+                Child = null,
+            };
 
             var box = new RenderConstrainedBox(state);
             box.Layout(LayoutConstraints.Unbounded());
@@ -65,7 +140,11 @@ namespace UniMob.UI.Tests
         [Test]
         public void IntrinsicWidth_WhenBoxIsTight_IgnoresChild()
         {
-            var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Tight(50, 60), Child = null };
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Tight(50, 60),
+                Child = null,
+            };
 
             var box = new RenderConstrainedBox(state);
 
@@ -76,7 +155,11 @@ namespace UniMob.UI.Tests
         public void IntrinsicWidth_WhenBoxIsLoose_ClampsChildsIntrinsicWidth()
         {
             var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(200, 10) });
-            var state = new FakeConstrainedBoxState { BoxConstraints = LayoutConstraints.Loose(100, 100), Child = child };
+            var state = new FakeConstrainedBoxState
+            {
+                BoxConstraints = LayoutConstraints.Loose(100, 100),
+                Child = child,
+            };
 
             var box = new RenderConstrainedBox(state);
 

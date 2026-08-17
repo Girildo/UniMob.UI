@@ -24,16 +24,24 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // If there is no child, we size ourself to the smallest size allowed by the child constraints.
             if (_state.Child != null)
             {
+                // Constrained, not forwarded verbatim: a child's size is only meaningful within the
+                // constraints it was handed, and a box that named a tight height has to report that
+                // height whatever the child answers. Forwarding raw let a child's violation through
+                // the very box meant to bound it -- a SizedBox with a tight 84 could report otherwise.
+                //
+                // An unbounded axis is deliberately left alone here. There is no size to clamp an
+                // infinity to, and quietly substituting one turns a broken layout into a silently
+                // zero-sized widget; leaving it lets the view boundary report it against the widget
+                // that actually asked for the impossible.
                 ChildSize = LayoutChild(_state.Child, childConstraints);
-                return ChildSize;
+                return ChildSize = childConstraints.Constrain(ChildSize);
             }
-
 
             // Constraining Vector2.zero mathematically guarantees we return the MinWidth/MinHeight.
             var width = childConstraints.MinWidth;
             var height = childConstraints.MinHeight;
 
-            // If the box was asked to expand (Infinity), but the parent ALSO gave infinite space, 
+            // If the box was asked to expand (Infinity), but the parent ALSO gave infinite space,
             // we must collapse back to the parent's safest minimum bound (usually 0) to avoid crashing Unity.
             if (float.IsPositiveInfinity(width)) width = constraints.MinWidth;
             if (float.IsPositiveInfinity(height)) height = constraints.MinHeight;
