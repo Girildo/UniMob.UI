@@ -429,11 +429,13 @@ namespace UniMob.UI.Tests
         }
 
         [UnityTest]
-        public IEnumerator Pop_OnARouteThatWasNeverPushed_Throws()
+        public IEnumerator Pop_OnARouteThatWasNeverPushed_ReportsNotTopmost()
         {
+            // On top of nothing, so nothing to do. Not an exception: owners pop in teardown paths, and a
+            // route handed to a fake or stubbed navigation service is an ordinary thing in a test.
             var route = new DecidingRoute("Loose", RouteModalType.Popup, Allow);
 
-            Assert.Throws<InvalidOperationException>(() => route.Pop());
+            Assert.AreEqual(PopOutcome.NotTopmost, route.Pop().Result);
             yield break;
         }
 

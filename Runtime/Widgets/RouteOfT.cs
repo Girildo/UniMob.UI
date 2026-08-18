@@ -33,13 +33,9 @@ namespace UniMob.UI.Widgets
         /// </summary>
         public Task<PopOutcome> Pop(T value)
         {
-            if (Navigator == null)
-            {
-                throw new InvalidOperationException(
-                    "Route '" + Key + "' has never been pushed onto a navigator, so there is nothing to pop it from.");
-            }
-
-            return Navigator.PopRoute(this, PopResult.OfValue(value));
+            return Navigator == null
+                ? Task.FromResult(PopOutcome.NotTopmost)
+                : Navigator.PopRoute(this, PopResult.OfValue(value));
         }
 
         /// <summary>

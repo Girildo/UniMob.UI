@@ -304,23 +304,6 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Transitional: pops whatever is on top, on the caller's authority, with an untyped value.
-        ///     Kept only while the app's navigation service still calls it; a pop should name its route
-        ///     (<see cref="Route.Pop"/>, <see cref="Route{T}.Pop(T)"/>) or ask it (<see cref="RequestPop"/>).
-        /// </summary>
-        public Task<PopOutcome> Pop(object result = null)
-        {
-            var top = Topmost();
-
-            if (top == null)
-            {
-                return Task.FromResult(PopOutcome.NotTopmost);
-            }
-
-            return PopRoute(top, result == null ? PopResult.None() : PopResult.OfValue(result));
-        }
-
-        /// <summary>
         ///     The pop a route performs on its own authority; reached through <see cref="Route.Pop"/>.
         /// </summary>
         internal Task<PopOutcome> PopRoute(Route route, PopResult result)

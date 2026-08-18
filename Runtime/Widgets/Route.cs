@@ -93,7 +93,8 @@ namespace UniMob.UI.Widgets
         ///     The navigator this route was pushed onto, or null while it has never been pushed. Set by the
         ///     navigator when it takes the route, and kept afterwards: a route that has already left the
         ///     stack still knows where it was, which is what lets a late <see cref="Pop"/> answer
-        ///     <see cref="PopOutcome.NotTopmost"/> instead of throwing.
+        ///     <see cref="PopOutcome.NotTopmost"/>; one that was never pushed answers the same, since it
+        ///     is on top of nothing.
         /// </summary>
         public NavigatorState Navigator { get; private set; }
 
@@ -109,13 +110,15 @@ namespace UniMob.UI.Widgets
         ///     ask instead through <see cref="NavigatorState.RequestPop"/>.
         /// </summary>
         /// <returns>
-        ///     <see cref="PopOutcome.Popped"/>, or why nothing happened. Completed already when the route
-        ///     was on top and nothing about it animates.
+        ///     <see cref="PopOutcome.Popped"/>, or why nothing happened -- <see cref="PopOutcome.NotTopmost"/>
+        ///     also for a route that was never pushed, since it is on top of nothing. Completed already when
+        ///     the route was on top and nothing about it animates.
         /// </returns>
-        /// <exception cref="InvalidOperationException">The route has never been pushed.</exception>
         public Task<PopOutcome> Pop()
         {
-            return RequireNavigator().PopRoute(this, PopResult.None());
+            return Navigator == null
+                ? Task.FromResult(PopOutcome.NotTopmost)
+                : Navigator.PopRoute(this, PopResult.None());
         }
 
         /// <summary>
@@ -151,17 +154,6 @@ namespace UniMob.UI.Widgets
         /// </summary>
         protected virtual void OnPopCompleted(PopResult result)
         {
-        }
-
-        private NavigatorState RequireNavigator()
-        {
-            if (Navigator == null)
-            {
-                throw new InvalidOperationException(
-                    "Route '" + Key + "' has never been pushed onto a navigator, so there is nothing to pop it from.");
-            }
-
-            return Navigator;
         }
 
         private TriggerStateMachine<ScreenState, ScreenEvent, Task> BuildStateMachine()
