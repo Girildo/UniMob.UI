@@ -438,6 +438,30 @@ namespace UniMob.UI.Tests
         }
 
         [UnityTest]
+        public IEnumerator Pop_IssuedBeforeItsPushHasRun_QueuesBehindThePush()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            // An animated route mid-exit keeps the command loop busy, so the next push waits.
+            var animated = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage);
+            host.Navigator.Push(animated);
+            yield return host.Settle();
+            animated.Pop();
+
+            var route = new DecidingRoute("C", RouteModalType.Popup, Allow);
+            host.Navigator.Push(route);
+
+            // The owner withdraws it before the push has even run: no throw, and the pop lands after.
+            var outcome = route.Pop();
+            yield return host.Settle();
+
+            Assert.AreEqual(PopOutcome.Popped, outcome.Result);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+            Assert.AreSame(host.Navigator, route.Navigator, "attached when the push was issued");
+        }
+
+        [UnityTest]
         public IEnumerator Pop_OnARouteThatAlreadyLeft_ReportsNotTopmostRatherThanThrowing()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);

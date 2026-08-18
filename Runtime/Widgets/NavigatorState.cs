@@ -149,6 +149,10 @@ namespace UniMob.UI.Widgets
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
+            // Attached as soon as the push is issued, not when the command runs: the command may sit
+            // behind an exit animation, and an owner that pops its route in that window -- a state
+            // disposing right after it pushed -- must find a navigator to queue the pop with.
+            route.AttachTo(this);
             ApplyCommands(new NavigatorCommand.Push(route));
             return route;
         }
@@ -169,6 +173,7 @@ namespace UniMob.UI.Widgets
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
+            route.AttachTo(this);
             ApplyCommands(
                 new NavigatorCommand.PopTo(null),
                 new NavigatorCommand.Replace(route, null, PopResult.None(PopRequest.Teardown)));
@@ -190,6 +195,7 @@ namespace UniMob.UI.Widgets
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
+            route.AttachTo(this);
             ApplyCommands(new NavigatorCommand.Replace(route, null, PopResult.None(PopRequest.Teardown)));
             return route;
         }
