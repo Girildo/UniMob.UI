@@ -35,6 +35,18 @@ namespace UniMob.UI.Widgets
 
         IState[] IMultiChildLayoutState.Children => Screens;
 
+        /// <summary>
+        ///     The routes on the stack, topmost first: a fresh snapshot after every push, pop and replace,
+        ///     so a reaction over it fires per mutation (coalesced per frame, like every atom).
+        /// </summary>
+        /// <remarks>
+        ///     A snapshot rather than the live collection because of how this atom is consumed. A computed
+        ///     atom compares its new value with the cached one and swallows a change that compares equal;
+        ///     the stack used to hand out one collection instance for its whole life, so every mutation
+        ///     compared equal and this property never obsoleted a subscriber. It was correct to read during
+        ///     a build, which re-reads the contents, and useless to react to. Handing out a new instance per
+        ///     mutation is what makes it honest.
+        /// </remarks>
         [Atom]
         public IReadOnlyCollection<Route> NavigationStack => _stack.Routes;
 
@@ -812,6 +824,9 @@ namespace UniMob.UI.Widgets
         /// </remarks>
         private int _revision = int.MinValue;
 
+        private Route[] _snapshot;
+        private int _snapshotRevision;
+
         public int Count => _stack.Count;
 
         public Route TopmostRoute
@@ -832,12 +847,22 @@ namespace UniMob.UI.Widgets
             }
         }
 
+        /// <summary>
+        ///     A snapshot of the stack, topmost first, rebuilt once per mutation and shared until the next.
+        /// </summary>
         public IReadOnlyCollection<Route> Routes
         {
             get
             {
                 _version.Get();
-                return _stack;
+
+                if (_snapshot == null || _snapshotRevision != _revision)
+                {
+                    _snapshot = _stack.ToArray();
+                    _snapshotRevision = _revision;
+                }
+
+                return _snapshot;
             }
         }
 

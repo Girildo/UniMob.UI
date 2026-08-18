@@ -17,24 +17,23 @@ namespace UniMob.UI.Tests
     public class NavigatorSignalProbeTests
     {
         /// <summary>
-        ///     <see cref="NavigatorState.NavigationStack"/> never notifies, and
-        ///     <see cref="NavigatorState.TopmostRoute"/> reports only the per-frame net.
+        ///     <see cref="NavigatorState.NavigationStack"/> and <see cref="NavigatorState.TopmostRoute"/> both
+        ///     report only the per-frame net of what happened.
         /// </summary>
         /// <remarks>
-        ///     Two separate causes, both worth knowing before reaching for either as a navigation signal.
+        ///     Worth knowing before reaching for either as a navigation signal.
         ///     <para>
-        ///         <b>NavigationStack is inert.</b> <c>NavigatorStack.Routes</c> returns the same
-        ///         <c>Stack&lt;Route&gt;</c> instance on every read, and <c>ComputedAtom.Evaluate</c>
-        ///         returns early without obsoleting its subscribers when the new value equals the cached
-        ///         one. The collection's identity never changes, so the comparison always succeeds and the
-        ///         change never propagates. The atom is correct to read during a build, which re-reads its
-        ///         contents, and silently useless to react to. That is a defect, not a design.
+        ///         <b>NavigationStack notifies per mutation.</b> <c>NavigatorStack.Routes</c> hands out a
+        ///         fresh snapshot after every push, pop and replace, so the computed atom sees a new value
+        ///         and obsoletes its subscribers -- even when the contents came back the same within the
+        ///         frame, since a new instance is a new value. It used not to: one collection instance for
+        ///         its whole life, so <c>ComputedAtom.Evaluate</c> compared equal every time and the change
+        ///         never propagated -- correct to read during a build, useless to react to.
         ///     </para>
         ///     <para>
-        ///         <b>TopmostRoute is lossy.</b> Its identity does change, so it does propagate, but
-        ///         reactions are actualized once per frame by <c>AtomScheduler</c>. Anything that happens
-        ///         and unhappens inside one frame is invisible, and a batch that moves the stack several
-        ///         times reports only where it ended up.
+        ///         <b>Both are lossy.</b> Reactions are actualized once per frame by <c>AtomScheduler</c>.
+        ///         Anything that happens and unhappens inside one frame is invisible, and a batch that
+        ///         moves the stack several times reports only where it ended up.
         ///     </para>
         /// </remarks>
         [UnityTest]
@@ -74,9 +73,12 @@ namespace UniMob.UI.Tests
                 lifetime.Dispose();
             }
 
-            Assert.AreEqual(1, stackRuns,
-                "NavigationStack fired only its initial run, across five stack mutations: the collection " +
-                "identity never changes, so the computed never obsoletes its subscribers");
+            Assert.AreEqual(5, stackRuns,
+                "NavigationStack fired its initial run and once per frame in which the stack was mutated: " +
+                "B pushed, T pushed and popped, C pushed, and the NewRoot. The frame that only pushed and " +
+                "popped T counts, because the snapshot is new even though its contents came back the same; " +
+                "and the NewRoot's three removals and one replace collapse into a single run. Whether the " +
+                "contents actually changed is for a computation over them to decide");
 
             CollectionAssert.AreEqual(
                 new[] { "A", "B", "C", "D" },
