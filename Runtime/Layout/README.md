@@ -126,6 +126,8 @@ Not every widget needs a render object. A widget defined purely in terms of othe
 
 **Materialise** — to turn an unbounded axis into a concrete number, which a render object can only do once something bounds it.
 
+**Hug / fill** — the two answers a box that could legally be either size gives when asked to size itself. Which one it gives is decided by the constraints it was handed, never by anything at the call site: `Align` fills a bounded axis and hugs an unbounded one, so the same widget fills as a flex child (a flex hands its own cross axis down) and hugs under a scroll list. A non-null `WidthFactor`/`HeightFactor` forces hugging on that axis whatever its value — the rule is `factor != null || !bounded` — which is why `WidthFactor = 1` is the idiom for "hug" rather than the no-op multiply it reads as, and why a hugged axis has no space left for `Alignment` to move the child in. Flutter's `RenderPositionedBox` rule, kept verbatim so that its documentation applies here.
+
 **Build-only state** — a state with no view, and therefore no `GameObject`. `HocState`, `StatelessElement`, and every state owning a `RenderProxy` (`Flexible`, `Positioned`, `Opacity`, `Clickable`, and the rest). Invisible in Unity's Hierarchy window, and disproportionately the cause of layout faults.
 
 **Owner** — the single state a render object belongs to. A structural relationship, held by the render object, true whether or not anything is being reported.

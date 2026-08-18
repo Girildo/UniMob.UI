@@ -75,5 +75,52 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(0f, box.PeekSize().x);
             Assert.AreEqual(Vector2.zero, box.ChildPosition);
         }
+
+        // The two tests below pin the composition rather than either half of it. Each half is
+        // already covered -- RenderFlex hands a tight flex child its own cross axis
+        // (RenderFlexTests.Column_TightFlexChild_IsStillBoundedByTheColumnsOwnCrossAxis), and a
+        // bounded axis makes this box fill (NoFactors_BoundedConstraints_ExpandsToFill... above) --
+        // but it is the pair that surprises: an Align written to sit beside its siblings quietly
+        // becomes as wide as the whole flex, taking the flex with it, and the alignment that was
+        // meant to place it has no space left to place it in. The size factor is the only way to
+        // ask for the other behaviour, so both modes are pinned here together.
+        [Test]
+        public void Align_AsTightFlexChild_FillsTheFlexCrossAxis()
+        {
+            var flexChild = TestHarness.Mount(
+                new Expanded { Child = new Align { Child = new FixedSizeBox { Size = new Vector2(120, 44) } } }
+            );
+
+            var flex = new RenderFlex(
+                new FakeFlexContainerState { Children = new[] { flexChild } },
+                Axis.Vertical
+            );
+            flex.Layout(LayoutConstraints.Tight(1000, 600));
+
+            Assert.AreEqual(1000f, flex.ChildrenLayout[0].Size.x, 0.01f);
+        }
+
+        [Test]
+        public void Align_AsTightFlexChild_WithSizeFactor_HugsItsChild()
+        {
+            var flexChild = TestHarness.Mount(
+                new Expanded
+                {
+                    Child = new Align
+                    {
+                        WidthFactor = 1f,
+                        Child = new FixedSizeBox { Size = new Vector2(120, 44) },
+                    },
+                }
+            );
+
+            var flex = new RenderFlex(
+                new FakeFlexContainerState { Children = new[] { flexChild } },
+                Axis.Vertical
+            );
+            flex.Layout(LayoutConstraints.Tight(1000, 600));
+
+            Assert.AreEqual(120f, flex.ChildrenLayout[0].Size.x, 0.01f);
+        }
     }
 }
