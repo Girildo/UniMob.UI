@@ -19,8 +19,10 @@ namespace UniMob.UI.Widgets
     ///     <para>
     ///         Observers are told, never consulted. Each call is made inside a try/catch, so one that
     ///         throws is logged and navigation carries on; nothing an observer does or returns can change
-    ///         where the navigator goes. Refusing a navigation is a different mechanism and belongs on
-    ///         <see cref="Route"/>, where per-route lifecycle already lives.
+    ///         where the navigator goes. Refusing a navigation is a different mechanism and lives on
+    ///         <see cref="Route"/>: <see cref="NavigatorState.RequestPop"/> asks a route through
+    ///         <c>Route.OnPopRequested</c> before anything moves, and a refused request fires no
+    ///         observer callback at all, since nothing happened.
     ///     </para>
     ///     <para>
     ///         Pushing from inside a callback is safe: the navigator is part-way through its command loop,

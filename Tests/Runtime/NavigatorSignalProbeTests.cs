@@ -58,7 +58,7 @@ namespace UniMob.UI.Tests
                 // Pushed and popped within one frame. A whole route was created, focused, destroyed and
                 // disposed here.
                 host.Navigator.Push(host.Create("T", RouteModalType.Fullscreen, RouteFlavour.Plain));
-                host.Navigator.Pop();
+                host.Navigator.TopmostRoute.Pop();
                 yield return host.Settle();
 
                 host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));

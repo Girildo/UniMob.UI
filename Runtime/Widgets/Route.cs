@@ -11,14 +11,18 @@ namespace UniMob.UI.Widgets
     {
         private readonly RouteSettings _settings;
         private readonly TriggerStateMachine<ScreenState, ScreenEvent, Task> _machine;
-        private readonly TaskCompletionSource<object> _popCompleter = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<PopResult> _popCompleter = new TaskCompletionSource<PopResult>();
         private readonly TaskCompletionSource<object> _pushCompleter = new TaskCompletionSource<object>();
         private readonly TaskCompletionSource<object> _disposeCompleter = new TaskCompletionSource<object>();
 
         private readonly MutableAtom<ScreenState> _screenState = Atom.Value(ScreenState.Initializing);
 
         private Func<bool> _backAction;
-        private object _popResult = null;
+
+        // What PopTask completes with. A pop command overwrites it before the route is destroyed; every
+        // other ending -- teardown, an un-asked replace, the navigator emptying itself -- leaves it at this
+        // default, so a route removed without being asked reports exactly that.
+        private PopResult _popResult = PopResult.None(PopRequest.Teardown);
 
         protected Route(RouteSettings settings)
         {
@@ -74,12 +78,91 @@ namespace UniMob.UI.Widgets
 
         public RouteModalType ModalType => _settings.ModalType;
 
-        public Task<object> PopTask => _popCompleter.Task;
+        /// <summary>
+        ///     Completes when the route has left the stack, with what it left with. A <see cref="Route{T}"/>
+        ///     also offers the same result typed, as <c>Result</c>.
+        /// </summary>
+        public Task<PopResult> PopTask => _popCompleter.Task;
 
         public Task PushTask => _pushCompleter.Task;
         public Task DisposeTask => _disposeCompleter.Task;
 
         public string Key => _settings.Name;
+
+        /// <summary>
+        ///     The navigator this route was pushed onto, or null while it has never been pushed. Set by the
+        ///     navigator when it takes the route, and kept afterwards: a route that has already left the
+        ///     stack still knows where it was, which is what lets a late <see cref="Pop"/> answer
+        ///     <see cref="PopOutcome.NotTopmost"/> instead of throwing.
+        /// </summary>
+        public NavigatorState Navigator { get; private set; }
+
+        internal void AttachTo(NavigatorState navigator)
+        {
+            Navigator = navigator;
+        }
+
+        /// <summary>
+        ///     Closes the route without a value, on its own authority: nobody is asked, and the pop happens
+        ///     as soon as the navigator gets to it. This is how a route's own content -- or the code that
+        ///     pushed it and still holds it -- ends it. Chrome and the system, which do not own the route,
+        ///     ask instead through <see cref="NavigatorState.RequestPop"/>.
+        /// </summary>
+        /// <returns>
+        ///     <see cref="PopOutcome.Popped"/>, or why nothing happened. Completed already when the route
+        ///     was on top and nothing about it animates.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">The route has never been pushed.</exception>
+        public Task<PopOutcome> Pop()
+        {
+            return RequireNavigator().PopRoute(this, PopResult.None());
+        }
+
+        /// <summary>
+        ///     Consulted when chrome or the system asks for this route to be popped. Answer
+        ///     <see cref="PopDecision.Refuse"/> to keep the route on screen. Runs outside the navigator's
+        ///     command loop, so it may take as long as it likes and may itself navigate -- push a dialog and
+        ///     await it, say; the pop, if allowed, is queued afterwards and only lands if the route is still
+        ///     on top. Untyped routes cannot attach a value to their answer; <see cref="Route{T}"/> can.
+        /// </summary>
+        protected virtual Task<PopDecision> OnPopRequested(object request)
+        {
+            return Task.FromResult(PopDecision.Allow());
+        }
+
+        /// <summary>
+        ///     The navigator's view of the answer, untyped. <see cref="Route{T}"/> overrides this to route
+        ///     the question through its typed hook instead.
+        /// </summary>
+        internal virtual async Task<PopVerdict> DecideAsync(object request)
+        {
+            var decision = await OnPopRequested(request);
+            return decision.IsAllowed ? PopVerdict.Allowed(false, null) : PopVerdict.Refused;
+        }
+
+        internal void SetPopResult(PopResult result)
+        {
+            _popResult = result;
+        }
+
+        /// <summary>
+        ///     Told once, with the result PopTask is about to complete with. <see cref="Route{T}"/> completes
+        ///     its typed task from here.
+        /// </summary>
+        protected virtual void OnPopCompleted(PopResult result)
+        {
+        }
+
+        private NavigatorState RequireNavigator()
+        {
+            if (Navigator == null)
+            {
+                throw new InvalidOperationException(
+                    "Route '" + Key + "' has never been pushed onto a navigator, so there is nothing to pop it from.");
+            }
+
+            return Navigator;
+        }
 
         private TriggerStateMachine<ScreenState, ScreenEvent, Task> BuildStateMachine()
         {
@@ -308,17 +391,20 @@ namespace UniMob.UI.Widgets
         /// </remarks>
         private void CompletePop()
         {
-            Zone.Current.NextFrame(() => _popCompleter.TrySetResult(_popResult));
+            var result = _popResult;
+
+            Zone.Current.NextFrame(() =>
+            {
+                if (_popCompleter.TrySetResult(result))
+                {
+                    OnPopCompleted(result);
+                }
+            });
         }
 
         public bool HandleBack() => _backAction?.Invoke() ?? false;
 
         public abstract Widget Build(BuildContext context);
-
-        public void SetResult(object result)
-        {
-            _popResult = result;
-        }
 
         void IBackActionOwner.SetBackAction(Func<bool> action)
         {
@@ -326,7 +412,7 @@ namespace UniMob.UI.Widgets
         }
 
         [Obsolete("await route is Obsolete. Use route.PopTask or route.PushTask instead")]
-        public TaskAwaiter<object> GetAwaiter()
+        public TaskAwaiter<PopResult> GetAwaiter()
         {
             return PopTask.GetAwaiter();
         }

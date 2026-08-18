@@ -16,6 +16,12 @@ namespace UniMob.UI.Widgets
         private readonly Queue<NavigatorCommand[]> _pendingCommands = new Queue<NavigatorCommand[]>();
         private readonly Stack<Route> _pendingPause = new Stack<Route>();
 
+        // One request per route at a time. A second requester arriving while the route is still deciding
+        // shares the pending answer instead of asking again, so a route is never asked twice about the
+        // same moment and two requesters never race each other to the same pop.
+        private readonly Dictionary<Route, Task<PopOutcome>> _pendingRequests =
+            new Dictionary<Route, Task<PopOutcome>>();
+
         private Task _task = Task.CompletedTask;
         private bool _processing;
 
@@ -147,28 +153,25 @@ namespace UniMob.UI.Widgets
             return route;
         }
 
-        public async Task<TResult> Push<TResult>(Route route)
-        {
-            if (route == null) throw new ArgumentNullException(nameof(route));
-
-            ApplyCommands(new NavigatorCommand.Push(route));
-            var result = await route.PopTask;
-            return result is TResult tResult ? tResult : default;
-        }
-
         public Route NewRootNamed(string routeName)
         {
             var route = CreateRoute(routeName);
             return NewRoot(route);
         }
 
+        /// <summary>
+        ///     Empties the stack and puts <paramref name="route"/> in its place, without asking any of the
+        ///     routes it removes: this is how the app's root changes hands, and a route is no more consulted
+        ///     about it than about the navigator unmounting. Everything removed completes with
+        ///     <see cref="PopRequest.Teardown"/>.
+        /// </summary>
         public Route NewRoot(Route route)
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
             ApplyCommands(
                 new NavigatorCommand.PopTo(null),
-                new NavigatorCommand.Replace(route));
+                new NavigatorCommand.Replace(route, null, PopResult.None(PopRequest.Teardown)));
             return route;
         }
 
@@ -178,24 +181,199 @@ namespace UniMob.UI.Widgets
             return Replace(route);
         }
 
+        /// <summary>
+        ///     Swaps the topmost route for <paramref name="route"/> without asking it. Teardown-class, like
+        ///     <see cref="NewRoot"/>: the removed route completes with <see cref="PopRequest.Teardown"/>.
+        ///     To swap a route that gets a say, use <see cref="RequestReplace"/>.
+        /// </summary>
         public Route Replace(Route route)
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
-            ApplyCommands(new NavigatorCommand.Replace(route));
+            ApplyCommands(new NavigatorCommand.Replace(route, null, PopResult.None(PopRequest.Teardown)));
             return route;
         }
 
-        public void PopTo(Route route)
+        /// <summary>
+        ///     Asks <paramref name="route"/> whether it may be popped and, if it agrees, pops it carrying
+        ///     <paramref name="request"/> and whatever value the route attached to its answer.
+        /// </summary>
+        /// <remarks>
+        ///     The question is put outside the command loop, so the route may take its time and may
+        ///     navigate while deciding; the pop itself is then queued and lands only if the route is still
+        ///     topmost, which is what <see cref="PopOutcome.NotTopmost"/> reports. Nothing else on the
+        ///     stack is held still meanwhile: another push may cover the route, and if it does the answer
+        ///     is honest about it rather than the pop removing the wrong route. A route already being
+        ///     asked is not asked again; the second requester shares the pending outcome.
+        ///     <para>
+        ///         <paramref name="request"/> is the caller's to define and is carried through untouched: it
+        ///         is what the route's hook receives and what ends up as <see cref="PopResult.Request"/>.
+        ///     </para>
+        /// </remarks>
+        public Task<PopOutcome> RequestPop(Route route, object request)
         {
-            //if (route == null) throw new ArgumentNullException(nameof(route));
+            if (route == null) throw new ArgumentNullException(nameof(route));
 
-            ApplyCommands(new NavigatorCommand.PopTo(route));
+            if (route.Navigator != this || Topmost() != route)
+            {
+                return Task.FromResult(PopOutcome.NotTopmost);
+            }
+
+            if (_pendingRequests.TryGetValue(route, out var pending))
+            {
+                return pending;
+            }
+
+            var task = RunRequest(route, request, verdict => PopRoute(route, verdict.ToResult(request)));
+            RememberRequest(route, task);
+            return task;
         }
 
-        public void Pop(object result = null)
+        /// <summary>
+        ///     Asks <paramref name="outgoing"/> whether it may go and, if it agrees, replaces it with
+        ///     <paramref name="incoming"/> in one stack change, so nothing ever observes the stack without
+        ///     either of them. Same terms as <see cref="RequestPop"/>; the outgoing route's result carries
+        ///     <paramref name="request"/> and the value its answer supplied.
+        /// </summary>
+        /// <returns>
+        ///     <see cref="PopOutcome.Popped"/> when the swap happened. On any other outcome
+        ///     <paramref name="incoming"/> was not pushed.
+        /// </returns>
+        public Task<PopOutcome> RequestReplace(Route outgoing, Route incoming, object request)
         {
-            ApplyCommands(new NavigatorCommand.Pop(result));
+            if (outgoing == null) throw new ArgumentNullException(nameof(outgoing));
+            if (incoming == null) throw new ArgumentNullException(nameof(incoming));
+
+            if (outgoing.Navigator != this || Topmost() != outgoing)
+            {
+                return Task.FromResult(PopOutcome.NotTopmost);
+            }
+
+            if (_pendingRequests.TryGetValue(outgoing, out var pending))
+            {
+                // Someone else is already closing it. Whatever they get, this replace did not happen:
+                // either the route refused, or it left through their pop and the incoming route was
+                // never pushed. Report the latter as NotTopmost so the caller falls back to a plain push.
+                return MapJoined(pending);
+            }
+
+            var task = RunRequest(outgoing, request, verdict => ReplaceRoute(outgoing, incoming, verdict.ToResult(request)));
+            RememberRequest(outgoing, task);
+            return task;
+        }
+
+        /// <summary>
+        ///     Pops route after route, asking each, until <paramref name="target"/> is on top -- or, when
+        ///     <paramref name="target"/> is null, until one route is left. Stops at the first route that
+        ///     refuses or that is no longer where the walk expected it, and says which.
+        /// </summary>
+        /// <remarks>
+        ///     One request per route, in turn, rather than one command that removes them all: each route is
+        ///     asked while it is genuinely topmost, which is the only moment its answer is about anything
+        ///     real. Between two steps the revealed route is resumed and focused as after any pop.
+        /// </remarks>
+        public async Task<PopToOutcome> RequestPopTo(Route target, object request)
+        {
+            while (true)
+            {
+                var top = Topmost();
+
+                if (top == null || top == target || target == null && _stack.Count <= 1)
+                {
+                    return PopToOutcome.ReachedTarget();
+                }
+
+                if (_stack.Count <= 1)
+                {
+                    return PopToOutcome.Stopped(top, PopOutcome.LastRoute);
+                }
+
+                var outcome = await RequestPop(top, request);
+
+                if (outcome != PopOutcome.Popped)
+                {
+                    return PopToOutcome.Stopped(top, outcome);
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Transitional: pops whatever is on top, on the caller's authority, with an untyped value.
+        ///     Kept only while the app's navigation service still calls it; a pop should name its route
+        ///     (<see cref="Route.Pop"/>, <see cref="Route{T}.Pop(T)"/>) or ask it (<see cref="RequestPop"/>).
+        /// </summary>
+        public Task<PopOutcome> Pop(object result = null)
+        {
+            var top = Topmost();
+
+            if (top == null)
+            {
+                return Task.FromResult(PopOutcome.NotTopmost);
+            }
+
+            return PopRoute(top, result == null ? PopResult.None() : PopResult.OfValue(result));
+        }
+
+        /// <summary>
+        ///     The pop a route performs on its own authority; reached through <see cref="Route.Pop"/>.
+        /// </summary>
+        internal Task<PopOutcome> PopRoute(Route route, PopResult result)
+        {
+            var command = new NavigatorCommand.Pop(route, result);
+            ApplyCommands(command);
+            return command.Outcome.Task;
+        }
+
+        private Task<PopOutcome> ReplaceRoute(Route outgoing, Route incoming, PopResult outgoingResult)
+        {
+            var command = new NavigatorCommand.Replace(incoming, outgoing, outgoingResult);
+            ApplyCommands(command);
+            return command.Outcome.Task;
+        }
+
+        private async Task<PopOutcome> RunRequest(Route route, object request, Func<PopVerdict, Task<PopOutcome>> commit)
+        {
+            try
+            {
+                var verdict = await route.DecideAsync(request);
+
+                if (!verdict.IsAllowed)
+                {
+                    return PopOutcome.Refused;
+                }
+
+                return await commit(verdict);
+            }
+            finally
+            {
+                _pendingRequests.Remove(route);
+            }
+        }
+
+        private void RememberRequest(Route route, Task<PopOutcome> task)
+        {
+            // Only while it is still pending: RunRequest clears the slot in its finally, and for a decision
+            // that completed synchronously that has already happened by the time we get here.
+            if (!task.IsCompleted)
+            {
+                _pendingRequests[route] = task;
+            }
+        }
+
+        private static async Task<PopOutcome> MapJoined(Task<PopOutcome> pending)
+        {
+            var outcome = await pending;
+            return outcome == PopOutcome.Popped ? PopOutcome.NotTopmost : outcome;
+        }
+
+        /// <summary>
+        ///     The route on top, asked without tracking: this is control flow, not something a
+        ///     computation should come to depend on. Null on an empty stack rather than the throw
+        ///     <see cref="TopmostRoute"/> reserves for it.
+        /// </summary>
+        private Route Topmost()
+        {
+            return _stack.Count > 0 ? _stack.Peek() : null;
         }
 
         public bool HandleBack()
@@ -339,7 +517,7 @@ namespace UniMob.UI.Widgets
             switch (command)
             {
                 case NavigatorCommand.Pop pop:
-                    return PopInternal(pop.Result);
+                    return PopInternal(pop);
 
                 case NavigatorCommand.PopTo backTo:
                     return PopToInternal(backTo);
@@ -360,6 +538,10 @@ namespace UniMob.UI.Widgets
             var screen = push.Route;
             var observers = SnapshotObservers();
             var covered = _stack.Count > 0 ? _stack.Peek() : null;
+
+            // The route learns where it lives before anything else happens to it, so even OnInitialize can
+            // already reach the navigator it is being pushed onto.
+            screen.AttachTo(this);
 
             // Announced before the route is built rather than after. Initialization is the only step of a
             // push that can take arbitrarily long -- a route that preloads holds this interval open for as
@@ -424,6 +606,18 @@ namespace UniMob.UI.Widgets
             // a replace with no old route to name.
             var replaced = _stack.Count > 0 ? _stack.Peek() : null;
 
+            // A requested replace names the route it was agreed with. If that route is no longer on top
+            // by the time the command runs -- it left through its own pop, or something was pushed over
+            // it while it was deciding -- the swap it agreed to no longer exists, and pushing the incoming
+            // route anyway would replace a stranger. Nothing happens, and the requester is told so.
+            if (replace.Target != null && replaced != replace.Target)
+            {
+                replace.Outcome.TrySetResult(PopOutcome.NotTopmost);
+                return;
+            }
+
+            screen.AttachTo(this);
+
             // Before the route is built, on the same reasoning as PushInternal, and unmatched on the same
             // terms. Replace has that exposure regardless of where the bracket is drawn: its removal is
             // deliberately not committed against a failing destroy, so it can abort before ever reaching
@@ -445,6 +639,10 @@ namespace UniMob.UI.Widgets
 
             if (_stack.Count > 0)
             {
+                // What the outgoing route reports it left with: the agreed answer for a requested replace,
+                // the teardown marker for an un-asked one. Set before the destroy so OnDestroy sees it.
+                _stack.Peek().SetPopResult(replace.OutgoingResult);
+
                 // The removal is deliberately not committed the way PopInternal and PopToInternal commit
                 // theirs. Those two cannot empty the stack, since both refuse below depth 1, whereas a
                 // replace removes before it adds: committing against a failing destroy would abort the
@@ -480,6 +678,10 @@ namespace UniMob.UI.Widgets
                 NotifyDidPush(observers, screen, null);
             }
 
+            // Answered once the swap is on the stack, before the incoming route is created: the requester
+            // asked whether the outgoing route went, and it has.
+            replace.Outcome.TrySetResult(PopOutcome.Popped);
+
             await screen.ApplyScreenEvent(ScreenEvent.Create);
         }
 
@@ -502,6 +704,10 @@ namespace UniMob.UI.Widgets
 
                 NotifyWillPop(observers, first, revealed);
 
+                // Un-asked by construction: this is NewRoot clearing the way, and the routes it removes
+                // report the same ending as they would at teardown.
+                first.SetPopResult(PopResult.None(PopRequest.Teardown));
+
                 var destroyTask = first.ApplyScreenEvent(ScreenEvent.Destroy);
 
                 if (first.ModalType == RouteModalType.Fullscreen)
@@ -523,20 +729,32 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private async Task PopInternal(object result)
+        private async Task PopInternal(NavigatorCommand.Pop pop)
         {
             if (_stack.Count <= 1)
             {
+                pop.Outcome.TrySetResult(_stack.Count == 1 && _stack.Peek() == pop.Target
+                    ? PopOutcome.LastRoute
+                    : PopOutcome.NotTopmost);
+                return;
+            }
+
+            var first = _stack.Peek();
+
+            // Pops name their target. One issued for a route that has since left, or been covered, does
+            // nothing rather than removing whatever happens to be on top now.
+            if (first != pop.Target)
+            {
+                pop.Outcome.TrySetResult(PopOutcome.NotTopmost);
                 return;
             }
 
             var observers = SnapshotObservers();
-            var first = _stack.Peek();
             var revealed = _stack.PeekBelow();
 
             NotifyWillPop(observers, first, revealed);
 
-            first.SetResult(result);
+            first.SetPopResult(pop.Result);
 
             var destroyTask = first.ApplyScreenEvent(ScreenEvent.Destroy);
 
@@ -564,6 +782,10 @@ namespace UniMob.UI.Widgets
                 // In the finally, so a pop that commits against a failed transition is still announced.
                 // Every WillPop is matched by a DidPop for exactly that reason.
                 NotifyDidPop(observers, first, revealed);
+
+                // Likewise: the route is off the stack, which is what the outcome reports, whatever its
+                // transition did on the way.
+                pop.Outcome.TrySetResult(PopOutcome.Popped);
             }
         }
 
@@ -777,13 +999,27 @@ namespace UniMob.UI.Widgets
 
     internal abstract class NavigatorCommand
     {
+        /// <summary>
+        ///     Removes <see cref="Target"/> if it is on top when the command runs, and says what happened.
+        /// </summary>
         public sealed class Pop : NavigatorCommand
         {
-            public object Result { get; }
+            public Route Target { get; }
+            public PopResult Result { get; }
+            public TaskCompletionSource<PopOutcome> Outcome { get; } =
+                new TaskCompletionSource<PopOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            public Pop(object result) => this.Result = result;
+            public Pop([NotNull] Route target, PopResult result)
+            {
+                Target = target;
+                Result = result;
+            }
         }
 
+        /// <summary>
+        ///     Un-asked removal down to a route, or to the last one when <see cref="Route"/> is null. Only
+        ///     <c>NewRoot</c> issues it.
+        /// </summary>
         public sealed class PopTo : NavigatorCommand
         {
             public Route Route { get; }
@@ -798,11 +1034,25 @@ namespace UniMob.UI.Widgets
             public Push([NotNull] Route route) => Route = route;
         }
 
+        /// <summary>
+        ///     Swaps the topmost route for <see cref="Route"/>. With a <see cref="Target"/>, only if that
+        ///     is what is on top; without one, whatever is on top, un-asked. <see cref="OutgoingResult"/> is
+        ///     what the removed route reports.
+        /// </summary>
         public class Replace : NavigatorCommand
         {
             public Route Route { get; }
+            [CanBeNull] public Route Target { get; }
+            public PopResult OutgoingResult { get; }
+            public TaskCompletionSource<PopOutcome> Outcome { get; } =
+                new TaskCompletionSource<PopOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            public Replace([NotNull] Route route) => Route = route;
+            public Replace([NotNull] Route route, [CanBeNull] Route target, PopResult outgoingResult)
+            {
+                Route = route;
+                Target = target;
+                OutgoingResult = outgoingResult;
+            }
         }
     }
 

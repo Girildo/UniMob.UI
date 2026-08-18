@@ -54,10 +54,10 @@ namespace UniMob.UI.Tests
                 host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
                 yield return host.Settle();
 
-                host.Navigator.Pop();
+                host.Navigator.TopmostRoute.Pop();
                 yield return host.Settle();
 
-                host.Navigator.Pop();
+                host.Navigator.TopmostRoute.Pop();
                 yield return host.Settle();
             }
             finally

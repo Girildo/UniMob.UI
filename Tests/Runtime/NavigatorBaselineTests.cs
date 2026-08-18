@@ -189,7 +189,7 @@ namespace UniMob.UI.Tests
             host.End();
 
             host.Begin("pop");
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
             host.End();
 
@@ -236,7 +236,7 @@ namespace UniMob.UI.Tests
             host.End();
 
             host.Begin("pop at depth 1");
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
             host.End();
 
@@ -254,9 +254,11 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
-        ///     Popping several routes at once resumes each one on its way past it, so an intermediate
-        ///     route is resumed and then immediately paused and destroyed. That churn is real and is
-        ///     pinned here deliberately; it is a consequence of UnpauseScreens running per iteration.
+        ///     Walking down the stack asks and pops one route at a time, so an intermediate route is
+        ///     resumed and focused on its way past and then immediately unfocused, paused and destroyed.
+        ///     That churn is real and is pinned here deliberately: each pop is a command of its own, and
+        ///     between two of them the revealed route is genuinely topmost -- it may be asked something,
+        ///     and its answer may take frames -- so it is treated as after any pop.
         /// </summary>
         [UnityTest]
         public IEnumerator PopTo_AcrossThreeRoutes_ResumesEachRouteBeforeDestroyingIt()
@@ -278,7 +280,7 @@ namespace UniMob.UI.Tests
             host.End();
 
             host.Begin("popTo A");
-            host.Navigator.PopTo(root);
+            host.Navigator.RequestPopTo(root, "test");
             yield return host.Settle();
             host.End();
 
@@ -318,7 +320,9 @@ namespace UniMob.UI.Tests
                 "  C OnDestroy",
                 "  B OnResume",
                 "  > DidPop(C, B)",
+                "  B OnFocus",
                 "  > WillPop(B, A)",
+                "  B OnFocusLost",
                 "  B OnPause",
                 "  B OnDestroy",
                 "  A OnResume",
@@ -349,7 +353,7 @@ namespace UniMob.UI.Tests
 
             // Null is a documented argument here, not an oversight: PopTo's command marks it CanBeNull
             // and reads it as "no target", which PopToInternal turns into "stop at the root".
-            host.Navigator.PopTo(null!);
+            host.Navigator.RequestPopTo(null, "test");
             yield return host.Settle();
             host.End();
 
@@ -613,7 +617,7 @@ namespace UniMob.UI.Tests
             host.End();
 
             host.Begin("pop animated");
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
             host.End();
 
@@ -668,7 +672,7 @@ namespace UniMob.UI.Tests
             Assert.IsTrue(pushed.PushTask.IsCompleted, "PushTask should complete once the route is pushed");
             Assert.IsFalse(pushed.PopTask.IsCompleted, "PopTask should not complete while the route is on the stack");
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             Assert.IsTrue(pushed.PopTask.IsCompleted, "PopTask should complete once the route is popped");

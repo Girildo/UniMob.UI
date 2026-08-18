@@ -63,7 +63,7 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             // Runs synchronously as far as the animation gate inside OnDestroy, and parks there.
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
 
             Assert.AreEqual(ScreenState.Destroyed, animated.ScreenState,
                 "the machine commits to Destroyed before waiting on the exit animation");

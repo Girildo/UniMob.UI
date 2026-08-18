@@ -68,7 +68,7 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
             observer.Calls.Clear();
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             CollectionAssert.AreEqual(
@@ -97,7 +97,7 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
             observer.Calls.Clear();
 
-            host.Navigator.PopTo(root);
+            host.Navigator.RequestPopTo(root, "test");
             yield return host.Settle();
 
             CollectionAssert.AreEqual(
@@ -173,7 +173,7 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
             observer.Calls.Clear();
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             CollectionAssert.AreEqual(
@@ -201,7 +201,7 @@ namespace UniMob.UI.Tests
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
             yield return host.Settle();
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count, "navigation ran to completion");

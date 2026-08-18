@@ -43,7 +43,7 @@ namespace UniMob.UI.Tests
             host.Navigator.Push(failing);
             yield return host.Settle();
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,
@@ -65,18 +65,23 @@ namespace UniMob.UI.Tests
                 host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy));
             yield return host.Settle();
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             AssertNoFinishedRouteOnTheStack(host);
         }
 
         /// <summary>
-        ///     A failure part-way through a multi-route pop keeps everything already removed removed, and
-        ///     stops at the route that failed rather than carrying on past it.
+        ///     A walk down the stack asks and pops one route at a time, so one route failing to destroy is
+        ///     that route's affair: it is removed all the same, and the walk carries on to the next.
         /// </summary>
+        /// <remarks>
+        ///     This used to stop at the failed route, when PopTo was one command removing several routes and
+        ///     a throw aborted its remaining iterations. RequestPopTo issues one pop per route, each committed
+        ///     on its own, and a committed pop reports Popped whatever its transition did on the way.
+        /// </remarks>
         [UnityTest]
-        public IEnumerator PopTo_WhenADestroyFailsAsynchronously_StopsAtTheFailedRoute()
+        public IEnumerator PopTo_WhenADestroyFailsAsynchronously_CarriesOnPastTheFailedRoute()
         {
             LogAssert.ignoreFailingMessages = true;
 
@@ -92,13 +97,13 @@ namespace UniMob.UI.Tests
             host.Navigator.Push(failing);
             yield return host.Settle();
 
-            host.Navigator.PopTo(root);
+            host.Navigator.RequestPopTo(root, "test");
             yield return host.Settle();
 
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,
                 "the route that failed to destroy is still removed");
-            Assert.AreEqual(2, host.Navigator.NavigationStack.Count,
-                "the failure aborts the remaining iterations, so B survives");
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count,
+                "the walk carries on past the failed route down to the root");
 
             AssertNoFinishedRouteOnTheStack(host);
         }
@@ -128,7 +133,7 @@ namespace UniMob.UI.Tests
             host.Navigator.Push(failing);
             yield return host.Settle();
 
-            host.Navigator.Pop();
+            host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,

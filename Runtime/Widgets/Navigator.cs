@@ -69,12 +69,10 @@ namespace UniMob.UI.Widgets
 
         public static Route Push(BuildContext context, Route route) => Of(context).Push(route);
 
-        public static Task<TResult> Push<TResult>(BuildContext context, Route route) =>
-            Of(context).Push<TResult>(route);
-
         public static Route PushNamed(BuildContext context, string routeName) => Of(context).PushNamed(routeName);
 
-        public static void Pop(BuildContext context) => Of(context).Pop();
+        /// <summary>Pops the topmost route on its own authority; the caller is taken to own it.</summary>
+        public static Task<PopOutcome> Pop(BuildContext context) => Of(context).TopmostRoute.Pop();
 
         public static Route NewRoot(BuildContext context, Route route) => Of(context).NewRoot(route);
 
@@ -84,6 +82,7 @@ namespace UniMob.UI.Widgets
 
         public static Route ReplaceNamed(BuildContext context, string routeName) => Of(context).ReplaceNamed(routeName);
 
-        public static void PopTo(BuildContext context, Route route) => Of(context).PopTo(route);
+        public static Task<PopToOutcome> PopTo(BuildContext context, Route route, object request) =>
+            Of(context).RequestPopTo(route, request);
     }
 }
