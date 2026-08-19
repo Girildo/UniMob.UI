@@ -97,8 +97,10 @@ namespace UniMob.UI.Widgets
             Outcome = outcome;
         }
 
-        internal static PopToOutcome ReachedTarget() => new PopToOutcome(true, null, PopOutcome.Popped);
+        /// <summary>A walk that reached its target.</summary>
+        public static PopToOutcome ReachedTarget() => new PopToOutcome(true, null, PopOutcome.Popped);
 
-        internal static PopToOutcome Stopped(Route at, PopOutcome outcome) => new PopToOutcome(false, at, outcome);
+        /// <summary>A walk that stopped short, at <paramref name="at"/>, because of <paramref name="outcome"/>.</summary>
+        public static PopToOutcome Stopped(Route at, PopOutcome outcome) => new PopToOutcome(false, at, outcome);
     }
 }
