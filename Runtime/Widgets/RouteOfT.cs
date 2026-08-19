@@ -1,22 +1,21 @@
+using System;
+using System.Threading.Tasks;
+
 namespace UniMob.UI.Widgets
 {
-    using System;
-    using System.Threading.Tasks;
 
     /// <summary>
     ///     A route that leaves the stack with a value of a known type.
     /// </summary>
     /// <remarks>
-    ///     The route is the one thing that knows what it returns, so this is where typing lives. The two
-    ///     ways a value can enter the pop are both typed: the route's own <see cref="Pop(T)"/>, and the
+    ///     The two ways a value can enter the pop are both typed: the route's own <see cref="Pop(T)"/>, and the
     ///     value a <see cref="PopDecision{T}"/> carries when the route is asked. Awaiting <see cref="Result"/>
-    ///     therefore yields a <see cref="PopResult{T}"/> and never an object to cast. The untyped
+    ///     therefore yields a <see cref="PopResult{T}"/>. The untyped
     ///     <see cref="Route.PopTask"/> completes as well, for callers that hold only a <see cref="Route"/>.
     /// </remarks>
     public abstract class Route<T> : Route
     {
-        // Asynchronous continuations for the same reason as the untyped completer this one mirrors: both
-        // are completed in turn for the one close, and neither awaiter may resume in between.
+        // Asynchronous continuations, like the untyped completer: see Route.CompletePop.
         private readonly TaskCompletionSource<PopResult<T>> _resultCompleter =
             new TaskCompletionSource<PopResult<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -82,8 +81,8 @@ namespace UniMob.UI.Widgets
             }
 
             // A value reaches a typed route only through Pop(T) or PopDecision<T>, so this holds by
-            // construction. The one way to break it is the untyped back-button pop with an object result,
-            // and that is a programming error worth surfacing to whoever is awaiting rather than hiding.
+            // construction; a value of another type here is a bug in the package, surfaced to whoever is
+            // awaiting rather than hidden.
             if (result.Value is T || result.Value == null && default(T) == null)
             {
                 _resultCompleter.TrySetResult(PopResult.Of((T) result.Value, result.Request));

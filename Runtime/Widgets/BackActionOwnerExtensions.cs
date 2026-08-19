@@ -36,15 +36,10 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Observes a request nobody awaits, so that a failure in it is reported rather than lost.
+        ///     Reports a faulted request to the zone. A back press has no caller to hand the outcome to,
+        ///     and the route's decision runs outside the command loop's catch, so a hook that throws on
+        ///     back would otherwise fail in silence. Cancellation is not a failure and is not reported.
         /// </summary>
-        /// <remarks>
-        ///     A back press has no caller to hand the outcome to, and the route's decision runs outside the
-        ///     navigator's command loop, so the loop's own catch never sees it fail. Unity does not report
-        ///     a faulted task that nobody observes, which would leave a hook that throws on back failing in
-        ///     silence. Routed to the zone, which is where the package reports everything else it runs on
-        ///     nobody's behalf. A cancelled request is not a failure and is not reported.
-        /// </remarks>
         private static void ReportIfFaulted(Task request)
         {
             request.ContinueWith(

@@ -1,8 +1,7 @@
 namespace UniMob.UI.Widgets
 {
     /// <summary>
-    ///     A route's answer to being asked whether it may be popped: yes or no. An untyped route cannot
-    ///     supply a value in its answer; a <see cref="Route{T}"/> answers with <see cref="PopDecision{T}"/>.
+    ///     A route's answer to being asked whether it may be popped: yes or no.
     /// </summary>
     public readonly struct PopDecision
     {
@@ -19,11 +18,6 @@ namespace UniMob.UI.Widgets
     ///     A typed route's answer to being asked whether it may be popped: refuse, allow without a value,
     ///     or allow and supply the value the pop carries.
     /// </summary>
-    /// <remarks>
-    ///     This is the only place a value can enter a pop that the route did not start itself, and it is
-    ///     typed, which is what makes awaiting a <see cref="Route{T}"/> safe: nothing outside the route can
-    ///     hand it a value of the wrong type.
-    /// </remarks>
     public readonly struct PopDecision<T>
     {
         public bool IsAllowed { get; }
@@ -89,10 +83,7 @@ namespace UniMob.UI.Widgets
 
         internal static PopToOutcome Stopped(Route at, PopOutcome outcome) => new PopToOutcome(false, at, outcome);
     }
-}
 
-namespace UniMob.UI.Widgets
-{
     /// <summary>
     ///     A decision as the navigator consumes it: typed and untyped answers both reduce to this.
     /// </summary>

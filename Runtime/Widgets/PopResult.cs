@@ -1,7 +1,5 @@
 namespace UniMob.UI.Widgets
 {
-    using System;
-
     /// <summary>
     ///     The requests the navigator itself stamps onto a result when it removes a route without anyone
     ///     asking the route.
@@ -34,10 +32,10 @@ namespace UniMob.UI.Widgets
     ///     led to the pop.
     /// </summary>
     /// <remarks>
-    ///     <see cref="HasValue"/> rather than a nullable value, because for value types default is a
-    ///     legitimate result and null cannot mean "none". <see cref="Request"/> is null when the route
-    ///     closed itself, and otherwise whatever object the requester passed to <c>RequestPop</c> (or one
-    ///     of the <see cref="PopRequest"/> markers). The navigator never interprets it.
+    ///     <see cref="HasValue"/> rather than a nullable value: for value types, default is a legitimate
+    ///     result. <see cref="Request"/> is null when the route closed itself, and otherwise whatever the
+    ///     requester passed to <c>RequestPop</c> or one of the <see cref="PopRequest"/> markers; the
+    ///     navigator never interprets it.
     /// </remarks>
     public readonly struct PopResult
     {

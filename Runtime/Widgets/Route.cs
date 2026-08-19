@@ -35,48 +35,27 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Which point of its lifecycle the route has reached.
+        ///     Which point of its lifecycle the route has reached. An atom: follow it with a reaction.
         /// </summary>
         /// <remarks>
-        ///     An atom, so that following it is a reaction rather than a poll. Every other piece of public
-        ///     state in this subsystem already is one -- <c>NavigatorState.Screens</c>,
-        ///     <c>NavigationStack</c> and <c>TopmostRoute</c> -- and a plain getter here left polling as
-        ///     the only way to use a property the package had chosen to publish.
-        ///     <para>
-        ///         Reads "the machine has entered this state", not "the transition has finished": the
-        ///         machine moves before it runs the transition's handler. A <see cref="PageRoute"/> being
-        ///         popped therefore reports <see cref="ScreenState.Destroyed"/> for the whole of its exit
-        ///         animation. Where the edge matters more than the state -- most of all which of the two
-        ///         endings a route reached -- use <see cref="ScreenEventApplied"/> instead.
-        ///     </para>
+        ///     Reads "the machine has entered this state", not "the transition has finished": the machine
+        ///     moves before it runs the transition's handler, so a <see cref="PageRoute"/> being popped
+        ///     reports <see cref="ScreenState.Destroyed"/> for the whole of its exit animation. Both endings
+        ///     (removed by navigation, torn down with the tree) land on Destroyed; to tell them apart,
+        ///     subscribe to <see cref="ScreenEventApplied"/>.
         /// </remarks>
         public ScreenState ScreenState => _screenState.Value;
 
         /// <summary>
-        ///     Raised for each screen event the route's state machine accepts, as it is applied.
+        ///     Raised for each screen event the state machine accepts, as it is applied: one firing per
+        ///     transition, in order, self-transitions included. An event the machine chains onwards fires
+        ///     once per step, so destroying a focused route reports Destroy three times.
         /// </summary>
         /// <remarks>
-        ///     The causes that <see cref="ScreenState"/> cannot report. Two different endings land on the
-        ///     same state -- <c>Created --Destroy--> Destroyed</c> when navigation removed the route, and
-        ///     <c>Created --Teardown--> Destroyed</c> when the tree it lived in went away -- so a consumer
-        ///     that has to tell them apart needs the cause and not the state.
-        ///     <para>
-        ///         One firing per transition the machine accepts, in the order it accepts them, including
-        ///         the self-transitions that change nothing. An event the machine chains onwards produces a
-        ///         firing of its own, so destroying a focused route reports Destroy three times: once for
-        ///         each step down to <see cref="ScreenState.Destroyed"/>.
-        ///     </para>
-        ///     <para>
-        ///         Raised before the transition's handler runs, and therefore before
-        ///         <see cref="ScreenState"/> can move again, so the state read from a subscriber is the one
-        ///         this event has just reached.
-        ///     </para>
-        ///     <para>
-        ///         Subscribers are told, never consulted: each is contained, so one that throws is logged
-        ///         and neither aborts the transition nor costs the subscribers after it their
-        ///         notification. Same terms as <see cref="INavigatorObserver"/>, and for the same reason --
-        ///         a transition already part-way through is not something a listener may cancel.
-        ///     </para>
+        ///     Raised before the transition's handler runs, so <see cref="ScreenState"/> read from a
+        ///     subscriber is the state this event has just reached. Subscribers are told, never consulted:
+        ///     one that throws is logged, and neither aborts the transition nor costs later subscribers
+        ///     their notification.
         /// </remarks>
         public event Action<ScreenEvent> ScreenEventApplied;
 
@@ -94,18 +73,13 @@ namespace UniMob.UI.Widgets
         public string Key => _settings.Name;
 
         /// <summary>
-        ///     The navigator this route was pushed onto, or null while it has never been pushed. Set by the
-        ///     navigator when it takes the route, and kept afterwards: a route that has already left the
-        ///     stack still knows where it was, which is what lets a late <see cref="Pop"/> answer
-        ///     <see cref="PopOutcome.NotTopmost"/>; one that was never pushed answers the same, since it
-        ///     is on top of nothing.
+        ///     The navigator this route was pushed onto, or null while it has never been pushed. Set when
+        ///     the push is issued and kept after the route leaves the stack, so that a late
+        ///     <see cref="Pop"/> can answer <see cref="PopOutcome.NotTopmost"/>.
         /// </summary>
         /// <remarks>
-        ///     Internal on purpose. Holding a route lets its holder close it, or ask for it to be closed; it
-        ///     is not a way to reach the navigator, whose full surface -- pushes, replaces, a new root -- is
-        ///     granted by position, through <c>Navigator.Of</c>, and not by being handed a route. What a
-        ///     route legitimately does with its navigator is offered as verbs on the route instead:
-        ///     <see cref="Pop"/> for its owner and <see cref="RequestPop"/> for its own chrome.
+        ///     Internal: holding a route lets its holder close it or ask for it to be closed, through
+        ///     <see cref="Pop"/> and <see cref="RequestPop"/>, not drive its navigator.
         /// </remarks>
         internal NavigatorState Navigator { get; private set; }
 
@@ -115,16 +89,13 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Closes the route without a value, on its own authority: nobody is asked, and the pop happens
-        ///     as soon as the navigator gets to it. This is how a route's own content -- or the code that
-        ///     pushed it and still holds it -- ends it. Chrome and the system, which do not own the route,
-        ///     ask instead through <see cref="NavigatorState.RequestPop"/>; the route's own chrome asks
-        ///     through <see cref="RequestPop"/>.
+        ///     Closes the route without a value, on its own authority: nobody is asked. For the route's
+        ///     owner, meaning its own content or the code that pushed it. Chrome and the system ask instead,
+        ///     through <see cref="NavigatorState.RequestPop"/>.
         /// </summary>
         /// <returns>
-        ///     <see cref="PopOutcome.Popped"/>, or why nothing happened -- <see cref="PopOutcome.NotTopmost"/>
-        ///     also for a route that was never pushed, since it is on top of nothing. Completed already when
-        ///     the route was on top and nothing about it animates.
+        ///     <see cref="PopOutcome.Popped"/>, or why nothing happened. <see cref="PopOutcome.NotTopmost"/>
+        ///     also for a route that was never pushed.
         /// </returns>
         public Task<PopOutcome> Pop()
         {
@@ -135,15 +106,13 @@ namespace UniMob.UI.Widgets
 
         /// <summary>
         ///     Asks for this route to be popped, as chrome or the system would, so that
-        ///     <see cref="OnPopRequested"/> gets its say. This is how the chrome a route draws for itself --
-        ///     a barrier that dismisses on tap, a close button in its own frame -- ends it without taking
-        ///     the decision out of the route's hands. Same terms as <see cref="NavigatorState.RequestPop"/>,
-        ///     which is the call for everyone who is not the route; this one is for subclasses only, because
-        ///     a route able to ask on its own behalf is no reason to hand anyone its navigator.
+        ///     <see cref="OnPopRequested"/> gets its say. For the chrome a route draws for itself: a barrier
+        ///     that dismisses on tap, its own close button. Same terms as
+        ///     <see cref="NavigatorState.RequestPop"/>.
         /// </summary>
         /// <returns>
-        ///     As <see cref="NavigatorState.RequestPop"/>: <see cref="PopOutcome.NotTopmost"/> also for a
-        ///     route that was never pushed, since it is on top of nothing.
+        ///     As <see cref="NavigatorState.RequestPop"/>. <see cref="PopOutcome.NotTopmost"/> also for a
+        ///     route that was never pushed.
         /// </returns>
         protected Task<PopOutcome> RequestPop(object request)
         {
@@ -228,19 +197,14 @@ namespace UniMob.UI.Widgets
                 .Allow(ScreenState.Created, ScreenState.Destroyed, ExecTransition(OnDestroy))
                 .Allow(ScreenState.Destroyed, ScreenState.Destroyed);
 
-            // Teardown is how a route ends when the tree it lives in is going away, as opposed to Destroy,
-            // which is how it ends when navigation removed it. Every live state goes straight to Destroyed
-            // rather than chaining through OnFocusLost and OnPause: those steps exist to hand the screen
-            // back to whatever was underneath, and at teardown there is nothing underneath to hand it to.
-            // Going direct is also what keeps this synchronous -- the chain through OnPause is what starts
-            // a PageRoute's exit animation, and OnDestroy is what then waits for it, so a route torn down
-            // this way has nothing to wait for and no animation to run.
+            // Teardown: the tree is going away, as opposed to Destroy, where navigation removed the route.
+            // Every live state goes straight to Destroyed, skipping OnFocusLost and OnPause: there is
+            // nothing underneath to hand the screen back to, and skipping the chain is what keeps teardown
+            // synchronous, since the chain is what starts a PageRoute's exit animation.
             //
-            // Destroyed is included, and carries the handler rather than being a bare self-transition,
-            // because a route caught part-way through an ordinary destroy is already in that state while it
-            // waits out its exit animation. That wait is abandoned when the tree disposes its lifetime, so
-            // without a handler here the one route that most needs closing out would be the only one to
-            // silently keep its callers waiting forever.
+            // Destroyed is included with the handler, not as a bare self-transition: a route caught
+            // mid-destroy is already Destroyed while it waits out its exit animation, that wait is
+            // abandoned with the tree, and without the handler its callers would wait forever.
             fsm.On(ScreenEvent.Teardown)
                 .Allow(ScreenState.Initializing, ScreenState.Destroyed, ExecTransition(OnTeardown))
                 .Allow(ScreenState.Created, ScreenState.Destroyed, ExecTransition(OnTeardown))
@@ -252,13 +216,9 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Mirrors an accepted transition onto the route's two public channels.
+        ///     Mirrors an accepted transition onto the route's two public channels, intermediate states of
+        ///     a chained event included.
         /// </summary>
-        /// <remarks>
-        ///     Both are published from the one place that knows a transition happened when it happens, so
-        ///     the atom passes through every intermediate state a chained event walks and a subscriber
-        ///     reading <see cref="ScreenState"/> sees the state the event it was handed just reached.
-        /// </remarks>
         private void PublishTransition(ScreenState state, ScreenEvent screenEvent)
         {
             _screenState.Value = state;
@@ -270,17 +230,12 @@ namespace UniMob.UI.Widgets
                 return;
             }
 
-            // Walked one at a time rather than invoked as a multicast delegate, so that each subscriber is
-            // contained on its own: a throw neither escapes into the handler that triggered the machine
-            // and aborts the transition, nor costs the subscribers after it their notification. Walking a
-            // copy of the invocation list is also what makes a subscriber that unsubscribes from inside
-            // its own callback harmless.
+            // One subscriber at a time, each contained: a throw neither aborts the transition nor costs
+            // later subscribers their notification, and walking a copy of the invocation list makes
+            // unsubscribing from inside a callback harmless.
             //
-            // Untracked, so that listening cannot perturb what is listened to. Transitions are driven from
-            // whatever called ApplyScreenEvent, still on that caller's stack, so a subscriber reading
-            // ScreenState -- the obvious thing to read, and the atom this very method just wrote -- would
-            // otherwise graft that dependency onto whatever computation was running and have it re-run on
-            // the next transition. ClickExtensions runs bound handlers the same way.
+            // Untracked: transitions run on the caller's stack, and a subscriber reading ScreenState would
+            // otherwise graft that dependency onto whatever computation is running.
             using (Atom.NoWatch)
             {
                 foreach (var subscriber in subscribers.GetInvocationList())
@@ -301,17 +256,11 @@ namespace UniMob.UI.Widgets
             previous => ExecuteTransitionInternal(previous, handler, screenEvent);
 
         /// <remarks>
-        ///     Every task here is awaited unconditionally. Skipping the await when a task was already
-        ///     finished looks like an optimisation and is a correctness hole: <c>IsCompleted</c> is true
-        ///     for a faulted task as well as a successful one, and awaiting is the only thing that
-        ///     rethrows. Guarding on it left a failed handler's exception sealed inside its task, so the
-        ///     transition reported success, the navigator carried on removing the route, and nothing ever
-        ///     completed its <see cref="PopTask"/> -- a permanent hang with no diagnostic anywhere, for
-        ///     every handler that failed without yielding first, which is all of them.
-        ///     <para>
-        ///         Awaiting a task that has already completed successfully does not yield, so the guards
-        ///         were buying nothing to begin with.
-        ///     </para>
+        ///     Every task is awaited unconditionally, even one that is already complete. <c>IsCompleted</c>
+        ///     is true for a faulted task too, and awaiting is the only thing that rethrows: behind a guard,
+        ///     a failed handler's exception stays sealed in its task, the navigator carries on removing the
+        ///     route, and <see cref="PopTask"/> never completes. Awaiting a completed task does not yield,
+        ///     so the guard would buy nothing.
         /// </remarks>
         private async Task ExecuteTransitionInternal(Task previous, Func<Task> handler, ScreenEvent? screenEvent)
         {
@@ -345,8 +294,7 @@ namespace UniMob.UI.Widgets
                 return _machine.Trigger(screenEvent) ?? Task.CompletedTask;
             }
 
-            // Straight off the machine rather than through the atom: a diagnostic must not make whatever
-            // computation happens to be running depend on this route's lifecycle.
+            // Read off the machine, not the atom: a diagnostic must not add a dependency to a running computation.
             Debug.LogErrorFormat("Cannot {0} scene {1} in {2} state", screenEvent, GetType().Name, _machine.State);
             return Task.CompletedTask;
         }
@@ -383,16 +331,11 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Ends the route because the tree it lives in is going away, rather than because navigation
-        ///     removed it.
+        ///     Ends the route because the tree it lives in is going away, not because navigation removed
+        ///     it. Separate from <see cref="OnDestroy"/>, which subclasses override to finish a transition;
+        ///     there is none to finish here, and a <see cref="PageRoute"/> waiting for its exit animation
+        ///     would strand <see cref="PopTask"/>.
         /// </summary>
-        /// <remarks>
-        ///     Deliberately not <see cref="OnDestroy"/>: a subclass overrides that to finish a transition,
-        ///     and there is no transition to finish here. <see cref="PageRoute"/> is the case that makes
-        ///     the distinction necessary -- its OnDestroy waits for an exit animation whose lifetime is
-        ///     destroyed moments later, so routing teardown through it would strand every caller waiting
-        ///     on <see cref="PopTask"/>.
-        /// </remarks>
         protected virtual Task OnTeardown()
         {
             CompletePop();
@@ -404,23 +347,10 @@ namespace UniMob.UI.Widgets
         ///     Answers everyone waiting on <see cref="PopTask"/>, from whichever ending got here first.
         /// </summary>
         /// <remarks>
-        ///     Deferred through the zone rather than completed inline, because both endings can be reached
-        ///     from inside disposal, and disposal runs within <c>Atom.NoWatch</c> (see
-        ///     <c>BuilderState.Dispose</c>). A continuation resumed there would read atoms without
-        ///     registering a dependency and build reactions that never fire, failing silently. The next
-        ///     frame is the first moment the call stack has unwound and tracking is live again.
-        ///     <para>
-        ///         TrySetResult rather than SetResult: the two endings are not mutually exclusive in
-        ///         principle, and a route that has already answered must not throw when asked again.
-        ///     </para>
-        ///     <para>
-        ///         The completer runs its continuations asynchronously, and so does the typed one a
-        ///         <see cref="Route{T}"/> completes from <see cref="OnPopCompleted"/>. Both stand for the one
-        ///         close, and they are completed one after the other; with inline continuations, whoever
-        ///         awaited <see cref="PopTask"/> would resume between the two and find the typed result still
-        ///         pending. Deferring every continuation until both are set is what makes the pair
-        ///         indistinguishable from a single completion, whichever of the two a caller holds.
-        ///     </para>
+        ///     Deferred to the next frame: both endings can be reached from inside disposal, which runs
+        ///     within <c>Atom.NoWatch</c>, and a continuation resumed there would read atoms without
+        ///     registering dependencies. Both the untyped and the typed completer run their continuations
+        ///     asynchronously, so an awaiter of either never resumes between the two being set.
         /// </remarks>
         private void CompletePop()
         {
@@ -428,6 +358,7 @@ namespace UniMob.UI.Widgets
 
             Zone.Current.NextFrame(() =>
             {
+                // TrySetResult: the two endings are not mutually exclusive, and answering twice must not throw.
                 if (_popCompleter.TrySetResult(result))
                 {
                     OnPopCompleted(result);

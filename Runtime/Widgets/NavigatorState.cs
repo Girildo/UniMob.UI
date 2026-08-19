@@ -42,17 +42,10 @@ namespace UniMob.UI.Widgets
         IState[] IMultiChildLayoutState.Children => Screens;
 
         /// <summary>
-        ///     The routes on the stack, topmost first: a fresh snapshot after every push, pop and replace,
-        ///     so a reaction over it fires per mutation (coalesced per frame, like every atom).
+        ///     The routes on the stack, topmost first. A fresh snapshot after every push, pop and replace,
+        ///     so a reaction over it fires per mutation; the live collection would compare equal to itself
+        ///     and never obsolete a subscriber.
         /// </summary>
-        /// <remarks>
-        ///     A snapshot rather than the live collection because of how this atom is consumed. A computed
-        ///     atom compares its new value with the cached one and swallows a change that compares equal;
-        ///     the stack used to hand out one collection instance for its whole life, so every mutation
-        ///     compared equal and this property never obsoleted a subscriber. It was correct to read during
-        ///     a build, which re-reads the contents, and useless to react to. Handing out a new instance per
-        ///     mutation is what makes it honest.
-        /// </remarks>
         [Atom]
         public IReadOnlyCollection<Route> NavigationStack => _stack.Routes;
 
@@ -60,14 +53,10 @@ namespace UniMob.UI.Widgets
         public Route TopmostRoute => _stack.TopmostRoute;
 
         /// <summary>
-        ///     How deep the stack is and what is on top of it: <c>"3 routes: room-edit"</c>.
+        ///     How deep the stack is and what is on top of it: <c>"3 routes: room-edit"</c>. Read off the
+        ///     stack directly, since <see cref="TopmostRoute"/> throws on the empty stack this state has
+        ///     before <c>InitState</c>.
         /// </summary>
-        /// <remarks>
-        ///     Straight off <see cref="NavigatorStack"/> rather than through the atoms above, because a
-        ///     label must survive being read at moments they do not cover: <c>Count</c> is a plain read,
-        ///     while <c>TopmostRoute</c> peeks and throws on the empty stack this state has between its
-        ///     constructor and <c>InitState</c>.
-        /// </remarks>
         public override string GetDiagnosticInfo()
         {
             var depth = _stack.Count;
@@ -90,21 +79,11 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     Ends every route still on the stack before the state tree takes them apart.
+        ///     Ends every route still on the stack before the state tree takes them apart. Otherwise the
+        ///     routes are disposed without being destroyed, nothing completes their <c>PopTask</c>, and
+        ///     every awaiter waits forever. Synchronous, because Dispose cannot await: that is why teardown
+        ///     is its own event and not a reuse of Destroy, which can block on an exit animation.
         /// </summary>
-        /// <remarks>
-        ///     Without this, unmounting a navigator disposes its routes without ever destroying them: the
-        ///     widgets leave the tree, <c>Builder.OnDispose</c> reaches <c>Route.Dispose</c>, and the state
-        ///     machine is simply abandoned wherever it stood. Nothing runs <c>OnDestroy</c>, so nothing
-        ///     completes <c>PopTask</c>, and every caller awaiting one waits forever. Pop, PopTo and
-        ///     Replace all destroy a route before it is disposed; this is what makes unmount agree with
-        ///     them.
-        ///     <para>
-        ///         Safe to do synchronously because every handler on the teardown path completes
-        ///         synchronously by construction, which is the reason teardown is its own event rather than
-        ///         a reuse of Destroy. Dispose cannot await, and Destroy can block on an exit animation.
-        ///     </para>
-        /// </remarks>
         public override void Dispose()
         {
             TearDownRoutes();
@@ -149,9 +128,8 @@ namespace UniMob.UI.Widgets
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
-            // Attached as soon as the push is issued, not when the command runs: the command may sit
-            // behind an exit animation, and an owner that pops its route in that window -- a state
-            // disposing right after it pushed -- must find a navigator to queue the pop with.
+            // Attached when the push is issued, not when the command runs: an owner that pops its route
+            // while the command waits behind an exit animation must find a navigator to queue the pop with.
             route.AttachTo(this);
             ApplyCommands(new NavigatorCommand.Push(route));
             return route;
@@ -165,9 +143,7 @@ namespace UniMob.UI.Widgets
 
         /// <summary>
         ///     Empties the stack and puts <paramref name="route"/> in its place, without asking any of the
-        ///     routes it removes: this is how the app's root changes hands, and a route is no more consulted
-        ///     about it than about the navigator unmounting. Everything removed completes with
-        ///     <see cref="PopRequest.Teardown"/>.
+        ///     routes it removes. Everything removed completes with <see cref="PopRequest.Teardown"/>.
         /// </summary>
         public Route NewRoot(Route route)
         {
@@ -205,30 +181,22 @@ namespace UniMob.UI.Widgets
         ///     <paramref name="request"/> and whatever value the route attached to its answer.
         /// </summary>
         /// <remarks>
-        ///     The question is put outside the command loop, so the route may take its time and may
-        ///     navigate while deciding; the pop itself is then queued and lands only if the route is still
-        ///     topmost, which is what <see cref="PopOutcome.NotTopmost"/> reports. Nothing else on the
-        ///     stack is held still meanwhile: another push may cover the route, and if it does the answer
-        ///     is honest about it rather than the pop removing the wrong route. A route already being
-        ///     asked is not asked again; the second requester shares the pending outcome, and does so even
-        ///     while the route is covered by something it pushed in order to decide.
-        ///     <para>
-        ///         <paramref name="request"/> is the caller's to define and is carried through untouched: it
-        ///         is what the route's hook receives and what ends up as <see cref="PopResult.Request"/>.
-        ///         It may not be null, because a null <see cref="PopResult.Request"/> is how a result says
-        ///         the route closed itself.
-        ///     </para>
+        ///     The route is asked outside the command loop: its hook may await and may navigate. The pop is
+        ///     queued afterwards and lands only if the route is still topmost, else
+        ///     <see cref="PopOutcome.NotTopmost"/>. A route already being asked is not asked again; a
+        ///     second requester shares the pending outcome, even while the route is covered by a dialog it
+        ///     pushed in order to decide. <paramref name="request"/> is carried through untouched to the
+        ///     hook and to <see cref="PopResult.Request"/>; it may not be null, since a null request marks
+        ///     a self-close.
         /// </remarks>
         public Task<PopOutcome> RequestPop(Route route, object request)
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
             if (request == null) throw new ArgumentNullException(nameof(request));
 
-            // Looked up before the topmost check, not after. A route that navigates while deciding is
-            // not on top for as long as its dialog is, and a second requester arriving then must still
-            // join the question in progress; checking topmost first would turn it away with NotTopmost
-            // for the very behaviour the hook is allowed. A pending entry can only exist for a route
-            // that was this navigator's, and on top, when it was asked, so joining it is always sound.
+            // Before the topmost check: a route deciding behind its own dialog is not on top, and a second
+            // requester must still join it. A pending entry only exists for a route that was ours and on
+            // top when asked.
             if (_pendingRequests.TryGetValue(route, out var pending))
             {
                 return pending;
@@ -258,12 +226,11 @@ namespace UniMob.UI.Widgets
             if (incoming == null) throw new ArgumentNullException(nameof(incoming));
             if (request == null) throw new ArgumentNullException(nameof(request));
 
-            // Before the topmost check, for the reason given in RequestPop.
+            // Before the topmost check, as in RequestPop.
             if (_pendingRequests.TryGetValue(outgoing, out var pending))
             {
-                // Someone else is already closing it. Whatever they get, this replace did not happen:
-                // either the route refused, or it left through their pop and the incoming route was
-                // never pushed. Report the latter as NotTopmost so the caller falls back to a plain push.
+                // Someone else is already closing it, so this replace does not happen either way: Refused
+                // stays Refused, and their Popped becomes NotTopmost here, since incoming was never pushed.
                 return MapJoined(pending);
             }
 
@@ -281,14 +248,12 @@ namespace UniMob.UI.Widgets
         ///     refuses or that is no longer where the walk expected it, and says which.
         /// </summary>
         /// <remarks>
-        ///     One request per route, in turn, rather than one command that removes them all: each route is
-        ///     asked while it is genuinely topmost, which is the only moment its answer is about anything
-        ///     real. Between two steps the revealed route is resumed and focused as after any pop.
+        ///     One request per route, in turn, so that each is asked while it is genuinely topmost. Between
+        ///     two steps the revealed route is resumed and focused as after any pop.
         /// </remarks>
         public Task<PopToOutcome> RequestPopTo(Route target, object request)
         {
-            // Validated here rather than in the async body, so a bad argument throws at the call instead
-            // of faulting the returned task.
+            // Outside the async body, so a bad argument throws at the call rather than faulting the task.
             if (request == null) throw new ArgumentNullException(nameof(request));
 
             return RequestPopToAsync(target, request);
@@ -358,22 +323,12 @@ namespace UniMob.UI.Widgets
         /// <summary>
         ///     Takes the route's slot, then asks. The slot is what every later requester joins.
         /// </summary>
-        /// <remarks>
-        ///     Registered before any route code runs, not once <see cref="RunRequest"/> has returned. The
-        ///     hook runs synchronously up to its first await and may navigate from there, and a second
-        ///     request for the same route arriving inside that window -- from the hook itself, or from an
-        ///     observer of a push the hook makes, which is announced while the route is still on top --
-        ///     has to find the question already in progress. Registered afterwards, it found nothing, asked
-        ///     the route a second time and queued a competing close. The same reasoning put
-        ///     <c>_processing</c> ahead of the command loop's first await: the synchronous prefix is part
-        ///     of the operation.
-        ///     <para>
-        ///         A placeholder rather than RunRequest's own task because that task does not exist until
-        ///         RunRequest has run its prefix, which is exactly the interval the slot must already cover.
-        ///     </para>
-        /// </remarks>
         private Task<PopOutcome> StartRequest(Route route, object request, Func<PopVerdict, Task<PopOutcome>> commit)
         {
+            // The slot is a placeholder registered before any route code runs. The hook runs synchronously
+            // up to its first await and may navigate from there; a second request for the same route
+            // arriving in that window (from the hook, or from an observer of a push it makes) must find
+            // the question in progress, not ask again and queue a competing close.
             var pending = new TaskCompletionSource<PopOutcome>();
             _pendingRequests[route] = pending.Task;
             Answer(pending, RunRequest(route, request, commit));
@@ -384,15 +339,11 @@ namespace UniMob.UI.Widgets
         ///     Completes the slot from the request that ran, with whatever it ended in: an outcome, a
         ///     failure, or cancellation.
         /// </summary>
-        /// <remarks>
-        ///     Inline, and deliberately so. RunRequest releases the slot in its finally, so by the time its
-        ///     task completes the slot is already free; completing the placeholder right there means a
-        ///     requester that resumes and asks again starts a fresh question rather than joining a finished
-        ///     one. The inner exceptions rather than the aggregate, so that awaiting the slot throws what
-        ///     RunRequest threw, not a wrapper around it.
-        /// </remarks>
         private static void Answer(TaskCompletionSource<PopOutcome> pending, Task<PopOutcome> run)
         {
+            // Synchronously: RunRequest frees the slot in its finally, so a requester that resumes and asks
+            // again must start a fresh question, not join this finished one. Inner exceptions, not the
+            // aggregate, so awaiting the slot throws what RunRequest threw.
             run.ContinueWith(finished =>
             {
                 if (finished.IsCanceled)
@@ -417,9 +368,8 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     The route on top, asked without tracking: this is control flow, not something a
-        ///     computation should come to depend on. Null on an empty stack rather than the throw
-        ///     <see cref="TopmostRoute"/> reserves for it.
+        ///     The route on top, untracked (control flow, not observation), or null on an empty stack
+        ///     where <see cref="TopmostRoute"/> throws.
         /// </summary>
         private Route Topmost()
         {
@@ -486,21 +436,14 @@ namespace UniMob.UI.Widgets
         ///     Queues a batch of commands, and starts the loop that drains the queue if one is not already
         ///     running.
         /// </summary>
-        /// <remarks>
-        ///     Whether a loop is running is tracked by a flag rather than read off <c>_task</c>, because
-        ///     <c>_task</c> is not assigned until <see cref="ProcessCommandsLoop"/> reaches its first real
-        ///     await, and an operation whose every step completes synchronously never gets there. Anything
-        ///     that navigates from inside that window -- an observer callback, a route's
-        ///     <c>OnInitialize</c>, any handler the loop calls before it first yields -- would find
-        ///     <c>_task</c> still holding the previous, completed loop and start a second one on top of the
-        ///     first. Both then walk the same stack, and the inner one acts on routes the outer one has
-        ///     only half moved: pushing from a <c>DidPush</c> reached a route that was on the stack but not
-        ///     yet created, and tried to pause it.
-        /// </remarks>
         private void ApplyCommands([NotNull] params NavigatorCommand[] commands)
         {
             _pendingCommands.Enqueue(commands);
 
+            // A flag, not _task.IsCompleted: _task is only assigned once the loop reaches its first real
+            // await, and a navigation whose handlers all complete synchronously never gets there. Anything
+            // navigating from inside that window (an observer callback, OnInitialize) would start a second
+            // loop over a stack the first has only half moved.
             if (_processing)
             {
                 return;
@@ -511,9 +454,7 @@ namespace UniMob.UI.Widgets
 
         private async Task ProcessCommandsLoop()
         {
-            // Set before the first await, so the synchronous prefix of the loop is covered too. That
-            // prefix is the whole of a navigation whose handlers all complete synchronously, which is
-            // every navigation that does not animate.
+            // Before the first await, so the synchronous prefix of the loop is covered too.
             _processing = true;
 
             try
@@ -525,15 +466,9 @@ namespace UniMob.UI.Widgets
             }
             catch (OperationCanceledException)
             {
-                // A transition abandoned rather than failed, which is not an error worth reporting. The
-                // only producer is a route's exit animation being cancelled when the tree disposes the
-                // lifetime it is bound to, so this happens on every unmount that lands mid-transition --
-                // an ordinary shutdown, printed as a red exception. Console noise on a routine path is
-                // worse than useless: it teaches people to stop reading the console.
-                //
-                // Caught separately rather than filtered inside the general handler so that control flow
-                // is provably unchanged: both catches sit outside the loop, so either way the remaining
-                // queued commands are abandoned.
+                // A transition abandoned, not failed: an exit animation cancelled because the tree disposed
+                // its lifetime, which is every unmount that lands mid-transition. Not worth a red log. Like
+                // the general catch, it ends the loop and abandons the remaining queued commands.
             }
             catch (Exception e)
             {
@@ -589,12 +524,9 @@ namespace UniMob.UI.Widgets
             }
             catch (Exception e)
             {
-                // The loop logs the failure and stops; what it cannot do is answer whoever issued this
-                // command. A replace whose incoming route fails to initialize, or whose outgoing route
-                // fails to destroy, would otherwise leave its outcome pending for good -- and with it the
-                // route's slot in _pendingRequests, since RunRequest only releases that once the commit
-                // has answered. Every later request for the route would then join a task that never
-                // completes. Failing the outcome here is what lets RunRequest finish and let go.
+                // The loop logs and stops, but it cannot answer whoever issued this command. Left pending,
+                // the outcome would also hold the route's slot in _pendingRequests forever, and every later
+                // request for that route would join a task that never completes.
                 command.Fail(e);
                 throw;
             }
@@ -606,24 +538,17 @@ namespace UniMob.UI.Widgets
             var observers = SnapshotObservers();
             var covered = _stack.Count > 0 ? _stack.Peek() : null;
 
-            // The route learns where it lives before anything else happens to it, so even OnInitialize can
-            // already reach the navigator it is being pushed onto.
+            // Attached first, so even OnInitialize can reach the navigator.
             screen.AttachTo(this);
 
-            // Announced before the route is built rather than after. Initialization is the only step of a
-            // push that can take arbitrarily long -- a route that preloads holds this interval open for as
-            // long as it likes -- so a bracket drawn after it would span nothing but the pause of the
-            // routes below, which Route's own lifecycle channel already reports in more detail. The cost
-            // is that a push whose initialization fails leaves WillPush unmatched; replace cannot avoid
-            // that case at all, so the guarantee was never available across the whole interface, and
-            // buying it here would have cost the only interval worth announcing.
+            // Announced before the route is built: initialization is the one step that can take
+            // arbitrarily long (a preloading route), so a bracket drawn after it would span nothing worth
+            // announcing. The cost is that a push whose initialization fails leaves WillPush unmatched.
             NotifyWillPush(observers, screen, covered);
 
-            // Built before anything already on screen is disturbed. OnInitialize is virtual, async and
-            // supplied by the route, so it is the one step here that can fail or take arbitrarily long,
-            // and doing it first means a route that cannot be built leaves the navigator exactly as it
-            // was instead of part-way through a transition. It also stops the screen the user is looking
-            // at being paused while the next one loads.
+            // Built before anything on screen is disturbed: OnInitialize is the one step here that can
+            // fail or take long, and a route that cannot be built must leave the navigator exactly as it
+            // was. It also keeps the visible screen unpaused while the next one loads.
             await InitializeScreen(screen);
 
             if (screen.ModalType == RouteModalType.Fullscreen)
@@ -637,24 +562,17 @@ namespace UniMob.UI.Widgets
 
             _stack.Push(screen);
 
-            // After the mutation, never before: NavigationStack and TopmostRoute are atoms an observer can
-            // read from inside its own callback, and announcing first would make the two channels
-            // contradict each other for the length of the call.
+            // After the mutation: an observer may read NavigationStack and TopmostRoute from its callback,
+            // and they must agree with what it is being told.
             NotifyDidPush(observers, screen, covered);
 
             await screen.ApplyScreenEvent(ScreenEvent.Create);
         }
 
         /// <summary>
-        ///     Whether the topmost route currently holds focus, asked without depending on the answer.
+        ///     Whether the topmost route currently holds focus. Untracked: control flow, not observation,
+        ///     so a push from inside a computation does not make it depend on a route's lifecycle.
         /// </summary>
-        /// <remarks>
-        ///     <see cref="ScreenState"/> is an atom now, and this is control flow rather than observation:
-        ///     the very next thing this push does is move that route out of the state it just read. Taken
-        ///     outside tracking so that pushing from inside a computation cannot make the computation
-        ///     depend on a route's lifecycle, matching <see cref="NavigatorStack"/>, whose <c>Peek</c> and
-        ///     <c>Count</c> are deliberately untracked beside its atom-backed public properties.
-        /// </remarks>
         private bool IsTopmostFocused()
         {
             using (Atom.NoWatch)
@@ -668,15 +586,11 @@ namespace UniMob.UI.Widgets
             var screen = replace.Route;
             var observers = SnapshotObservers();
 
-            // A replace with nothing to replace is a push, and which of the two this is can be settled
-            // before anything moves, so the observer hears the operation that actually happens instead of
-            // a replace with no old route to name.
+            // A replace on an empty navigator is announced as a push.
             var replaced = _stack.Count > 0 ? _stack.Peek() : null;
 
-            // A requested replace names the route it was agreed with. If that route is no longer on top
-            // by the time the command runs -- it left through its own pop, or something was pushed over
-            // it while it was deciding -- the swap it agreed to no longer exists, and pushing the incoming
-            // route anyway would replace a stranger. Nothing happens, and the requester is told so.
+            // A requested replace names the route it was agreed with; if that route is no longer on top
+            // (it popped itself, or was covered while deciding), the swap it agreed to no longer exists.
             if (replace.Target != null && replaced != replace.Target)
             {
                 replace.Outcome.TrySetResult(PopOutcome.NotTopmost);
@@ -685,10 +599,7 @@ namespace UniMob.UI.Widgets
 
             screen.AttachTo(this);
 
-            // Before the route is built, on the same reasoning as PushInternal, and unmatched on the same
-            // terms. Replace has that exposure regardless of where the bracket is drawn: its removal is
-            // deliberately not committed against a failing destroy, so it can abort before ever reaching
-            // the push half.
+            // Before the route is built, as in PushInternal, and unmatched on the same terms.
             if (replaced != null)
             {
                 NotifyWillReplace(observers, screen, replaced);
@@ -698,23 +609,17 @@ namespace UniMob.UI.Widgets
                 NotifyWillPush(observers, screen, null);
             }
 
-            // Built before the outgoing route is touched, which is what makes a replace atomic. Building
-            // it last meant the old route had already been destroyed and popped by the time the new one
-            // was initialized, so a route that could not be built left the navigator permanently one
-            // shorter with nothing in its place.
+            // Built before the outgoing route is touched: a route that cannot be built must not leave the
+            // navigator one route short with nothing in its place.
             await InitializeScreen(screen);
 
             if (_stack.Count > 0)
             {
-                // What the outgoing route reports it left with: the agreed answer for a requested replace,
-                // the teardown marker for an un-asked one. Set before the destroy so OnDestroy sees it.
+                // Set before the destroy so OnDestroy sees it.
                 _stack.Peek().SetPopResult(replace.OutgoingResult);
 
-                // The removal is deliberately not committed the way PopInternal and PopToInternal commit
-                // theirs. Those two cannot empty the stack, since both refuse below depth 1, whereas a
-                // replace removes before it adds: committing against a failing destroy would abort the
-                // command with an empty navigator and a TopmostRoute that throws, which is worse than the
-                // route it would have left behind.
+                // Unlike PopInternal, the removal is not committed against a failing destroy: a replace
+                // removes before it adds, so committing would abort with an empty navigator.
                 await _stack.Peek().ApplyScreenEvent(ScreenEvent.Destroy);
                 _stack.Pop();
 
@@ -745,8 +650,8 @@ namespace UniMob.UI.Widgets
                 NotifyDidPush(observers, screen, null);
             }
 
-            // Answered once the swap is on the stack, before the incoming route is created: the requester
-            // asked whether the outgoing route went, and it has.
+            // Answered once the swap is on the stack, before the incoming route is created: the question
+            // was whether the outgoing route went.
             replace.Outcome.TrySetResult(PopOutcome.Popped);
 
             await screen.ApplyScreenEvent(ScreenEvent.Create);
@@ -754,9 +659,7 @@ namespace UniMob.UI.Widgets
 
         private async Task PopToInternal(NavigatorCommand.PopTo popTo)
         {
-            // One snapshot for the whole command, not one per iteration: a PopTo is a single operation
-            // that happens to remove several routes, and every route it removes must be announced to the
-            // same set of observers.
+            // One snapshot for the whole command: every route it removes is announced to the same observers.
             var observers = SnapshotObservers();
 
             while (_stack.Count > 1)
@@ -771,8 +674,7 @@ namespace UniMob.UI.Widgets
 
                 NotifyWillPop(observers, first, revealed);
 
-                // Un-asked by construction: this is NewRoot clearing the way, and the routes it removes
-                // report the same ending as they would at teardown.
+                // Un-asked: NewRoot clearing the way, reported as teardown.
                 first.SetPopResult(PopResult.None(PopRequest.Teardown));
 
                 var destroyTask = first.ApplyScreenEvent(ScreenEvent.Destroy);
@@ -782,8 +684,8 @@ namespace UniMob.UI.Widgets
                     await UnpauseScreens(skip: 1);
                 }
 
-                // Per iteration, for the reason given in PopInternal. A throw part-way through still
-                // leaves every route it already removed removed, and stops at the one that failed.
+                // Removal commits per iteration, as in PopInternal: a throw part-way through keeps every
+                // route already removed removed, and stops at the one that failed.
                 try
                 {
                     await destroyTask;
@@ -808,8 +710,8 @@ namespace UniMob.UI.Widgets
 
             var first = _stack.Peek();
 
-            // Pops name their target. One issued for a route that has since left, or been covered, does
-            // nothing rather than removing whatever happens to be on top now.
+            // Pops name their target: one issued for a route that has since left, or been covered, does
+            // nothing rather than removing whatever is on top now.
             if (first != pop.Target)
             {
                 pop.Outcome.TrySetResult(PopOutcome.NotTopmost);
@@ -830,14 +732,10 @@ namespace UniMob.UI.Widgets
                 await UnpauseScreens(skip: 1);
             }
 
-            // The removal commits even if the transition does not. TriggerStateMachine assigns the next
-            // state before running the handler, so by the time this awaits, the route already reports
-            // Destroyed -- and it is still on the stack, still rendered, and still what TopmostRoute,
-            // HandleBack and PopIfTopmost answer with. Letting a throw skip the pop leaves the machine and
-            // the stack permanently disagreeing about a route that has already said it is finished.
-            //
-            // Removals commit; additions do not. The mirror of this on the push side would be wrong:
-            // nothing has committed before a push, so a throw there should correctly leave it undone.
+            // The removal commits even if the transition throws. The state machine moves before it runs the
+            // handler, so the route already reports Destroyed while still on the stack and still what
+            // TopmostRoute and HandleBack answer with; skipping the pop would leave the two permanently
+            // disagreeing. Removals commit, additions do not: nothing has committed before a push.
             try
             {
                 await destroyTask;
@@ -846,12 +744,9 @@ namespace UniMob.UI.Widgets
             {
                 _stack.Pop();
 
-                // In the finally, so a pop that commits against a failed transition is still announced.
-                // Every WillPop is matched by a DidPop for exactly that reason.
+                // Both in the finally: the route is off the stack whatever its transition did, so every
+                // WillPop is matched by a DidPop and the outcome reports Popped.
                 NotifyDidPop(observers, first, revealed);
-
-                // Likewise: the route is off the stack, which is what the outcome reports, whatever its
-                // transition did on the way.
                 pop.Outcome.TrySetResult(PopOutcome.Popped);
             }
         }
@@ -899,21 +794,11 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>
-        ///     The observers an operation will announce to, fixed for the whole of it.
+        ///     The observers an operation announces to, fixed for the whole of it: the widget can be
+        ///     replaced across the operation's awaits, and an observer must hear both edges or neither.
+        ///     Untracked, so that a navigation started from inside a computation does not make it depend
+        ///     on the navigator's widget.
         /// </summary>
-        /// <remarks>
-        ///     Observers are configuration on the widget, and an operation spans awaits during which the
-        ///     widget can be replaced. Reading the list again at the Did edge would let an observer hear
-        ///     the end of something it never heard the start of, and let another hear the start of
-        ///     something it never hears the end of.
-        ///     <para>
-        ///         Untracked, because <c>Widget</c> is an atom and this read is the navigator's own
-        ///         bookkeeping. A navigation started from inside a computation -- a reaction that routes on
-        ///         some condition is an ordinary thing to write -- would otherwise come away with a
-        ///         dependency on the navigator's widget purely because notifying is a thing the navigator
-        ///         now does, and rebuild whenever that widget was replaced.
-        ///     </para>
-        /// </remarks>
         private INavigatorObserver[] SnapshotObservers()
         {
             IReadOnlyList<INavigatorObserver> observers;
@@ -938,22 +823,10 @@ namespace UniMob.UI.Widgets
             return snapshot;
         }
 
-        // Every callback is dispatched the same way, and the shape is the point.
-        //
-        // Iterate the snapshot the operation began with, and contain each observer separately. An observer
-        // that throws is logged and the rest still hear the callback, matching how Zone contains a ticker
-        // that throws -- the navigator's job is to navigate, and a consumer of notifications must not be
-        // able to stop it. The snapshot is also what makes an observer that unregisters itself
-        // mid-callback harmless, since what is being walked is no longer the list it removed itself from.
-        //
-        // The whole walk is untracked, so that observing cannot perturb what it observes. An operation
-        // reaches here still on the caller's stack whenever its handlers complete synchronously, which is
-        // every navigation that does not animate, and navigating from inside a computation -- a reaction
-        // that routes on some condition -- is an ordinary thing to write. Without this, an observer that
-        // read NavigationStack or a route's ScreenState in its callback would silently graft that
-        // dependency onto that computation, and the next navigation would invalidate it: a reaction would
-        // start re-running because something was listening, which is the one thing a listener must never
-        // cause. Same reasoning as ClickExtensions, which runs every bound handler under NoWatch.
+        // Every callback is dispatched the same way: over the snapshot the operation began with, each
+        // observer contained on its own (one that throws is logged, the rest still hear it), and the whole
+        // walk untracked, so that an observer reading NavigationStack or a route's ScreenState cannot graft
+        // that dependency onto whatever computation the navigation was started from.
 
         private void NotifyWillPush(INavigatorObserver[] observers, Route route, Route previousRoute)
         {
@@ -1067,18 +940,17 @@ namespace UniMob.UI.Widgets
     internal abstract class NavigatorCommand
     {
         /// <summary>
-        ///     Told that processing this command threw, after the navigator has given up on it. A command
-        ///     that answers a requester fails that answer here, so nobody is left waiting on a command that
-        ///     will not finish. Commands nobody awaits have nothing to do.
+        ///     Told that processing this command threw. A command that answers a requester fails that
+        ///     answer here; commands nobody awaits have nothing to do.
         /// </summary>
         public virtual void Fail(Exception exception)
         {
         }
 
         /// <summary>
-        ///     Fails an outcome the way an async method would: a cancelled transition cancels it, anything
-        ///     else faults it. No-op for an outcome that was already answered, which is what a pop whose
-        ///     removal committed before its transition failed has already done.
+        ///     Fails an outcome the way an async method would: cancellation cancels it, anything else
+        ///     faults it. No-op for an outcome already answered, as a pop whose removal committed before
+        ///     its transition failed has.
         /// </summary>
         protected static void FailOutcome(TaskCompletionSource<PopOutcome> outcome, Exception exception)
         {
@@ -1159,16 +1031,8 @@ namespace UniMob.UI.Widgets
         private readonly List<Widget> _widgets = new List<Widget>();
         private readonly MutableAtom<int> _version = Atom.Value(int.MinValue);
 
-        /// <summary>
-        ///     The version counter itself, kept beside the atom that publishes it.
-        /// </summary>
-        /// <remarks>
-        ///     Counted here rather than as <c>_version.Value++</c>, because that is a read as well as a
-        ///     write: the getter subscribes whatever computation is running, and the setter then
-        ///     invalidates it. Mutating the stack from inside a computation therefore made that computation
-        ///     depend on the stack and immediately obsoleted it, so it re-ran for a change it had made
-        ///     itself. Publishing a value computed outside the atom leaves the write a write.
-        /// </remarks>
+        // Counted here, not as _version.Value++: that is a read as well as a write, and a stack mutated
+        // from inside a computation would subscribe that computation and immediately obsolete it.
         private int _revision = int.MinValue;
 
         private Route[] _snapshot;
@@ -1218,13 +1082,8 @@ namespace UniMob.UI.Widgets
 
         /// <summary>
         ///     The route that would become topmost if the current one were removed, or null when there is
-        ///     nothing underneath.
+        ///     nothing underneath. Untracked, like <see cref="Peek"/> and <see cref="Count"/>; allocation-free.
         /// </summary>
-        /// <remarks>
-        ///     Untracked, like <see cref="Peek"/> and <see cref="Count"/>: this answers a question asked
-        ///     while the stack is being mutated, not one a widget observes. Walks the stack's own struct
-        ///     enumerator and stops at the second entry, so asking costs no allocation.
-        /// </remarks>
         public Route PeekBelow()
         {
             var topmostSkipped = false;
