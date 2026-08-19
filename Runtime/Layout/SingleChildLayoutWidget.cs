@@ -27,7 +27,9 @@ namespace UniMob.UI.Layout
     {
         private readonly StateHolder? _child;
 
-        public IState? Child => Widget.Child == null ? null : _child?.Value;
+        // Always resolved, never short-circuited on a null Widget.Child: the holder is what disposes
+        // the outgoing child, so skipping it strands that child's state and everything it owns.
+        public IState? Child => _child?.Value;
 
         protected SingleChildLayoutState()
         {

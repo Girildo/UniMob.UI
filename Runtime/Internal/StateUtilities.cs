@@ -155,12 +155,24 @@ namespace UniMob.UI.Internal
             child.Dispose();
         }
 
-        public static State UpdateChild(BuildContext context, [CanBeNull] State child, [NotNull] Widget newWidget)
+        public static State UpdateChild(BuildContext context, [CanBeNull] State child, [CanBeNull] Widget newWidget)
         {
             Assert.IsNull(Atom.CurrentScope);
             
             
             
+
+            // A null widget means "no child here anymore". Without this the caller has to skip the
+            // build to avoid a crash, and skipping it is what leaves the outgoing child undisposed.
+            if (newWidget == null)
+            {
+                if (child != null)
+                {
+                    DeactivateChild(child);
+                }
+
+                return null;
+            }
 
             if (child != null)
             {
