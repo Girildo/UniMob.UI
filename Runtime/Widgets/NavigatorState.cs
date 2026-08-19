@@ -239,9 +239,7 @@ namespace UniMob.UI.Widgets
                 return Task.FromResult(PopOutcome.NotTopmost);
             }
 
-            var task = RunRequest(route, request, verdict => PopRoute(route, verdict.ToResult(request)));
-            RememberRequest(route, task);
-            return task;
+            return StartRequest(route, request, verdict => PopRoute(route, verdict.ToResult(request)));
         }
 
         /// <summary>
@@ -274,9 +272,7 @@ namespace UniMob.UI.Widgets
                 return Task.FromResult(PopOutcome.NotTopmost);
             }
 
-            var task = RunRequest(outgoing, request, verdict => ReplaceRoute(outgoing, incoming, verdict.ToResult(request)));
-            RememberRequest(outgoing, task);
-            return task;
+            return StartRequest(outgoing, request, verdict => ReplaceRoute(outgoing, incoming, verdict.ToResult(request)));
         }
 
         /// <summary>
@@ -359,14 +355,59 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private void RememberRequest(Route route, Task<PopOutcome> task)
+        /// <summary>
+        ///     Takes the route's slot, then asks. The slot is what every later requester joins.
+        /// </summary>
+        /// <remarks>
+        ///     Registered before any route code runs, not once <see cref="RunRequest"/> has returned. The
+        ///     hook runs synchronously up to its first await and may navigate from there, and a second
+        ///     request for the same route arriving inside that window -- from the hook itself, or from an
+        ///     observer of a push the hook makes, which is announced while the route is still on top --
+        ///     has to find the question already in progress. Registered afterwards, it found nothing, asked
+        ///     the route a second time and queued a competing close. The same reasoning put
+        ///     <c>_processing</c> ahead of the command loop's first await: the synchronous prefix is part
+        ///     of the operation.
+        ///     <para>
+        ///         A placeholder rather than RunRequest's own task because that task does not exist until
+        ///         RunRequest has run its prefix, which is exactly the interval the slot must already cover.
+        ///     </para>
+        /// </remarks>
+        private Task<PopOutcome> StartRequest(Route route, object request, Func<PopVerdict, Task<PopOutcome>> commit)
         {
-            // Only while it is still pending: RunRequest clears the slot in its finally, and for a decision
-            // that completed synchronously that has already happened by the time we get here.
-            if (!task.IsCompleted)
+            var pending = new TaskCompletionSource<PopOutcome>();
+            _pendingRequests[route] = pending.Task;
+            Answer(pending, RunRequest(route, request, commit));
+            return pending.Task;
+        }
+
+        /// <summary>
+        ///     Completes the slot from the request that ran, with whatever it ended in: an outcome, a
+        ///     failure, or cancellation.
+        /// </summary>
+        /// <remarks>
+        ///     Inline, and deliberately so. RunRequest releases the slot in its finally, so by the time its
+        ///     task completes the slot is already free; completing the placeholder right there means a
+        ///     requester that resumes and asks again starts a fresh question rather than joining a finished
+        ///     one. The inner exceptions rather than the aggregate, so that awaiting the slot throws what
+        ///     RunRequest threw, not a wrapper around it.
+        /// </remarks>
+        private static void Answer(TaskCompletionSource<PopOutcome> pending, Task<PopOutcome> run)
+        {
+            run.ContinueWith(finished =>
             {
-                _pendingRequests[route] = task;
-            }
+                if (finished.IsCanceled)
+                {
+                    pending.TrySetCanceled();
+                }
+                else if (finished.IsFaulted)
+                {
+                    pending.TrySetException(finished.Exception.InnerExceptions);
+                }
+                else
+                {
+                    pending.TrySetResult(finished.Result);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         private static async Task<PopOutcome> MapJoined(Task<PopOutcome> pending)

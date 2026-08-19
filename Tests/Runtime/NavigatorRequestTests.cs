@@ -239,6 +239,51 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
 
+        /// <summary>
+        ///     The route's slot is taken before the route is asked, not once the asking has returned. The
+        ///     hook runs synchronously up to its first await, and a request for the same route issued
+        ///     inside that window -- here from the hook itself; an observer of a push the hook makes is the
+        ///     realistic source -- must find the question in progress rather than start a competing one.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RequestPop_IssuedAgainFromInsideTheHookBeforeItYields_JoinsRatherThanAsksAgain()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var decision = new TaskCompletionSource<PopDecision>();
+            Task<PopOutcome> inner = null;
+            DecidingRoute route = null;
+            route = new DecidingRoute("D", RouteModalType.Popup, _ =>
+            {
+                // Only from the first question. Keyed on TimesAsked, which is counted before the hook
+                // runs, rather than on whether the inner request has been made: a regression asks again
+                // from inside that very call, before its result is assigned, and a guard on the result
+                // would let it nest until the stack ran out instead of failing the assertion below.
+                if (route.TimesAsked == 1)
+                {
+                    inner = host.Navigator.RequestPop(route, "inner");
+                }
+
+                return decision.Task;
+            });
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var outer = host.Navigator.RequestPop(route, "outer");
+
+            Assert.AreEqual(1, route.TimesAsked, "the request from inside the hook joined the question in progress");
+            Assert.AreSame(outer, inner, "one pending answer, shared");
+            Assert.IsFalse(outer.IsCompleted);
+
+            decision.SetResult(PopDecision.Allow());
+            yield return host.Settle();
+
+            Assert.AreEqual(PopOutcome.Popped, outer.Result);
+            Assert.AreEqual(PopOutcome.Popped, inner.Result);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+        }
+
         [UnityTest]
         public IEnumerator RequestPop_WhenTheRoutePopsItselfWhileDeciding_ReportsNotTopmost()
         {
