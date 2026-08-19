@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UniMob.UI.Widgets;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
@@ -675,6 +677,45 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(0, route.TimesAsked, "rejected at the call, before the route is consulted");
             Assert.AreEqual(2, host.Navigator.NavigationStack.Count);
+        }
+
+        /// <summary>
+        ///     Nobody awaits a back press, and the decision runs outside the command loop, so a hook that
+        ///     throws on back has no caller and no loop to report to. It must still be reported.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Back_WhenTheRouteThrowsWhileDeciding_IsReportedRatherThanSwallowed()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var timesAsked = 0;
+            var route = new DecidingRoute("D", RouteModalType.Popup, request =>
+            {
+                if (timesAsked++ == 0)
+                {
+                    throw new InvalidOperationException("decision failed on " + request);
+                }
+
+                return Allow(request);
+            });
+            route.WithPopOnBack(host.Navigator);
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            LogAssert.Expect(LogType.Exception, new Regex("decision failed on PopRequest.Back"));
+
+            Assert.IsTrue(host.Navigator.HandleBack(), "back was handled, whatever the route then did with it");
+            yield return host.Settle();
+
+            Assert.AreSame(route, host.Navigator.TopmostRoute, "a decision that failed is not a decision to leave");
+
+            // The failed question released the route: the next back press asks it again.
+            Assert.IsTrue(host.Navigator.HandleBack());
+            yield return host.Settle();
+
+            Assert.AreEqual(2, timesAsked);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
     }
 }

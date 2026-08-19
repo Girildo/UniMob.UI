@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 
 namespace UniMob.UI.Widgets
@@ -20,7 +21,7 @@ namespace UniMob.UI.Widgets
                 {
                     if (navigatorState.NavigationStack.Count > 0)
                     {
-                        _ = navigatorState.RequestPop(navigatorState.TopmostRoute, PopRequest.Back);
+                        ReportIfFaulted(navigatorState.RequestPop(navigatorState.TopmostRoute, PopRequest.Back));
                     }
 
                     return true;
@@ -32,6 +33,23 @@ namespace UniMob.UI.Widgets
             owner.SetBackAction(HandleBack);
 
             return owner;
+        }
+
+        /// <summary>
+        ///     Observes a request nobody awaits, so that a failure in it is reported rather than lost.
+        /// </summary>
+        /// <remarks>
+        ///     A back press has no caller to hand the outcome to, and the route's decision runs outside the
+        ///     navigator's command loop, so the loop's own catch never sees it fail. Unity does not report
+        ///     a faulted task that nobody observes, which would leave a hook that throws on back failing in
+        ///     silence. Routed to the zone, which is where the package reports everything else it runs on
+        ///     nobody's behalf. A cancelled request is not a failure and is not reported.
+        /// </remarks>
+        private static void ReportIfFaulted(Task request)
+        {
+            request.ContinueWith(
+                faulted => Zone.Current.HandleUncaughtException(faulted.Exception.GetBaseException()),
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 }
