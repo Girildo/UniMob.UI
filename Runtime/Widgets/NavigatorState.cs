@@ -519,27 +519,44 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private Task ProcessCommand([NotNull] NavigatorCommand command)
+        private async Task ProcessCommand([NotNull] NavigatorCommand command)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
 
-            switch (command)
+            try
             {
-                case NavigatorCommand.Pop pop:
-                    return PopInternal(pop);
+                switch (command)
+                {
+                    case NavigatorCommand.Pop pop:
+                        await PopInternal(pop);
+                        return;
 
-                case NavigatorCommand.PopTo backTo:
-                    return PopToInternal(backTo);
+                    case NavigatorCommand.PopTo backTo:
+                        await PopToInternal(backTo);
+                        return;
 
-                case NavigatorCommand.Push forward:
-                    return PushInternal(forward);
+                    case NavigatorCommand.Push forward:
+                        await PushInternal(forward);
+                        return;
 
-                case NavigatorCommand.Replace replace:
-                    return ReplaceInternal(replace);
+                    case NavigatorCommand.Replace replace:
+                        await ReplaceInternal(replace);
+                        return;
+                }
+
+                Debug.LogWarning($"Unexpected navigator command: {command.GetType().Name}");
             }
-
-            Debug.LogWarning($"Unexpected navigator command: {command.GetType().Name}");
-            return Task.CompletedTask;
+            catch (Exception e)
+            {
+                // The loop logs the failure and stops; what it cannot do is answer whoever issued this
+                // command. A replace whose incoming route fails to initialize, or whose outgoing route
+                // fails to destroy, would otherwise leave its outcome pending for good -- and with it the
+                // route's slot in _pendingRequests, since RunRequest only releases that once the commit
+                // has answered. Every later request for the route would then join a task that never
+                // completes. Failing the outcome here is what lets RunRequest finish and let go.
+                command.Fail(e);
+                throw;
+            }
         }
 
         private async Task PushInternal(NavigatorCommand.Push push)
@@ -1009,6 +1026,32 @@ namespace UniMob.UI.Widgets
     internal abstract class NavigatorCommand
     {
         /// <summary>
+        ///     Told that processing this command threw, after the navigator has given up on it. A command
+        ///     that answers a requester fails that answer here, so nobody is left waiting on a command that
+        ///     will not finish. Commands nobody awaits have nothing to do.
+        /// </summary>
+        public virtual void Fail(Exception exception)
+        {
+        }
+
+        /// <summary>
+        ///     Fails an outcome the way an async method would: a cancelled transition cancels it, anything
+        ///     else faults it. No-op for an outcome that was already answered, which is what a pop whose
+        ///     removal committed before its transition failed has already done.
+        /// </summary>
+        protected static void FailOutcome(TaskCompletionSource<PopOutcome> outcome, Exception exception)
+        {
+            if (exception is OperationCanceledException)
+            {
+                outcome.TrySetCanceled();
+            }
+            else
+            {
+                outcome.TrySetException(exception);
+            }
+        }
+
+        /// <summary>
         ///     Removes <see cref="Target"/> if it is on top when the command runs, and says what happened.
         /// </summary>
         public sealed class Pop : NavigatorCommand
@@ -1023,6 +1066,8 @@ namespace UniMob.UI.Widgets
                 Target = target;
                 Result = result;
             }
+
+            public override void Fail(Exception exception) => FailOutcome(Outcome, exception);
         }
 
         /// <summary>
@@ -1062,6 +1107,8 @@ namespace UniMob.UI.Widgets
                 Target = target;
                 OutgoingResult = outgoingResult;
             }
+
+            public override void Fail(Exception exception) => FailOutcome(Outcome, exception);
         }
     }
 

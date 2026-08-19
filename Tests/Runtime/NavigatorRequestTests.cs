@@ -8,6 +8,22 @@ using UnityEngine.TestTools;
 namespace UniMob.UI.Tests
 {
     /// <summary>
+    ///     A route that cannot be built: its initialization throws, which is the one step of a push or
+    ///     replace that is supplied by the route and can fail before anything on the stack is touched.
+    /// </summary>
+    internal sealed class FailingToInitializeRoute : Route
+    {
+        public FailingToInitializeRoute(string key) : base(new RouteSettings(key, RouteModalType.Popup))
+        {
+        }
+
+        public override Widget Build(BuildContext context) => new Empty();
+
+        protected override Task OnInitialize() =>
+            throw new InvalidOperationException("Route '" + Key + "' cannot be initialized.");
+    }
+
+    /// <summary>
     ///     A route that answers <see cref="Route.OnPopRequested"/> with whatever the fixture supplies, and
     ///     counts how often it was asked.
     /// </summary>
@@ -406,6 +422,77 @@ namespace UniMob.UI.Tests
                 "the route left through the first request; this replace did not happen");
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+        }
+
+        /// <summary>
+        ///     A requester whose command fails is told so, and the route is released for the next
+        ///     request. Left pending, the failed request would hold the route's slot for good and every
+        ///     later request for it would join a task that never completes.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RequestReplace_WhenTheIncomingRouteFailsToInitialize_FailsTheRequester_AndReleasesTheRoute()
+        {
+            // The failing initialization reaches ProcessCommandsLoop, which logs it; that is the point of
+            // the fixture.
+            LogAssert.ignoreFailingMessages = true;
+
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var outgoing = new DecidingRoute("D", RouteModalType.Popup, Allow);
+            host.Navigator.Push(outgoing);
+            yield return host.Settle();
+
+            var broken = new FailingToInitializeRoute("X");
+            var outcome = host.Navigator.RequestReplace(outgoing, broken, "switch");
+            yield return host.Settle();
+
+            Assert.IsTrue(outcome.IsCompleted, "the requester is answered rather than left waiting on a replace that will never finish");
+            Assert.IsTrue(outcome.IsFaulted, "and answered with the failure");
+            Assert.AreSame(outgoing, host.Navigator.TopmostRoute, "the outgoing route was never touched: the incoming one failed before it");
+            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, broken);
+
+            var again = host.Navigator.RequestPop(outgoing, "again");
+            yield return host.Settle();
+
+            Assert.AreEqual(2, outgoing.TimesAsked, "the failed request released the route, so it is asked afresh");
+            Assert.IsTrue(again.IsCompleted, "and the new request is answered on its own terms");
+            Assert.AreEqual(PopOutcome.Popped, again.Result);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+        }
+
+        /// <summary>
+        ///     The other way a replace can fail: the outgoing route's destroy throws. Replace deliberately
+        ///     does not commit its removal against that, so the route stays; the requester must still be
+        ///     answered and the route released.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RequestReplace_WhenTheOutgoingRouteFailsToDestroy_FailsTheRequester_AndReleasesTheRoute()
+        {
+            LogAssert.ignoreFailingMessages = true;
+
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var outgoing = host.Create("B", RouteModalType.Popup, RouteFlavour.ThrowsOnDestroy);
+            host.Navigator.Push(outgoing);
+            yield return host.Settle();
+
+            var incoming = host.Create("E", RouteModalType.Popup, RouteFlavour.Plain);
+            var outcome = host.Navigator.RequestReplace(outgoing, incoming, "switch");
+            yield return host.Settle();
+
+            Assert.IsTrue(outcome.IsCompleted, "the requester is answered rather than left waiting");
+            Assert.IsTrue(outcome.IsFaulted, "and answered with the failure");
+            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming,
+                "the swap was abandoned before the incoming route was placed");
+
+            var retry = host.Create("F", RouteModalType.Popup, RouteFlavour.Plain);
+            var again = host.Navigator.RequestReplace(outgoing, retry, "again");
+            yield return host.Settle();
+
+            Assert.AreNotSame(outcome, again, "the failed request no longer holds the route's slot");
+            Assert.IsTrue(again.IsCompleted, "a new request is answered on its own terms");
         }
 
         [UnityTest]
