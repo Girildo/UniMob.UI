@@ -139,11 +139,7 @@ namespace UniMob.UI.Widgets
         ///     The navigator's view of the answer, untyped. <see cref="Route{T}"/> overrides this to route
         ///     the question through its typed hook instead.
         /// </summary>
-        internal virtual async Task<PopVerdict> DecideAsync(object request)
-        {
-            var decision = await OnPopRequested(request);
-            return decision.IsAllowed ? PopVerdict.Allowed(false, null) : PopVerdict.Refused;
-        }
+        internal virtual Task<PopDecision> DecideAsync(object request) => OnPopRequested(request);
 
         internal void SetPopResult(PopResult result)
         {

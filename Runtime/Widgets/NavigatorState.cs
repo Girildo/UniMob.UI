@@ -207,7 +207,7 @@ namespace UniMob.UI.Widgets
                 return Task.FromResult(PopOutcome.NotTopmost);
             }
 
-            return StartRequest(route, request, verdict => PopRoute(route, verdict.ToResult(request)));
+            return StartRequest(route, request, decision => PopRoute(route, decision.ToResult(request)));
         }
 
         /// <summary>
@@ -239,7 +239,7 @@ namespace UniMob.UI.Widgets
                 return Task.FromResult(PopOutcome.NotTopmost);
             }
 
-            return StartRequest(outgoing, request, verdict => ReplaceRoute(outgoing, incoming, verdict.ToResult(request)));
+            return StartRequest(outgoing, request, decision => ReplaceRoute(outgoing, incoming, decision.ToResult(request)));
         }
 
         /// <summary>
@@ -301,18 +301,18 @@ namespace UniMob.UI.Widgets
             return command.Outcome.Task;
         }
 
-        private async Task<PopOutcome> RunRequest(Route route, object request, Func<PopVerdict, Task<PopOutcome>> commit)
+        private async Task<PopOutcome> RunRequest(Route route, object request, Func<PopDecision, Task<PopOutcome>> commit)
         {
             try
             {
-                var verdict = await route.DecideAsync(request);
+                var decision = await route.DecideAsync(request);
 
-                if (!verdict.IsAllowed)
+                if (!decision.IsAllowed)
                 {
                     return PopOutcome.Refused;
                 }
 
-                return await commit(verdict);
+                return await commit(decision);
             }
             finally
             {
@@ -323,7 +323,7 @@ namespace UniMob.UI.Widgets
         /// <summary>
         ///     Takes the route's slot, then asks. The slot is what every later requester joins.
         /// </summary>
-        private Task<PopOutcome> StartRequest(Route route, object request, Func<PopVerdict, Task<PopOutcome>> commit)
+        private Task<PopOutcome> StartRequest(Route route, object request, Func<PopDecision, Task<PopOutcome>> commit)
         {
             // The slot is a placeholder registered before any route code runs. The hook runs synchronously
             // up to its first await and may navigate from there; a second request for the same route

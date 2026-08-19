@@ -60,17 +60,7 @@ namespace UniMob.UI.Widgets
             return base.OnPopRequested(request);
         }
 
-        internal sealed override async Task<PopVerdict> DecideAsync(object request)
-        {
-            var decision = await DecidePop(request);
-
-            if (!decision.IsAllowed)
-            {
-                return PopVerdict.Refused;
-            }
-
-            return PopVerdict.Allowed(decision.HasValue, decision.HasValue ? (object) decision.Value : null);
-        }
+        internal sealed override async Task<PopDecision> DecideAsync(object request) => await DecidePop(request);
 
         protected sealed override void OnPopCompleted(PopResult result)
         {

@@ -1,17 +1,32 @@
 namespace UniMob.UI.Widgets
 {
     /// <summary>
-    ///     A route's answer to being asked whether it may be popped: yes or no.
+    ///     A route's answer to being asked whether it may be popped: yes or no. An untyped route cannot
+    ///     attach a value; a <see cref="Route{T}"/> answers with <see cref="PopDecision{T}"/>, which
+    ///     converts to this for the navigator.
     /// </summary>
     public readonly struct PopDecision
     {
         public bool IsAllowed { get; }
 
-        private PopDecision(bool isAllowed) => IsAllowed = isAllowed;
+        // The value a typed decision carries, erased: this is the shape the navigator consumes, and only a
+        // PopDecision<T> can set it.
+        internal bool HasValue { get; }
+        internal object Value { get; }
 
-        public static PopDecision Allow() => new PopDecision(true);
+        internal PopDecision(bool isAllowed, bool hasValue, object value)
+        {
+            IsAllowed = isAllowed;
+            HasValue = hasValue;
+            Value = value;
+        }
 
-        public static PopDecision Refuse() => new PopDecision(false);
+        public static PopDecision Allow() => new PopDecision(true, false, null);
+
+        public static PopDecision Refuse() => new PopDecision(false, false, null);
+
+        /// <summary>The result a pop carries when this decision answered <paramref name="request"/>.</summary>
+        internal PopResult ToResult(object request) => new PopResult(HasValue, Value, request);
     }
 
     /// <summary>
@@ -36,6 +51,9 @@ namespace UniMob.UI.Widgets
         public static PopDecision<T> Allow() => new PopDecision<T>(true, false, default);
 
         public static PopDecision<T> Refuse() => new PopDecision<T>(false, false, default);
+
+        public static implicit operator PopDecision(PopDecision<T> decision) =>
+            new PopDecision(decision.IsAllowed, decision.HasValue, decision.HasValue ? (object) decision.Value : null);
     }
 
     /// <summary>
@@ -82,29 +100,5 @@ namespace UniMob.UI.Widgets
         internal static PopToOutcome ReachedTarget() => new PopToOutcome(true, null, PopOutcome.Popped);
 
         internal static PopToOutcome Stopped(Route at, PopOutcome outcome) => new PopToOutcome(false, at, outcome);
-    }
-
-    /// <summary>
-    ///     A decision as the navigator consumes it: typed and untyped answers both reduce to this.
-    /// </summary>
-    internal readonly struct PopVerdict
-    {
-        public bool IsAllowed { get; }
-        public bool HasValue { get; }
-        public object Value { get; }
-
-        private PopVerdict(bool isAllowed, bool hasValue, object value)
-        {
-            IsAllowed = isAllowed;
-            HasValue = hasValue;
-            Value = value;
-        }
-
-        public static readonly PopVerdict Refused = new PopVerdict(false, false, null);
-
-        public static PopVerdict Allowed(bool hasValue, object value) => new PopVerdict(true, hasValue, value);
-
-        /// <summary>The result a pop carries when this verdict answered <paramref name="request"/>.</summary>
-        public PopResult ToResult(object request) => new PopResult(HasValue, Value, request);
     }
 }
