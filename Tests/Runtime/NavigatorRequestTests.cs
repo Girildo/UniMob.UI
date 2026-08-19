@@ -565,5 +565,29 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(PopOutcome.NotTopmost, again.Result,
                 "an owner tidying up after its route already left must be able to do so harmlessly");
         }
+
+        /// <summary>
+        ///     A null <see cref="PopResult.Request"/> is how a result says the route closed itself, so no
+        ///     request may be null: it would make an asked pop indistinguishable from a self-close.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Request_WithANullRequest_IsRejectedBeforeTheRouteIsAsked()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var route = new DecidingRoute("D", RouteModalType.Popup, Allow);
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var incoming = host.Create("E", RouteModalType.Popup, RouteFlavour.Plain);
+
+            Assert.Throws<ArgumentNullException>(() => host.Navigator.RequestPop(route, null));
+            Assert.Throws<ArgumentNullException>(() => host.Navigator.RequestReplace(route, incoming, null));
+            Assert.Throws<ArgumentNullException>(() => host.Navigator.RequestPopTo(null, null));
+
+            Assert.AreEqual(0, route.TimesAsked, "rejected at the call, before the route is consulted");
+            Assert.AreEqual(2, host.Navigator.NavigationStack.Count);
+        }
     }
 }

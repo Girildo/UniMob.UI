@@ -215,11 +215,14 @@ namespace UniMob.UI.Widgets
         ///     <para>
         ///         <paramref name="request"/> is the caller's to define and is carried through untouched: it
         ///         is what the route's hook receives and what ends up as <see cref="PopResult.Request"/>.
+        ///         It may not be null, because a null <see cref="PopResult.Request"/> is how a result says
+        ///         the route closed itself.
         ///     </para>
         /// </remarks>
         public Task<PopOutcome> RequestPop(Route route, object request)
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
             // Looked up before the topmost check, not after. A route that navigates while deciding is
             // not on top for as long as its dialog is, and a second requester arriving then must still
@@ -255,6 +258,7 @@ namespace UniMob.UI.Widgets
         {
             if (outgoing == null) throw new ArgumentNullException(nameof(outgoing));
             if (incoming == null) throw new ArgumentNullException(nameof(incoming));
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
             // Before the topmost check, for the reason given in RequestPop.
             if (_pendingRequests.TryGetValue(outgoing, out var pending))
@@ -285,7 +289,16 @@ namespace UniMob.UI.Widgets
         ///     asked while it is genuinely topmost, which is the only moment its answer is about anything
         ///     real. Between two steps the revealed route is resumed and focused as after any pop.
         /// </remarks>
-        public async Task<PopToOutcome> RequestPopTo(Route target, object request)
+        public Task<PopToOutcome> RequestPopTo(Route target, object request)
+        {
+            // Validated here rather than in the async body, so a bad argument throws at the call instead
+            // of faulting the returned task.
+            if (request == null) throw new ArgumentNullException(nameof(request));
+
+            return RequestPopToAsync(target, request);
+        }
+
+        private async Task<PopToOutcome> RequestPopToAsync(Route target, object request)
         {
             while (true)
             {
