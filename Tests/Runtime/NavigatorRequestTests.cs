@@ -609,7 +609,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(0, route.TimesAsked, "an un-asked replace does not consult the route, even one that would refuse");
             Assert.IsTrue(route.PopTask.IsCompleted);
-            Assert.AreSame(RemovalReason.Teardown, route.PopTask.Result.Request);
+            Assert.AreEqual(PopCause.Teardown, route.PopTask.Result.Cause);
             Assert.IsFalse(route.PopTask.Result.HasValue);
         }
 
@@ -628,8 +628,8 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Assert.AreEqual(0, route.TimesAsked);
-            Assert.AreSame(RemovalReason.Teardown, route.PopTask.Result.Request);
-            Assert.AreSame(RemovalReason.Teardown, root.PopTask.Result.Request);
+            Assert.AreEqual(PopCause.Teardown, route.PopTask.Result.Cause);
+            Assert.AreEqual(PopCause.Teardown, root.PopTask.Result.Cause);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
 
@@ -647,7 +647,7 @@ namespace UniMob.UI.Tests
             yield return host.PumpFrames(3);
 
             Assert.IsTrue(route.PopTask.IsCompleted);
-            Assert.AreSame(RemovalReason.Teardown, route.PopTask.Result.Request);
+            Assert.AreEqual(PopCause.Teardown, route.PopTask.Result.Cause);
         }
 
         [UnityTest]
@@ -807,11 +807,11 @@ namespace UniMob.UI.Tests
 
                 return Allow(request);
             });
-            route.WithPopOnBack(host.Navigator);
+            route.WithPopOnBack(host.Navigator, "back");
             host.Navigator.Push(route);
             yield return host.Settle();
 
-            LogAssert.Expect(LogType.Exception, new Regex("decision failed on RemovalReason.Back"));
+            LogAssert.Expect(LogType.Exception, new Regex("decision failed on back"));
 
             Assert.IsTrue(host.Navigator.HandleBack(), "back was handled, whatever the route then did with it");
             yield return host.Settle();

@@ -66,7 +66,7 @@ namespace UniMob.UI.Widgets
         {
             if (!result.HasValue)
             {
-                _resultCompleter.TrySetResult(PopResult.None<T>(result.Request));
+                _resultCompleter.TrySetResult(new PopResult<T>(result.Cause, result.Request, false, default));
                 return;
             }
 
@@ -75,7 +75,7 @@ namespace UniMob.UI.Widgets
             // awaiting rather than hidden.
             if (result.Value is T || result.Value == null && default(T) == null)
             {
-                _resultCompleter.TrySetResult(PopResult.Of((T) result.Value, result.Request));
+                _resultCompleter.TrySetResult(new PopResult<T>(result.Cause, result.Request, true, (T) result.Value));
                 return;
             }
 

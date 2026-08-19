@@ -26,7 +26,7 @@ namespace UniMob.UI.Widgets
         // What PopTask completes with. A pop command overwrites it before the route is destroyed; every
         // other ending -- teardown, an un-asked replace, the navigator emptying itself -- leaves it at this
         // default, so a route removed without being asked reports exactly that.
-        private PopResult _popResult = PopResult.None(RemovalReason.Teardown);
+        private PopResult _popResult = PopResult.Teardown();
 
         protected Route(RouteSettings settings)
         {

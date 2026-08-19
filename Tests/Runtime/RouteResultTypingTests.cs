@@ -52,7 +52,8 @@ namespace UniMob.UI.Tests
             var (hasValue, value) = route.Result.Result;
             Assert.IsTrue(hasValue);
             Assert.AreEqual(42, value);
-            Assert.IsNull(route.Result.Result.Request, "the route closed itself");
+            Assert.AreEqual(PopCause.Self, route.Result.Result.Cause, "the route closed itself");
+            Assert.IsNull(route.Result.Result.Request);
 
             Assert.IsTrue(route.PopTask.Result.HasValue);
             Assert.AreEqual(42, route.PopTask.Result.Value, "the untyped task carries the same value, boxed");
@@ -94,6 +95,7 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(PopOutcome.Popped, outcome.Result);
             Assert.IsTrue(route.Result.Result.HasValue);
             Assert.AreEqual(7, route.Result.Result.Value);
+            Assert.AreEqual(PopCause.Requested, route.Result.Result.Cause);
             Assert.AreSame(request, route.Result.Result.Request,
                 "who asked and what the route answered travel together");
         }
@@ -149,7 +151,8 @@ namespace UniMob.UI.Tests
 
             Assert.IsTrue(route.Result.IsCompleted);
             Assert.IsFalse(route.Result.Result.HasValue);
-            Assert.AreSame(RemovalReason.Teardown, route.Result.Result.Request);
+            Assert.AreEqual(PopCause.Teardown, route.Result.Result.Cause);
+            Assert.IsNull(route.Result.Result.Request, "nobody asked, so there is nothing to have asked with");
         }
 
         [UnityTest]

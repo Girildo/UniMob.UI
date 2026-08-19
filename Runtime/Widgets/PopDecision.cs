@@ -26,7 +26,7 @@ namespace UniMob.UI.Widgets
         public static PopDecision Refuse() => new PopDecision(false, false, null);
 
         /// <summary>The result a pop carries when this decision answered <paramref name="request"/>.</summary>
-        internal PopResult ToResult(object request) => new PopResult(HasValue, Value, request);
+        internal PopResult ToResult(object request) => new PopResult(PopCause.Requested, request, HasValue, Value);
     }
 
     /// <summary>
