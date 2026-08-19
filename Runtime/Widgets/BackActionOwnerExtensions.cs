@@ -7,7 +7,7 @@ namespace UniMob.UI.Widgets
     public static class BackActionOwnerExtensions
     {
         /// <summary>
-        ///     Makes the back button ask the topmost route to pop, carrying <see cref="PopRequest.Back"/>.
+        ///     Makes the back button ask the topmost route to pop, carrying <see cref="RemovalReason.Back"/>.
         ///     Back is chrome: it does not own the route, so it asks rather than pops.
         /// </summary>
         [PublicAPI]
@@ -21,7 +21,7 @@ namespace UniMob.UI.Widgets
                 {
                     if (navigatorState.NavigationStack.Count > 0)
                     {
-                        ReportIfFaulted(navigatorState.RequestPop(navigatorState.TopmostRoute, PopRequest.Back));
+                        ReportIfFaulted(navigatorState.RequestPop(navigatorState.TopmostRoute, RemovalReason.Back));
                     }
 
                     return true;

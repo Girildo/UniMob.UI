@@ -149,7 +149,7 @@ namespace UniMob.UI.Tests
 
             Assert.IsTrue(route.Result.IsCompleted);
             Assert.IsFalse(route.Result.Result.HasValue);
-            Assert.AreSame(PopRequest.Teardown, route.Result.Result.Request);
+            Assert.AreSame(RemovalReason.Teardown, route.Result.Result.Request);
         }
 
         [UnityTest]

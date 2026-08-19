@@ -1,18 +1,13 @@
 namespace UniMob.UI.Widgets
 {
     /// <summary>
-    ///     The requests the navigator itself stamps onto a result when it removes a route without anyone
-    ///     asking the route.
+    ///     The reasons the package itself puts in <see cref="PopResult.Request"/>: <see cref="Teardown"/>
+    ///     when the navigator removes a route without asking it (unmount, an un-asked <c>Replace</c> or
+    ///     <c>NewRoot</c>), <see cref="Back"/> when the back button asks. Everything else a route is asked
+    ///     with is the caller's own request object, carried through uninterpreted; a null request means
+    ///     the route closed itself.
     /// </summary>
-    /// <remarks>
-    ///     A result's <c>Request</c> is null exactly when the route closed itself. Everything else that
-    ///     ends a route is a request of some kind, and these are the ones that originate inside the package:
-    ///     <see cref="Teardown"/> for the navigator unmounting, an un-asked <c>Replace</c> or <c>NewRoot</c>
-    ///     removing the route from under a caller, and <see cref="Back"/> for the back button.
-    ///     Callers supply their own request objects for everything they ask; the navigator carries them
-    ///     through without looking inside.
-    /// </remarks>
-    public static class PopRequest
+    public static class RemovalReason
     {
         public static readonly object Teardown = new Marker("Teardown");
         public static readonly object Back = new Marker("Back");
@@ -23,7 +18,7 @@ namespace UniMob.UI.Widgets
 
             public Marker(string name) => _name = name;
 
-            public override string ToString() => "PopRequest." + _name;
+            public override string ToString() => "RemovalReason." + _name;
         }
     }
 
@@ -34,7 +29,7 @@ namespace UniMob.UI.Widgets
     /// <remarks>
     ///     <see cref="HasValue"/> rather than a nullable value: for value types, default is a legitimate
     ///     result. <see cref="Request"/> is null when the route closed itself, and otherwise whatever the
-    ///     requester passed to <c>RequestPop</c> or one of the <see cref="PopRequest"/> markers; the
+    ///     requester passed to <c>RequestPop</c> or one of the <see cref="RemovalReason"/> markers; the
     ///     navigator never interprets it.
     /// </remarks>
     public readonly struct PopResult

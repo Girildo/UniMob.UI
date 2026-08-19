@@ -143,7 +143,7 @@ namespace UniMob.UI.Widgets
 
         /// <summary>
         ///     Empties the stack and puts <paramref name="route"/> in its place, without asking any of the
-        ///     routes it removes. Everything removed completes with <see cref="PopRequest.Teardown"/>.
+        ///     routes it removes. Everything removed completes with <see cref="RemovalReason.Teardown"/>.
         /// </summary>
         public Route NewRoot(Route route)
         {
@@ -152,7 +152,7 @@ namespace UniMob.UI.Widgets
             route.AttachTo(this);
             ApplyCommands(
                 new NavigatorCommand.PopTo(null),
-                new NavigatorCommand.Replace(route, null, PopResult.None(PopRequest.Teardown)));
+                new NavigatorCommand.Replace(route, null, PopResult.None(RemovalReason.Teardown)));
             return route;
         }
 
@@ -164,7 +164,7 @@ namespace UniMob.UI.Widgets
 
         /// <summary>
         ///     Swaps the topmost route for <paramref name="route"/> without asking it. Teardown-class, like
-        ///     <see cref="NewRoot"/>: the removed route completes with <see cref="PopRequest.Teardown"/>.
+        ///     <see cref="NewRoot"/>: the removed route completes with <see cref="RemovalReason.Teardown"/>.
         ///     To swap a route that gets a say, use <see cref="RequestReplace"/>.
         /// </summary>
         public Route Replace(Route route)
@@ -172,7 +172,7 @@ namespace UniMob.UI.Widgets
             if (route == null) throw new ArgumentNullException(nameof(route));
 
             route.AttachTo(this);
-            ApplyCommands(new NavigatorCommand.Replace(route, null, PopResult.None(PopRequest.Teardown)));
+            ApplyCommands(new NavigatorCommand.Replace(route, null, PopResult.None(RemovalReason.Teardown)));
             return route;
         }
 
@@ -675,7 +675,7 @@ namespace UniMob.UI.Widgets
                 NotifyWillPop(observers, first, revealed);
 
                 // Un-asked: NewRoot clearing the way, reported as teardown.
-                first.SetPopResult(PopResult.None(PopRequest.Teardown));
+                first.SetPopResult(PopResult.None(RemovalReason.Teardown));
 
                 var destroyTask = first.ApplyScreenEvent(ScreenEvent.Destroy);
 
