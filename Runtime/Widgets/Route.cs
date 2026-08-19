@@ -100,7 +100,14 @@ namespace UniMob.UI.Widgets
         ///     <see cref="PopOutcome.NotTopmost"/>; one that was never pushed answers the same, since it
         ///     is on top of nothing.
         /// </summary>
-        public NavigatorState Navigator { get; private set; }
+        /// <remarks>
+        ///     Internal on purpose. Holding a route lets its holder close it, or ask for it to be closed; it
+        ///     is not a way to reach the navigator, whose full surface -- pushes, replaces, a new root -- is
+        ///     granted by position, through <c>Navigator.Of</c>, and not by being handed a route. What a
+        ///     route legitimately does with its navigator is offered as verbs on the route instead:
+        ///     <see cref="Pop"/> for its owner and <see cref="RequestPop"/> for its own chrome.
+        /// </remarks>
+        internal NavigatorState Navigator { get; private set; }
 
         internal void AttachTo(NavigatorState navigator)
         {
@@ -111,7 +118,8 @@ namespace UniMob.UI.Widgets
         ///     Closes the route without a value, on its own authority: nobody is asked, and the pop happens
         ///     as soon as the navigator gets to it. This is how a route's own content -- or the code that
         ///     pushed it and still holds it -- ends it. Chrome and the system, which do not own the route,
-        ///     ask instead through <see cref="NavigatorState.RequestPop"/>.
+        ///     ask instead through <see cref="NavigatorState.RequestPop"/>; the route's own chrome asks
+        ///     through <see cref="RequestPop"/>.
         /// </summary>
         /// <returns>
         ///     <see cref="PopOutcome.Popped"/>, or why nothing happened -- <see cref="PopOutcome.NotTopmost"/>
@@ -123,6 +131,27 @@ namespace UniMob.UI.Widgets
             return Navigator == null
                 ? Task.FromResult(PopOutcome.NotTopmost)
                 : Navigator.PopRoute(this, PopResult.None());
+        }
+
+        /// <summary>
+        ///     Asks for this route to be popped, as chrome or the system would, so that
+        ///     <see cref="OnPopRequested"/> gets its say. This is how the chrome a route draws for itself --
+        ///     a barrier that dismisses on tap, a close button in its own frame -- ends it without taking
+        ///     the decision out of the route's hands. Same terms as <see cref="NavigatorState.RequestPop"/>,
+        ///     which is the call for everyone who is not the route; this one is for subclasses only, because
+        ///     a route able to ask on its own behalf is no reason to hand anyone its navigator.
+        /// </summary>
+        /// <returns>
+        ///     As <see cref="NavigatorState.RequestPop"/>: <see cref="PopOutcome.NotTopmost"/> also for a
+        ///     route that was never pushed, since it is on top of nothing.
+        /// </returns>
+        protected Task<PopOutcome> RequestPop(object request)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+
+            return Navigator == null
+                ? Task.FromResult(PopOutcome.NotTopmost)
+                : Navigator.RequestPop(this, request);
         }
 
         /// <summary>

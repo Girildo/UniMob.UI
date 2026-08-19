@@ -27,7 +27,9 @@ namespace UniMob.UI.Tests
 
     /// <summary>
     ///     A route that answers <see cref="Route.OnPopRequested"/> with whatever the fixture supplies, and
-    ///     counts how often it was asked.
+    ///     counts how often it was asked. Its own chrome's way of closing it, the protected
+    ///     <see cref="Route.RequestPop"/>, is exposed as <see cref="AskToLeave"/> so a test can stand in
+    ///     for that chrome.
     /// </summary>
     internal sealed class DecidingRoute : Route
     {
@@ -44,6 +46,8 @@ namespace UniMob.UI.Tests
         public object LastRequest { get; private set; }
 
         public override Widget Build(BuildContext context) => new Empty();
+
+        public Task<PopOutcome> AskToLeave(object request) => RequestPop(request);
 
         protected override Task<PopDecision> OnPopRequested(object request)
         {
@@ -400,7 +404,8 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(PopOutcome.Refused, outcome.Result);
             Assert.AreSame(outgoing, host.Navigator.TopmostRoute);
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
-            Assert.IsNull(incoming.Navigator, "a route that was never placed knows no navigator");
+            Assert.AreEqual(PopOutcome.NotTopmost, incoming.Pop().Result,
+                "a route that was never placed is on top of nothing, so it was never attached");
         }
 
         [UnityTest]
@@ -675,9 +680,9 @@ namespace UniMob.UI.Tests
             var outcome = route.Pop();
             yield return host.Settle();
 
-            Assert.AreEqual(PopOutcome.Popped, outcome.Result);
+            Assert.AreEqual(PopOutcome.Popped, outcome.Result,
+                "only possible if the route was attached to its navigator when the push was issued");
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
-            Assert.AreSame(host.Navigator, route.Navigator, "attached when the push was issued");
         }
 
         [UnityTest]
@@ -698,6 +703,64 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(PopOutcome.NotTopmost, again.Result,
                 "an owner tidying up after its route already left must be able to do so harmlessly");
+        }
+
+        /// <summary>
+        ///     A route's own chrome -- a barrier tap, its own close button -- closes it by asking, so that
+        ///     the route's decision still runs. Same protocol as a request from outside, just issued from
+        ///     within.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RequestPop_FromTheRouteItself_AsksItAndPopsItCarryingTheRequest()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var route = new DecidingRoute("D", RouteModalType.Popup, Allow);
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var request = new object();
+            var outcome = route.AskToLeave(request);
+            yield return host.Settle();
+
+            Assert.AreEqual(PopOutcome.Popped, outcome.Result);
+            Assert.AreEqual(1, route.TimesAsked, "asking on its own behalf still consults the route");
+            Assert.AreSame(request, route.LastRequest);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+            Assert.AreSame(request, route.PopTask.Result.Request, "the result names the request, as for any asked pop");
+        }
+
+        [UnityTest]
+        public IEnumerator RequestPop_FromTheRouteItself_WhenItRefuses_LeavesItInPlace()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var route = new DecidingRoute("D", RouteModalType.Popup, Refuse);
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var outcome = route.AskToLeave("why");
+            yield return host.Settle();
+
+            Assert.AreEqual(PopOutcome.Refused, outcome.Result,
+                "the route's own chrome gets no more authority than anyone else who asks");
+            Assert.AreSame(route, host.Navigator.TopmostRoute);
+            Assert.IsFalse(route.PopTask.IsCompleted);
+        }
+
+        [UnityTest]
+        public IEnumerator RequestPop_FromARouteThatWasNeverPushed_ReportsNotTopmostWithoutAskingIt()
+        {
+            var route = new DecidingRoute("Loose", RouteModalType.Popup, Allow);
+
+            Assert.AreEqual(PopOutcome.NotTopmost, route.AskToLeave("why").Result);
+            Assert.AreEqual(0, route.TimesAsked, "on top of nothing, so there is nothing to decide");
+
+            // The null-request rule holds regardless of whether the route has a navigator to forward to.
+            Assert.Throws<ArgumentNullException>(() => route.AskToLeave(null));
+            yield break;
         }
 
         /// <summary>
