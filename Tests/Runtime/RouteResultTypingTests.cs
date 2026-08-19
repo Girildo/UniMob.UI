@@ -169,5 +169,54 @@ namespace UniMob.UI.Tests
             Assert.IsTrue(route.Result.Result.HasValue, "the route said it had a value; that the value is null is its business");
             Assert.IsNull(route.Result.Result.Value);
         }
+
+        /// <summary>
+        ///     The typed and the untyped result are two views of one close. Whichever a caller awaits,
+        ///     the other must already be complete by the time the caller resumes.
+        /// </summary>
+        /// <remarks>
+        ///     The two completers are set one after the other, and the continuations of the first used to
+        ///     run inline inside its completion, so an awaiter of <c>PopTask</c> resumed while
+        ///     <c>Result</c> was still pending. Both completers now defer their continuations, which is what
+        ///     this pins from both sides.
+        /// </remarks>
+        [UnityTest]
+        public IEnumerator AwaitingEitherResult_FindsTheOtherAlreadyComplete()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            var route = new DecidingRoute<int>("D", RouteModalType.Popup, _ => AllowWith(0));
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var typedWasCompleteWhenUntypedResumed = false;
+            var untypedWasCompleteWhenTypedResumed = false;
+
+            async Task AwaitUntyped()
+            {
+                await route.PopTask;
+                typedWasCompleteWhenUntypedResumed = route.Result.IsCompleted;
+            }
+
+            async Task AwaitTyped()
+            {
+                await route.Result;
+                untypedWasCompleteWhenTypedResumed = route.PopTask.IsCompleted;
+            }
+
+            var untypedAwaiter = AwaitUntyped();
+            var typedAwaiter = AwaitTyped();
+
+            route.Pop(42);
+            yield return host.Settle();
+
+            Assert.IsTrue(untypedAwaiter.IsCompleted, "the PopTask awaiter resumed");
+            Assert.IsTrue(typedAwaiter.IsCompleted, "the Result awaiter resumed");
+            Assert.IsTrue(typedWasCompleteWhenUntypedResumed,
+                "an awaiter of PopTask must not resume before Result is complete");
+            Assert.IsTrue(untypedWasCompleteWhenTypedResumed,
+                "an awaiter of Result must not resume before PopTask is complete");
+        }
     }
 }

@@ -11,7 +11,11 @@ namespace UniMob.UI.Widgets
     {
         private readonly RouteSettings _settings;
         private readonly TriggerStateMachine<ScreenState, ScreenEvent, Task> _machine;
-        private readonly TaskCompletionSource<PopResult> _popCompleter = new TaskCompletionSource<PopResult>();
+        // Continuations run asynchronously so that the typed and untyped result complete as one: see
+        // CompletePop.
+        private readonly TaskCompletionSource<PopResult> _popCompleter =
+            new TaskCompletionSource<PopResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         private readonly TaskCompletionSource<object> _pushCompleter = new TaskCompletionSource<object>();
         private readonly TaskCompletionSource<object> _disposeCompleter = new TaskCompletionSource<object>();
 
@@ -379,6 +383,14 @@ namespace UniMob.UI.Widgets
         ///     <para>
         ///         TrySetResult rather than SetResult: the two endings are not mutually exclusive in
         ///         principle, and a route that has already answered must not throw when asked again.
+        ///     </para>
+        ///     <para>
+        ///         The completer runs its continuations asynchronously, and so does the typed one a
+        ///         <see cref="Route{T}"/> completes from <see cref="OnPopCompleted"/>. Both stand for the one
+        ///         close, and they are completed one after the other; with inline continuations, whoever
+        ///         awaited <see cref="PopTask"/> would resume between the two and find the typed result still
+        ///         pending. Deferring every continuation until both are set is what makes the pair
+        ///         indistinguishable from a single completion, whichever of the two a caller holds.
         ///     </para>
         /// </remarks>
         private void CompletePop()

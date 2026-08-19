@@ -15,8 +15,10 @@ namespace UniMob.UI.Widgets
     /// </remarks>
     public abstract class Route<T> : Route
     {
+        // Asynchronous continuations for the same reason as the untyped completer this one mirrors: both
+        // are completed in turn for the one close, and neither awaiter may resume in between.
         private readonly TaskCompletionSource<PopResult<T>> _resultCompleter =
-            new TaskCompletionSource<PopResult<T>>();
+            new TaskCompletionSource<PopResult<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         protected Route(RouteSettings settings) : base(settings)
         {
