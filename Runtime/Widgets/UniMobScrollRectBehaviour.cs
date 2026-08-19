@@ -4,10 +4,13 @@ using UnityEngine.UI;
 
 namespace UniMob.UI.Widgets
 {
+    /// <summary>
+    /// A <see cref="ScrollRect"/> that forwards drags along its inactive axis to the parent
+    /// hierarchy, so a vertical list nested in a horizontal pager scrolls both ways.
+    /// </summary>
     internal class UniMobScrollRectBehaviour : ScrollRect
     {
         private bool _routeToParent;
-        private UniMobDismissibleDialogBehaviour _dismissibleDialog;
 
         public override void OnInitializePotentialDrag(PointerEventData eventData)
         {
@@ -29,13 +32,6 @@ namespace UniMob.UI.Widgets
                 return;
             }
 
-            _dismissibleDialog = GetComponentInParent<UniMobDismissibleDialogBehaviour>();
-
-            if (_dismissibleDialog != null && _dismissibleDialog.HandleBeginDrag(eventData, this))
-            {
-                return;
-            }
-
             base.OnBeginDrag(eventData);
         }
 
@@ -47,11 +43,6 @@ namespace UniMob.UI.Widgets
                 return;
             }
 
-            if (_dismissibleDialog != null && _dismissibleDialog.HandleDrag(eventData))
-            {
-                return;
-            }
-
             base.OnDrag(eventData);
         }
 
@@ -60,11 +51,6 @@ namespace UniMob.UI.Widgets
             if (_routeToParent)
             {
                 ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.endDragHandler);
-                return;
-            }
-
-            if (_dismissibleDialog != null && _dismissibleDialog.HandleEndDrag(eventData))
-            {
                 return;
             }
 
