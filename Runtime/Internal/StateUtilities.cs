@@ -16,6 +16,22 @@ namespace UniMob.UI.Internal
 
         public static State[] UpdateChildren(BuildContext context, State[] oldChildren, List<Widget> newWidgets)
         {
+            // Checked before anything is inflated or deactivated, so a bad list fails clean rather
+            // than half-diffed. UpdateChild reads null as "no child", which is meaningful for a slot
+            // but not for a list: unasserted, a null is stored as a null state and only surfaces
+            // later, at teardown or render, far from the caller that wrote it.
+            for (var i = 0; i < newWidgets.Count; i++)
+            {
+                if (newWidgets[i] != null)
+                    continue;
+
+                // Guarded so the message is built only on the failure path: this runs on every
+                // rebuild of every list.
+                Assert.IsNotNull(
+                    newWidgets[i],
+                    $"Children[{i}] is null. A list drops an absent child rather than holding a null.");
+            }
+
             var newChildrenTop = 0;
             var oldChildrenTop = 0;
             var newChildrenBottom = newWidgets.Count - 1;
@@ -155,12 +171,24 @@ namespace UniMob.UI.Internal
             child.Dispose();
         }
 
-        public static State UpdateChild(BuildContext context, [CanBeNull] State child, [NotNull] Widget newWidget)
+        public static State UpdateChild(BuildContext context, [CanBeNull] State child, [CanBeNull] Widget newWidget)
         {
             Assert.IsNull(Atom.CurrentScope);
             
             
             
+
+            // A null widget means "no child here anymore". Without this the caller has to skip the
+            // build to avoid a crash, and skipping it is what leaves the outgoing child undisposed.
+            if (newWidget == null)
+            {
+                if (child != null)
+                {
+                    DeactivateChild(child);
+                }
+
+                return null;
+            }
 
             if (child != null)
             {

@@ -59,6 +59,12 @@ namespace UniMob.UI.Layout.Internal.Views
 
             if (State.Child == null)
             {
+                // A child that has gone away still has a view to recycle, and an empty mapper pass
+                // is what returns it to the pool. Skipping the pass leaves that view mounted, still
+                // bound to its old state, and painting its last frame forever.
+                using (_mapper.CreateRender()) { }
+                this.ChildView = null;
+
                 // No child to place, but this render object can still be the one at fault -- one that
                 // answers with a non-finite size of its own has nothing below it to blame. Returning
                 // here is what made that invisible.
