@@ -180,6 +180,47 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
 
+        /// <summary>
+        ///     The two freedoms the protocol grants have to hold together: a route may navigate while it
+        ///     decides, and a second requester shares the pending answer. A route behind the dialog it
+        ///     pushed is not on top, and that must not turn the second requester away.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RequestPop_WhileTheRouteDecidesBehindItsOwnDialog_StillSharesTheOutcome()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            Route confirmation = null;
+            var route = new DecidingRoute("D", RouteModalType.Popup, async _ =>
+            {
+                confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
+                host.Navigator.Push(confirmation);
+                await confirmation.PopTask;
+                return PopDecision.Allow();
+            });
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var first = host.Navigator.RequestPop(route, "first");
+            yield return host.Settle();
+
+            Assert.AreSame(confirmation, host.Navigator.TopmostRoute, "D is covered by the dialog it pushed to decide");
+
+            var second = host.Navigator.RequestPop(route, "second");
+
+            Assert.AreSame(first, second, "the second requester joins the question in progress, covered or not");
+            Assert.IsFalse(second.IsCompleted, "and is not turned away with NotTopmost");
+            Assert.AreEqual(1, route.TimesAsked);
+
+            confirmation.Pop();
+            yield return host.Settle();
+
+            Assert.AreEqual(PopOutcome.Popped, first.Result);
+            Assert.AreEqual(PopOutcome.Popped, second.Result);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+        }
+
         [UnityTest]
         public IEnumerator RequestPop_WhenTheRoutePopsItselfWhileDeciding_ReportsNotTopmost()
         {
@@ -321,6 +362,48 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Assert.AreEqual(PopOutcome.NotTopmost, outcome.Result, "the swap it agreed to no longer exists");
+            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
+            Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
+        }
+
+        /// <summary>
+        ///     Same as for RequestPop: a replace arriving while the route decides behind its own dialog
+        ///     joins the pending question rather than being turned away for not being on top.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RequestReplace_WhileTheRouteDecidesBehindItsOwnDialog_JoinsThePendingRequest()
+        {
+            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
+            yield return host.Settle();
+
+            Route confirmation = null;
+            var route = new DecidingRoute("D", RouteModalType.Popup, async _ =>
+            {
+                confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
+                host.Navigator.Push(confirmation);
+                await confirmation.PopTask;
+                return PopDecision.Allow();
+            });
+            host.Navigator.Push(route);
+            yield return host.Settle();
+
+            var first = host.Navigator.RequestPop(route, "first");
+            yield return host.Settle();
+
+            Assert.AreSame(confirmation, host.Navigator.TopmostRoute, "D is covered by the dialog it pushed to decide");
+
+            var incoming = host.Create("E", RouteModalType.Popup, RouteFlavour.Plain);
+            var replace = host.Navigator.RequestReplace(route, incoming, "switch");
+
+            Assert.IsFalse(replace.IsCompleted, "joined, not turned away with NotTopmost");
+            Assert.AreEqual(1, route.TimesAsked);
+
+            confirmation.Pop();
+            yield return host.Settle();
+
+            Assert.AreEqual(PopOutcome.Popped, first.Result);
+            Assert.AreEqual(PopOutcome.NotTopmost, replace.Result,
+                "the route left through the first request; this replace did not happen");
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }

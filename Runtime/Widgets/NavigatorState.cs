@@ -210,7 +210,8 @@ namespace UniMob.UI.Widgets
         ///     topmost, which is what <see cref="PopOutcome.NotTopmost"/> reports. Nothing else on the
         ///     stack is held still meanwhile: another push may cover the route, and if it does the answer
         ///     is honest about it rather than the pop removing the wrong route. A route already being
-        ///     asked is not asked again; the second requester shares the pending outcome.
+        ///     asked is not asked again; the second requester shares the pending outcome, and does so even
+        ///     while the route is covered by something it pushed in order to decide.
         ///     <para>
         ///         <paramref name="request"/> is the caller's to define and is carried through untouched: it
         ///         is what the route's hook receives and what ends up as <see cref="PopResult.Request"/>.
@@ -220,14 +221,19 @@ namespace UniMob.UI.Widgets
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
 
-            if (route.Navigator != this || Topmost() != route)
-            {
-                return Task.FromResult(PopOutcome.NotTopmost);
-            }
-
+            // Looked up before the topmost check, not after. A route that navigates while deciding is
+            // not on top for as long as its dialog is, and a second requester arriving then must still
+            // join the question in progress; checking topmost first would turn it away with NotTopmost
+            // for the very behaviour the hook is allowed. A pending entry can only exist for a route
+            // that was this navigator's, and on top, when it was asked, so joining it is always sound.
             if (_pendingRequests.TryGetValue(route, out var pending))
             {
                 return pending;
+            }
+
+            if (route.Navigator != this || Topmost() != route)
+            {
+                return Task.FromResult(PopOutcome.NotTopmost);
             }
 
             var task = RunRequest(route, request, verdict => PopRoute(route, verdict.ToResult(request)));
@@ -250,17 +256,18 @@ namespace UniMob.UI.Widgets
             if (outgoing == null) throw new ArgumentNullException(nameof(outgoing));
             if (incoming == null) throw new ArgumentNullException(nameof(incoming));
 
-            if (outgoing.Navigator != this || Topmost() != outgoing)
-            {
-                return Task.FromResult(PopOutcome.NotTopmost);
-            }
-
+            // Before the topmost check, for the reason given in RequestPop.
             if (_pendingRequests.TryGetValue(outgoing, out var pending))
             {
                 // Someone else is already closing it. Whatever they get, this replace did not happen:
                 // either the route refused, or it left through their pop and the incoming route was
                 // never pushed. Report the latter as NotTopmost so the caller falls back to a plain push.
                 return MapJoined(pending);
+            }
+
+            if (outgoing.Navigator != this || Topmost() != outgoing)
+            {
+                return Task.FromResult(PopOutcome.NotTopmost);
             }
 
             var task = RunRequest(outgoing, request, verdict => ReplaceRoute(outgoing, incoming, verdict.ToResult(request)));
