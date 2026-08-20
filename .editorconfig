@@ -6,6 +6,9 @@ trim_trailing_whitespace = false
 insert_final_newline = false
 indent_style = space
 indent_size = 4
+# csharpier owns C# formatting and defaults to 100; keep every other tool that wraps lines
+# in agreement with it rather than letting two formatters fight over the same file.
+max_line_length = 100
 
 # Microsoft .NET properties
 csharp_indent_braces = false
@@ -269,7 +272,7 @@ resharper_csharp_align_multiline_extends_list = false
 resharper_csharp_align_multiline_for_stmt = false
 resharper_csharp_align_multiline_parameter = false
 resharper_csharp_align_multiple_declaration = false
-resharper_csharp_max_line_length = 120
+resharper_csharp_max_line_length = 100
 resharper_csharp_naming_rule.enum_member = AaBb
 resharper_csharp_naming_rule.method_property_event = AaBb
 resharper_csharp_naming_rule.other = AaBb
