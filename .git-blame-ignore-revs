@@ -1,0 +1,5 @@
+# Revisions to skip when running git blame. Configure it once per clone with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: dotnet csharpier format Packages/UniMob.UI
+2da1d441bc8aa66f757e3317e95ace47c2a3a3bf
