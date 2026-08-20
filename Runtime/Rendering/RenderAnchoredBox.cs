@@ -7,32 +7,6 @@ using UnityEngine;
 namespace UniMob.UI.Rendering
 {
     /// <summary>
-    /// What <see cref="AnchoredBox"/> needs from its state to place a child against another widget's
-    /// measured box. All of the geometry is reactive: the layout pass runs inside an atom, so reading
-    /// it here is what makes the child follow the anchor.
-    /// </summary>
-    public interface IAnchoredBoxState : ISingleChildLayoutState
-    {
-        /// <summary><b>[Atom]</b> The box being anchored to, in canvas space.</summary>
-        WidgetGeometry AnchorGeometry { get; }
-
-        /// <summary><b>[Atom]</b> This widget's own box, in canvas space, to rebase the anchor into.</summary>
-        WidgetGeometry SelfGeometry { get; }
-
-        // The PREFERRED placement. It is mirrored across FlipToFit's axis when the child turns out
-        // not to fit on that side -- a decision that belongs here rather than in the state, because
-        // it is the one place the child's measured size exists.
-        Alignment TargetAnchor { get; }
-        Alignment ChildAnchor { get; }
-        Vector2 Offset { get; }
-        float? KeepInsidePadding { get; }
-        bool MatchAnchorWidth { get; }
-
-        /// <summary>The axis the placement may flip on, or null to place it exactly as described.</summary>
-        Axis? FlipToFit { get; }
-    }
-
-    /// <summary>
     /// Places a single child at a point derived from another widget's box, and keeps it inside its own
     /// bounds.
     /// </summary>

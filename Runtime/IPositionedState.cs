@@ -1,5 +1,3 @@
-using UniMob.UI.Rendering;
-
 namespace UniMob.UI
 {
     /// <summary>

@@ -121,10 +121,4 @@ namespace UniMob.UI.Rendering
             return width / _aspectRatio;
         }
     }
-
-    public interface IAspectRatioState : ISingleChildLayoutState
-    {
-        // Intentionally left blank.
-        public float AspectRatio { get; }
-    }
 }

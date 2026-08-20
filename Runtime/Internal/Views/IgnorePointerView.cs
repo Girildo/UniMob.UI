@@ -33,9 +33,4 @@ namespace UniMob.UI.Internal.Views
             _canvasGroup.blocksRaycasts = !this.State.Ignoring;
         }
     }
-
-    internal interface IIgnorePointerState : ISingleChildLayoutState
-    {
-        bool Ignoring { get; }
-    }
 }

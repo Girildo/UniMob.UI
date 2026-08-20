@@ -45,12 +45,4 @@ namespace UniMob.UI.Internal.Views
             childTransform.localRotation = State.Rotation.Value;
         }
     }
-
-    internal interface ICompositeTransitionState : ISingleChildLayoutState
-    {
-        IAnimation<float> Opacity { get; }
-        IAnimation<Vector2> Position { get; }
-        IAnimation<Vector3> Scale { get; }
-        IAnimation<Quaternion> Rotation { get; }
-    }
 }

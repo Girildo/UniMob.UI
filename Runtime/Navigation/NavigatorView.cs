@@ -63,9 +63,4 @@ namespace UniMob.UI.Navigation
             }
         }
     }
-
-    public interface INavigatorState : IViewState
-    {
-        IState[] Screens { get; }
-    }
 }

@@ -76,15 +76,4 @@ namespace UniMob.UI.Widgets
         public CrossAxisAlignment CrossAxisAlignment => this.Widget.CrossAxisAlignment;
         public MainAxisAlignment RunAlignment => this.Widget.RunAlignment;
     }
-
-    public interface IWrapState : IMultiChildLayoutState
-    {
-        Axis Direction { get; }
-        float Spacing { get; }
-        float RunSpacing { get; }
-
-        MainAxisAlignment Alignment { get; }
-        CrossAxisAlignment CrossAxisAlignment { get; }
-        MainAxisAlignment RunAlignment { get; }
-    }
 }

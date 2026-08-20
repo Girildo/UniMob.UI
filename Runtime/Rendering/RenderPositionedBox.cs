@@ -3,13 +3,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Rendering
 {
-    public interface IPositionedBoxState : ISingleChildLayoutState
-    {
-        Alignment Alignment { get; }
-        float? WidthFactor { get; }
-        float? HeightFactor { get; }
-    }
-
     /// <summary>
     /// A render object that positions a child within itself, potentially creating
     /// more space for alignment by expanding or applying size factors.

@@ -1,4 +1,4 @@
-namespace UniMob.UI.Rendering
+namespace UniMob.UI
 {
     /// <summary>
     /// A state that presents exactly one child to the layout system.

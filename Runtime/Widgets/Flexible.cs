@@ -2,12 +2,6 @@ using UniMob.UI.Rendering;
 
 namespace UniMob.UI.Widgets
 {
-    public enum FlexFit
-    {
-        Loose,
-        Tight,
-    }
-
     internal interface IFlexible : ISingleChildLayoutWidget
     {
         int Flex { get; }

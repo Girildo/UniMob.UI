@@ -15,6 +15,4 @@ namespace UniMob.UI.Widgets
     {
         protected override void Render() { }
     }
-
-    internal interface IEmptyState : IViewState { }
 }

@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Rendering
 {
-    public interface ITabsLayoutState : IMultiChildLayoutState
-    {
-        TabController TabController { get; }
-    }
-
     /// <summary>
     ///     Lays every child out as one full-viewport page and slides the run of them horizontally as the
     ///     controller moves, so page <c>i</c> sits at <c>(i - Value) * width</c>.

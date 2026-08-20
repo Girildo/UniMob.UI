@@ -3,11 +3,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Rendering
 {
-    public interface IConstrainedBoxState : ISingleChildLayoutState
-    {
-        LayoutConstraints BoxConstraints { get; }
-    }
-
     public class RenderConstrainedBox : RenderProxy
     {
         private readonly IConstrainedBoxState _state;

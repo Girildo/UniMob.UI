@@ -31,9 +31,4 @@ namespace UniMob.UI.Internal.Views
             _canvasGroup.alpha = State.OpacityValue.Value;
         }
     }
-
-    internal interface IOpacityState : ISingleChildLayoutState
-    {
-        IAnimation<float> OpacityValue { get; }
-    }
 }

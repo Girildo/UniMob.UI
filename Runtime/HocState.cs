@@ -5,8 +5,6 @@ using UnityEngine.Assertions;
 
 namespace UniMob.UI
 {
-    public interface IHocState : IState { }
-
     public abstract class HocState<TWidget> : State, IHocState, ISingleChildLayoutState
         where TWidget : Widget
     {

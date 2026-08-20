@@ -6,14 +6,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Rendering
 {
-    public interface IFlexContainerState : IMultiChildLayoutState
-    {
-        CrossAxisAlignment CrossAxisAlignment { get; }
-        MainAxisAlignment MainAxisAlignment { get; }
-        AxisSize MainAxisSize { get; }
-        float Spacing { get; }
-    }
-
     public class RenderFlex : MultiChildRenderObject
     {
         private readonly IFlexContainerState _state;

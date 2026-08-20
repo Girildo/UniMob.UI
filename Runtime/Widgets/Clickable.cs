@@ -19,12 +19,6 @@ namespace UniMob.UI.Widgets
         }
     }
 
-    internal interface IClickableState : ISingleChildLayoutState
-    {
-        bool Interactable { get; }
-        void OnClick();
-    }
-
     internal class ClickableState : SingleChildLayoutState<Clickable>, IClickableState
     {
         public override WidgetViewReference View =>

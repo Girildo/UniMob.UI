@@ -28,11 +28,6 @@ namespace UniMob.UI.Widgets
         }
     }
 
-    public interface IPaddingState : ISingleChildLayoutState
-    {
-        RectPadding Padding { get; }
-    }
-
     public class PaddingBoxState : SingleChildLayoutState<PaddingBox>, IPaddingState
     {
         public RectPadding Padding => Widget.Padding;

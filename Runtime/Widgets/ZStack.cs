@@ -17,11 +17,6 @@ namespace UniMob.UI.Widgets
         }
     }
 
-    public interface IZStackState : IMultiChildLayoutState
-    {
-        Alignment Alignment { get; }
-    }
-
     public class ZStackState : ViewState<ZStack>, IZStackState
     {
         private readonly StateCollectionHolder _children;

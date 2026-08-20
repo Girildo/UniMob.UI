@@ -5,19 +5,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Widgets
 {
-    /// <summary>
-    ///     Horizontal text alignment options.
-    /// </summary>
-    public enum HorizontalTextAlignment
-    {
-        Left = 0x1,
-        Center = 0x2,
-        Right = 0x4,
-        Justified = 0x8,
-        Flush = 0x10,
-        Geometry = 0x20,
-    }
-
     public class Text : StatefulWidget
     {
         public WidgetViewReference? ViewReference { get; init; }
@@ -109,26 +96,5 @@ namespace UniMob.UI.Widgets
 
         public override WidgetViewReference View =>
             Widget.ViewReference ?? WidgetViewReference.Registered("UniMob.LayoutTextView");
-    }
-
-    public interface ITextState : IViewState
-    {
-        string Value { get; }
-        Color Color { get; }
-
-        /// <summary>The colour to paint, as an animation; a constant one when nothing animates it.</summary>
-        IAnimation<Color> AnimatedColor { get; }
-
-        int FontSize { get; }
-
-        TMP_Style Style { get; }
-
-        FontWeight FontWeight { get; }
-        HorizontalTextAlignment HorizontalTextAlign { get; }
-
-        bool WrappingEnabled { get; }
-        TextOverflowModes OverflowMode { get; }
-
-        int MaxLines { get; }
     }
 }

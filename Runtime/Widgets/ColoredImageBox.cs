@@ -22,12 +22,6 @@ namespace UniMob.UI.Widgets
         }
     }
 
-    internal interface IColoredImageBoxState : ISingleChildLayoutState
-    {
-        Color BackgroundColor { get; }
-        Sprite? BackgroundImage { get; }
-    }
-
     internal class ColoredImageBoxState
         : SingleChildLayoutState<ColoredImageBox>,
             IColoredImageBoxState
