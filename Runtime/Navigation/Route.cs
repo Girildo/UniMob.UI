@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using UniMob.UI.Internal;
 
 namespace UniMob.UI.Navigation
@@ -407,12 +406,6 @@ namespace UniMob.UI.Navigation
         void IBackActionOwner.SetBackAction(Func<bool> action)
         {
             _backAction = action;
-        }
-
-        [Obsolete("await route is Obsolete. Use route.PopTask or route.PushTask instead")]
-        public TaskAwaiter<PopResult> GetAwaiter()
-        {
-            return PopTask.GetAwaiter();
         }
     }
 

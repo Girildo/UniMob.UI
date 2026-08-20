@@ -1165,11 +1165,7 @@ namespace UniMob.UI.Navigation
             return null;
         }
 
-        /// <summary>
-        ///     Removes the topmost route. Void rather than returning it: every caller pops for the
-        ///     effect, and Route is awaitable, so a discarded one reads to the compiler as a
-        ///     forgotten await.
-        /// </summary>
+        /// <summary>Removes the topmost route. Every caller pops for the effect, so nothing is returned.</summary>
         public void Pop()
         {
             _widgets.RemoveAt(_widgets.Count - 1);
