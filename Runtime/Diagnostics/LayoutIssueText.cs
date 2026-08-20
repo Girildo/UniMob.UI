@@ -17,10 +17,8 @@ namespace UniMob.UI.Diagnostics
     ///         list shows only the first line of an entry. Everything else goes below it.
     ///     </para>
     ///     <para>
-    ///         Public rather than internal, for the two reasons that outrank a smaller surface: a
-    ///         reporter outside this assembly has to reach the same severity or the divergence comes
-    ///         straight back, and there is no <c>InternalsVisibleTo</c> here, so an internal formatter
-    ///         is an untested one.
+    ///         Public rather than internal because a reporter outside this assembly has to reach the
+    ///         same severity, or the divergence comes straight back.
     ///     </para>
     /// </remarks>
     public static class LayoutIssueText

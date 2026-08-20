@@ -14,7 +14,7 @@ namespace UniMob.UI.Tests
     ///     that silently returned a default for something it was never supposed to read would hide a bug
     ///     instead of failing the test. Subclasses override only what their target RenderObject reads.
     /// </summary>
-    public abstract class FakeState : IState
+    internal abstract class FakeState : IState
     {
         public virtual Lifetime StateLifetime => Lifetime.Eternal;
 

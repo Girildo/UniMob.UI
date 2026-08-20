@@ -15,7 +15,8 @@ namespace UniMob.UI.Tests
     ///     stop reaching Unity's log at all -- it passes just as happily when the widget under test is
     ///     screaming into a recorder nobody checked. Assert on this instead.
     ///     <para>
-    ///         Lives in the test assembly rather than in Runtime, so no test helper ships in the package.
+    ///         Lives in the testing assembly rather than in Runtime, which is constrained to
+    ///         <c>UNITY_INCLUDE_TESTS</c>, so no test helper reaches a player build.
     ///     </para>
     /// </remarks>
     public sealed class RecordingReporter

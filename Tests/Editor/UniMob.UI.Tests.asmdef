@@ -5,7 +5,7 @@
         "UniMob",
         "UniMob.UI",
         "UniMob.UI.Editor",
-        "UniMob.UI.Tests.Shared",
+        "UniMob.UI.Testing",
         "Unity.TextMeshPro",
         "Unity.Addressables",
         "Unity.ResourceManager"

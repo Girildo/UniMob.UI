@@ -10,7 +10,7 @@ namespace UniMob.UI.Tests
     ///     <c>IPositionedBoxState</c>, <c>IAspectRatioState</c>, <c>IIntrinsicSizeState</c>, ...). Subclasses
     ///     just add their own extra property/properties.
     /// </summary>
-    public class FakeSingleChildLayoutState : FakeState, ISingleChildLayoutState
+    internal class FakeSingleChildLayoutState : FakeState, ISingleChildLayoutState
     {
         public IState Child { get; set; }
     }

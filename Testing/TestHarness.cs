@@ -71,7 +71,7 @@ namespace UniMob.UI.Tests
         /// <summary>
         ///     Applies a parent's layout push, as <c>RenderObject.LayoutChild</c> does.
         /// </summary>
-        public static Vector2 DriveLayout(State state, LayoutConstraints constraints)
+        internal static Vector2 DriveLayout(State state, LayoutConstraints constraints)
         {
             return state.RenderObject.Layout(constraints);
         }
@@ -79,7 +79,7 @@ namespace UniMob.UI.Tests
         /// <summary>
         ///     Applies the view pass, as <c>View.DoRender</c> does on the state backing a view.
         /// </summary>
-        public static void DriveViewPass(State state)
+        internal static void DriveViewPass(State state)
         {
             state.InnerViewState.RenderObject.WatchLayout();
         }
@@ -88,7 +88,7 @@ namespace UniMob.UI.Tests
         ///     Applies both pulls a real frame makes, in runtime order. Where a build-only wrapper is
         ///     involved these reach the same render object, which is what makes double-driving visible.
         /// </summary>
-        public static void DriveFrame(State state, LayoutConstraints constraints)
+        internal static void DriveFrame(State state, LayoutConstraints constraints)
         {
             DriveLayout(state, constraints);
             DriveViewPass(state);
