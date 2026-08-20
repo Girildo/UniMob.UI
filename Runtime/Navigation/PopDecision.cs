@@ -12,9 +12,9 @@ namespace UniMob.UI.Navigation
         // The value a typed decision carries, erased: this is the shape the navigator consumes, and only a
         // PopDecision<T> can set it.
         internal bool HasValue { get; }
-        internal object Value { get; }
+        internal object? Value { get; }
 
-        internal PopDecision(bool isAllowed, bool hasValue, object value)
+        internal PopDecision(bool isAllowed, bool hasValue, object? value)
         {
             IsAllowed = isAllowed;
             HasValue = hasValue;
@@ -26,7 +26,7 @@ namespace UniMob.UI.Navigation
         public static PopDecision Refuse() => new PopDecision(false, false, null);
 
         /// <summary>The result a pop carries when this decision answered <paramref name="request"/>.</summary>
-        internal PopResult ToResult(object request) =>
+        internal PopResult ToResult(object? request) =>
             new PopResult(PopCause.Requested, request, HasValue, Value);
     }
 
@@ -38,9 +38,11 @@ namespace UniMob.UI.Navigation
     {
         public bool IsAllowed { get; }
         public bool HasValue { get; }
-        public T Value { get; }
 
-        private PopDecision(bool isAllowed, bool hasValue, T value)
+        /// <summary>The value supplied, meaningful only where <see cref="HasValue"/> is true.</summary>
+        public T? Value { get; }
+
+        private PopDecision(bool isAllowed, bool hasValue, T? value)
         {
             IsAllowed = isAllowed;
             HasValue = hasValue;
@@ -57,7 +59,7 @@ namespace UniMob.UI.Navigation
             new PopDecision(
                 decision.IsAllowed,
                 decision.HasValue,
-                decision.HasValue ? (object)decision.Value : null
+                decision.HasValue ? (object?)decision.Value : null
             );
     }
 
@@ -89,13 +91,13 @@ namespace UniMob.UI.Navigation
     {
         public bool Reached { get; }
 
-        /// <summary>The route the walk stopped at, when it did not reach its target.</summary>
-        public Route StoppedAt { get; }
+        /// <summary>The route the walk stopped at, or null when the walk reached its target.</summary>
+        public Route? StoppedAt { get; }
 
         /// <summary>Why the walk stopped there, when it did not reach its target.</summary>
         public PopOutcome Outcome { get; }
 
-        private PopToOutcome(bool reached, Route stoppedAt, PopOutcome outcome)
+        private PopToOutcome(bool reached, Route? stoppedAt, PopOutcome outcome)
         {
             Reached = reached;
             StoppedAt = stoppedAt;

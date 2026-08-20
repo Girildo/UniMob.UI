@@ -405,7 +405,7 @@ namespace UniMob.UI.Navigation
         ///     The route on top, untracked (control flow, not observation), or null on an empty stack
         ///     where <see cref="TopmostRoute"/> throws.
         /// </summary>
-        private Route Topmost()
+        private Route? Topmost()
         {
             return _stack.Count > 0 ? _stack.Peek() : null;
         }
@@ -846,7 +846,7 @@ namespace UniMob.UI.Navigation
                 observers = Widget.Observers;
             }
 
-            if (observers == null || observers.Count == 0)
+            if (observers.Count == 0)
             {
                 return Array.Empty<INavigatorObserver>();
             }
@@ -869,7 +869,7 @@ namespace UniMob.UI.Navigation
         private void NotifyWillPush(
             INavigatorObserver[] observers,
             Route route,
-            Route previousRoute
+            Route? previousRoute
         )
         {
             using (Atom.NoWatch)
@@ -888,7 +888,11 @@ namespace UniMob.UI.Navigation
             }
         }
 
-        private void NotifyDidPush(INavigatorObserver[] observers, Route route, Route previousRoute)
+        private void NotifyDidPush(
+            INavigatorObserver[] observers,
+            Route route,
+            Route? previousRoute
+        )
         {
             using (Atom.NoWatch)
             {
@@ -906,7 +910,11 @@ namespace UniMob.UI.Navigation
             }
         }
 
-        private void NotifyWillPop(INavigatorObserver[] observers, Route route, Route previousRoute)
+        private void NotifyWillPop(
+            INavigatorObserver[] observers,
+            Route route,
+            Route? previousRoute
+        )
         {
             using (Atom.NoWatch)
             {
@@ -924,7 +932,7 @@ namespace UniMob.UI.Navigation
             }
         }
 
-        private void NotifyDidPop(INavigatorObserver[] observers, Route route, Route previousRoute)
+        private void NotifyDidPop(INavigatorObserver[] observers, Route route, Route? previousRoute)
         {
             using (Atom.NoWatch)
             {
@@ -945,7 +953,7 @@ namespace UniMob.UI.Navigation
         private void NotifyWillReplace(
             INavigatorObserver[] observers,
             Route newRoute,
-            Route oldRoute
+            Route? oldRoute
         )
         {
             using (Atom.NoWatch)
@@ -967,7 +975,7 @@ namespace UniMob.UI.Navigation
         private void NotifyDidReplace(
             INavigatorObserver[] observers,
             Route newRoute,
-            Route oldRoute
+            Route? oldRoute
         )
         {
             using (Atom.NoWatch)
@@ -1042,7 +1050,8 @@ namespace UniMob.UI.Navigation
         /// </summary>
         public sealed class PopTo : NavigatorCommand
         {
-            public Route Route { get; }
+            /// <summary>The route to stop at, or null to remove everything but the last one.</summary>
+            public Route? Route { get; }
 
             public PopTo(Route? route) => Route = route;
         }
@@ -1091,7 +1100,7 @@ namespace UniMob.UI.Navigation
         // from inside a computation would subscribe that computation and immediately obsolete it.
         private int _revision = int.MinValue;
 
-        private Route[] _snapshot;
+        private Route[]? _snapshot;
         private int _snapshotRevision;
 
         public int Count => _stack.Count;
@@ -1139,7 +1148,7 @@ namespace UniMob.UI.Navigation
         ///     The route that would become topmost if the current one were removed, or null when there is
         ///     nothing underneath. Untracked, like <see cref="Peek"/> and <see cref="Count"/>; allocation-free.
         /// </summary>
-        public Route PeekBelow()
+        public Route? PeekBelow()
         {
             var topmostSkipped = false;
 
@@ -1156,12 +1165,16 @@ namespace UniMob.UI.Navigation
             return null;
         }
 
-        public Route Pop()
+        /// <summary>
+        ///     Removes the topmost route. Void rather than returning it: every caller pops for the
+        ///     effect, and Route is awaitable, so a discarded one reads to the compiler as a
+        ///     forgotten await.
+        /// </summary>
+        public void Pop()
         {
             _widgets.RemoveAt(_widgets.Count - 1);
-            var result = _stack.Pop();
+            _stack.Pop();
             _version.Value = ++_revision;
-            return result;
         }
 
         public void Push(Route screen)

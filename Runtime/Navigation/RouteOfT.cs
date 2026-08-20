@@ -79,7 +79,7 @@ namespace UniMob.UI.Navigation
             if (result.Value is T || result.Value == null && default(T) == null)
             {
                 _resultCompleter.TrySetResult(
-                    new PopResult<T>(result.Cause, result.Request, true, (T)result.Value)
+                    new PopResult<T>(result.Cause, result.Request, true, (T)result.Value!)
                 );
                 return;
             }
@@ -89,7 +89,7 @@ namespace UniMob.UI.Navigation
                     "Route '"
                         + Key
                         + "' was popped with a "
-                        + result.Value.GetType().Name
+                        + (result.Value?.GetType().Name ?? "null")
                         + " but is a Route<"
                         + typeof(T).Name
                         + ">."

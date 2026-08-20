@@ -23,25 +23,25 @@ namespace UniMob.UI.Navigation
         ///     when the navigator is empty. Raised before the incoming route is built, so a push whose
         ///     initialization fails ends without a matching <see cref="DidPush"/>.
         /// </summary>
-        void WillPush(Route route, Route previousRoute);
+        void WillPush(Route route, Route? previousRoute);
 
         /// <summary>
         ///     A push has been committed. The stack already contains <paramref name="route"/>, so
         ///     <c>NavigationStack</c> and <c>TopmostRoute</c> agree with this callback while it runs.
         /// </summary>
-        void DidPush(Route route, Route previousRoute);
+        void DidPush(Route route, Route? previousRoute);
 
         /// <summary>
         ///     A pop is starting. <paramref name="previousRoute"/> is the route that will be revealed
         ///     underneath.
         /// </summary>
-        void WillPop(Route route, Route previousRoute);
+        void WillPop(Route route, Route? previousRoute);
 
         /// <summary>
         ///     A pop has been committed. Reached even when the route's exit transition failed: the
         ///     navigator commits the removal either way, so every <see cref="WillPop"/> is matched.
         /// </summary>
-        void DidPop(Route route, Route previousRoute);
+        void DidPop(Route route, Route? previousRoute);
 
         /// <summary>
         ///     A replace is starting. A replace on an empty navigator announces itself as a push instead,
@@ -49,11 +49,11 @@ namespace UniMob.UI.Navigation
         ///     <see cref="WillPush"/>, and unmatched on the same terms; a failing outgoing transition can
         ///     also abort it, since a replace does not commit its removal against one.
         /// </summary>
-        void WillReplace(Route newRoute, Route oldRoute);
+        void WillReplace(Route newRoute, Route? oldRoute);
 
         /// <summary>
         ///     A replace has been committed.
         /// </summary>
-        void DidReplace(Route newRoute, Route oldRoute);
+        void DidReplace(Route newRoute, Route? oldRoute);
     }
 }

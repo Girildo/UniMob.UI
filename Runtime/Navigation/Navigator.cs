@@ -31,12 +31,12 @@ namespace UniMob.UI.Navigation
         public Navigator(
             string initialRoute,
             Dictionary<string, Func<Route>> routes,
-            IReadOnlyList<INavigatorObserver> observers = null
+            IReadOnlyList<INavigatorObserver>? observers = null
         )
         {
             InitialRoute = initialRoute;
             Routes = routes;
-            Observers = observers;
+            Observers = observers ?? Array.Empty<INavigatorObserver>();
         }
 
         public override State CreateState() => new NavigatorState();
@@ -44,26 +44,29 @@ namespace UniMob.UI.Navigation
         public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
             new RenderNavigator((INavigatorState)state);
 
-        public static NavigatorState Of(
-            BuildContext context,
-            bool rootNavigator = false,
-            bool nullOk = false
-        )
+        /// <summary>
+        ///     The navigator above <paramref name="context"/>, or the outermost one when
+        ///     <paramref name="rootNavigator"/> is set. Throws where there is none; use
+        ///     <see cref="OfOrNull"/> where its absence is an answer rather than a fault.
+        /// </summary>
+        public static NavigatorState Of(BuildContext context, bool rootNavigator = false)
         {
-            var navigator = rootNavigator
-                ? context.RootAncestorStateOfType<NavigatorState>()
-                : context.AncestorStateOfType<NavigatorState>();
-
-            if (!nullOk && navigator == null)
-            {
-                throw new Exception(
+            return OfOrNull(context, rootNavigator)
+                ?? throw new Exception(
                     "Navigator operation requested with a context that does not include a Navigator.\n"
                         + "The context used to push or pop routes from the Navigator must be that of a "
                         + "widget that is a descendant of a Navigator widget."
                 );
-            }
+        }
 
-            return navigator;
+        /// <summary>
+        ///     The navigator above <paramref name="context"/>, or null where there is none.
+        /// </summary>
+        public static NavigatorState? OfOrNull(BuildContext context, bool rootNavigator = false)
+        {
+            return rootNavigator
+                ? context.RootAncestorStateOfType<NavigatorState>()
+                : context.AncestorStateOfType<NavigatorState>();
         }
 
         public static Route Push(BuildContext context, Route route) => Of(context).Push(route);

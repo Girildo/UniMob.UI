@@ -17,16 +17,16 @@ namespace UniMob.UI.Navigation
         private readonly TaskCompletionSource<PopResult> _popCompleter =
             new TaskCompletionSource<PopResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private readonly TaskCompletionSource<object> _pushCompleter =
-            new TaskCompletionSource<object>();
-        private readonly TaskCompletionSource<object> _disposeCompleter =
-            new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object?> _pushCompleter =
+            new TaskCompletionSource<object?>();
+        private readonly TaskCompletionSource<object?> _disposeCompleter =
+            new TaskCompletionSource<object?>();
 
         private readonly MutableAtom<ScreenState> _screenState = Atom.Value(
             ScreenState.Initializing
         );
 
-        private Func<bool> _backAction;
+        private Func<bool>? _backAction;
 
         // What PopTask completes with. A pop command overwrites it before the route is destroyed; every
         // other ending -- teardown, an un-asked replace, the navigator emptying itself -- leaves it at this
@@ -62,7 +62,7 @@ namespace UniMob.UI.Navigation
         ///     one that throws is logged, and neither aborts the transition nor costs later subscribers
         ///     their notification.
         /// </remarks>
-        public event Action<ScreenEvent> ScreenEventApplied;
+        public event Action<ScreenEvent>? ScreenEventApplied;
 
         public RouteModalType ModalType => _settings.ModalType;
 
@@ -86,7 +86,8 @@ namespace UniMob.UI.Navigation
         ///     Internal: holding a route lets its holder close it or ask for it to be closed, through
         ///     <see cref="Pop"/> and <see cref="RequestPop"/>, not drive its navigator.
         /// </remarks>
-        internal NavigatorState Navigator { get; private set; }
+        /// <summary>The navigator this route is on, or null before it is attached to one.</summary>
+        internal NavigatorState? Navigator { get; private set; }
 
         internal void AttachTo(NavigatorState navigator)
         {

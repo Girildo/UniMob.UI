@@ -128,7 +128,7 @@ namespace UniMob.UI.Navigation
         public PageRouteBuilder(
             RouteSettings settings,
             PageBuilder pageBuilder,
-            PageTransitionsBuilder transitionsBuilder = null,
+            PageTransitionsBuilder? transitionsBuilder = null,
             float transitionDuration = 0f,
             float reverseTransitionDuration = 0f
         )

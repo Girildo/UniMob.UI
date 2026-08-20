@@ -15,7 +15,7 @@ namespace UniMob.UI.Navigation
 {
     internal class NavigatorView : View<INavigatorState>
     {
-        private ViewMapperBase _mapper;
+        private ViewMapperBase _mapper = null!;
 
         protected override void Activate()
         {

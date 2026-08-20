@@ -14,7 +14,7 @@ namespace UniMob.UI.Navigation
             this TBackActionOwner owner,
             NavigatorState navigatorState,
             object request,
-            Func<bool> filter = null
+            Func<bool>? filter = null
         )
             where TBackActionOwner : IBackActionOwner
         {

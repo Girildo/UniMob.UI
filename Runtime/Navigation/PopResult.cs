@@ -33,11 +33,16 @@ namespace UniMob.UI.Navigation
     public readonly struct PopResult
     {
         public PopCause Cause { get; }
-        public object Request { get; }
-        public bool HasValue { get; }
-        public object Value { get; }
 
-        internal PopResult(PopCause cause, object request, bool hasValue, object value)
+        /// <summary>What the requester asked with, or null when nobody asked.</summary>
+        public object? Request { get; }
+
+        public bool HasValue { get; }
+
+        /// <summary>The value carried, meaningful only where <see cref="HasValue"/> is true.</summary>
+        public object? Value { get; }
+
+        internal PopResult(PopCause cause, object? request, bool hasValue, object? value)
         {
             Cause = cause;
             Request = request;
@@ -45,7 +50,7 @@ namespace UniMob.UI.Navigation
             Value = value;
         }
 
-        public void Deconstruct(out bool hasValue, out object value)
+        public void Deconstruct(out bool hasValue, out object? value)
         {
             hasValue = HasValue;
             value = Value;
@@ -55,17 +60,17 @@ namespace UniMob.UI.Navigation
         ///     A result without a value: the route's own close, or an asked one when <paramref name="request"/>
         ///     is given.
         /// </summary>
-        public static PopResult None(object request = null) =>
+        public static PopResult None(object? request = null) =>
             new PopResult(CauseOf(request), request, false, null);
 
         /// <summary>A result carrying an untyped value. Typed routes go through <see cref="Of{T}"/>.</summary>
-        public static PopResult OfValue(object value, object request = null) =>
+        public static PopResult OfValue(object? value, object? request = null) =>
             new PopResult(CauseOf(request), request, true, value);
 
-        public static PopResult<T> Of<T>(T value, object request = null) =>
+        public static PopResult<T> Of<T>(T value, object? request = null) =>
             new PopResult<T>(CauseOf(request), request, true, value);
 
-        public static PopResult<T> None<T>(object request = null) =>
+        public static PopResult<T> None<T>(object? request = null) =>
             new PopResult<T>(CauseOf(request), request, false, default);
 
         /// <summary>The result of a route the navigator removed without asking it.</summary>
@@ -74,16 +79,16 @@ namespace UniMob.UI.Navigation
         public static PopResult<T> Teardown<T>() =>
             new PopResult<T>(PopCause.Teardown, null, false, default);
 
-        private static PopCause CauseOf(object request) =>
+        private static PopCause CauseOf(object? request) =>
             request == null ? PopCause.Self : PopCause.Requested;
 
         public override string ToString() => Describe(HasValue, Value, Cause, Request);
 
         internal static string Describe(
             bool hasValue,
-            object value,
+            object? value,
             PopCause cause,
-            object request
+            object? request
         ) =>
             (hasValue ? "PopResult(" + value + ")" : "PopResult(none)")
             + ", "
@@ -98,11 +103,16 @@ namespace UniMob.UI.Navigation
     public readonly struct PopResult<T>
     {
         public PopCause Cause { get; }
-        public object Request { get; }
-        public bool HasValue { get; }
-        public T Value { get; }
 
-        internal PopResult(PopCause cause, object request, bool hasValue, T value)
+        /// <summary>What the requester asked with, or null when nobody asked.</summary>
+        public object? Request { get; }
+
+        public bool HasValue { get; }
+
+        /// <summary>The value carried, meaningful only where <see cref="HasValue"/> is true.</summary>
+        public T? Value { get; }
+
+        internal PopResult(PopCause cause, object? request, bool hasValue, T? value)
         {
             Cause = cause;
             Request = request;
@@ -110,7 +120,7 @@ namespace UniMob.UI.Navigation
             Value = value;
         }
 
-        public void Deconstruct(out bool hasValue, out T value)
+        public void Deconstruct(out bool hasValue, out T? value)
         {
             hasValue = HasValue;
             value = Value;
