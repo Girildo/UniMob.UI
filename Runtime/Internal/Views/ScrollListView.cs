@@ -250,7 +250,7 @@ namespace UniMob.UI.Internal.Views
             int index,
             float duration,
             ScrollToPosition scrollToPosition,
-            Easing easing
+            Easing? easing
         ) // this should be moved to the controller
         {
             if (State?.RenderObject is not IScrollableRenderObject renderSliver)
@@ -267,8 +267,12 @@ namespace UniMob.UI.Internal.Views
             return true;
         }
 
-        private IEnumerator AnimateScrollTo(float targetPixelOffset, float duration, Easing easing)
+        private IEnumerator AnimateScrollTo(float targetPixelOffset, float duration, Easing? easing)
         {
+            // Every caller down the chain defaults easing to null; without this the coroutine throws
+            // on the first frame of a plain ScrollTo.
+            var curve = easing ?? Ease.Linear;
+
             var originalMovementType = scrollRect.movementType;
             try
             {
@@ -293,7 +297,7 @@ namespace UniMob.UI.Internal.Views
                     var newPixelOffset = Mathf.LerpUnclamped(
                         startPixelOffset,
                         targetPixelOffset,
-                        easing(time, duration)
+                        curve(time, duration)
                     );
 
                     // Writes via the normalized-position setter (see ApplyPixelOffsetToScrollRect), which in

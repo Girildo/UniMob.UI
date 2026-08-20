@@ -30,7 +30,7 @@ namespace UniMob.UI.Widgets
         }
 
         private static Widget DefaultLayoutBuilder(
-            Widget currentChild,
+            Widget? currentChild,
             IEnumerable<Widget> previousChildren
         )
         {
@@ -56,8 +56,8 @@ namespace UniMob.UI.Widgets
         private readonly Queue<AnimationController> _pendingAnimations =
             new Queue<AnimationController>();
 
-        private List<Widget> _outgoingWidgets = new List<Widget>();
-        private Entry _currentEntry;
+        private List<Widget>? _outgoingWidgets = new List<Widget>();
+        private Entry? _currentEntry;
         private int _childNumber;
 
         public override void InitState()
@@ -71,9 +71,9 @@ namespace UniMob.UI.Widgets
         {
             _version.Get();
 
-            RebuildOutgoingWidgetsIfNeed();
+            var outgoingWidgets = RebuildOutgoingWidgetsIfNeed();
 
-            var previousChildren = _outgoingWidgets.Where(w =>
+            var previousChildren = outgoingWidgets.Where(w =>
                 w.Key != _currentEntry?.Transition.Key
             );
             return Widget.LayoutBuilder.Invoke(_currentEntry?.Transition, previousChildren);
@@ -98,24 +98,24 @@ namespace UniMob.UI.Widgets
                 MarkChildWidgetCacheAsDirty();
             }
 
-            var hasNewChild = Widget.Child != null;
-            var hasOldChild = _currentEntry != null;
+            var newChild = Widget.Child;
+            var currentEntry = _currentEntry;
 
-            if (
-                hasNewChild != hasOldChild
-                || hasNewChild && !StateUtilities.CanUpdateWidget(Widget.Child, _currentEntry.Child)
-            )
+            var needsNewEntry =
+                newChild == null
+                    ? currentEntry != null
+                    : currentEntry == null
+                        || !StateUtilities.CanUpdateWidget(newChild, currentEntry.Child);
+
+            if (needsNewEntry)
             {
                 _childNumber += 1;
                 AddEntryForNewChild(animate: true);
             }
-            else if (_currentEntry != null)
+            else if (currentEntry != null && newChild != null)
             {
-                Assert.IsTrue(hasOldChild && hasNewChild);
-                Assert.IsTrue(StateUtilities.CanUpdateWidget(Widget.Child, _currentEntry.Child));
-
-                _currentEntry.Child = Widget.Child;
-                UpdateTransitionForEntry(_currentEntry);
+                currentEntry.Child = newChild;
+                UpdateTransitionForEntry(currentEntry);
 
                 MarkChildWidgetCacheAsDirty();
             }
@@ -123,23 +123,25 @@ namespace UniMob.UI.Widgets
 
         private void AddEntryForNewChild(bool animate)
         {
-            Assert.IsTrue(animate || _currentEntry == null);
+            var outgoing = _currentEntry;
 
-            var hasCurrentEntry = _currentEntry != null;
-            if (hasCurrentEntry)
+            Assert.IsTrue(animate || outgoing == null);
+
+            var hasCurrentEntry = outgoing != null;
+            if (outgoing != null)
             {
                 Assert.IsTrue(animate);
-                Assert.IsTrue(!_outgoingEntries.Contains(_currentEntry));
+                Assert.IsTrue(!_outgoingEntries.Contains(outgoing));
 
-                _outgoingEntries.Add(_currentEntry);
+                _outgoingEntries.Add(outgoing);
 
-                if (_currentEntry.AnimationController.Status != AnimationStatus.Dismissed)
+                if (outgoing.AnimationController.Status != AnimationStatus.Dismissed)
                 {
-                    _currentEntry.AnimationController.Reverse();
+                    outgoing.AnimationController.Reverse();
                 }
                 else
                 {
-                    _currentEntry.LifetimeController.Dispose();
+                    outgoing.LifetimeController.Dispose();
                 }
 
                 _currentEntry = null;
@@ -147,7 +149,8 @@ namespace UniMob.UI.Widgets
                 MarkChildWidgetCacheAsDirty();
             }
 
-            if (Widget.Child == null)
+            var child = Widget.Child;
+            if (child == null)
             {
                 return;
             }
@@ -159,7 +162,7 @@ namespace UniMob.UI.Widgets
                 Widget.ReverseDuration
             );
 
-            _currentEntry = NewEntry(lc, Widget.Child, controller, Widget.TransitionBuilder);
+            _currentEntry = NewEntry(lc, child, controller, Widget.TransitionBuilder);
 
             if (animate)
             {
@@ -183,19 +186,18 @@ namespace UniMob.UI.Widgets
         }
 
         private Entry NewEntry(
-            ILifetimeController lc,
+            LifetimeController lc,
             Widget child,
             AnimationController controller,
             AnimatedSwitcherTransitionBuilder transition
         )
         {
-            var entry = new Entry
-            {
-                Child = child,
-                Transition = MakeTransition(child, controller, transition),
-                AnimationController = controller,
-                LifetimeController = lc,
-            };
+            var entry = new Entry(
+                lc,
+                controller,
+                MakeTransition(child, controller, transition),
+                child
+            );
 
             Atom.Reaction(
                 lc.Lifetime,
@@ -264,24 +266,37 @@ namespace UniMob.UI.Widgets
             _outgoingWidgets = null;
         }
 
-        private void RebuildOutgoingWidgetsIfNeed()
+        private List<Widget> RebuildOutgoingWidgetsIfNeed()
         {
-            if (_outgoingWidgets == null)
-            {
-                _outgoingWidgets = _outgoingEntries.Select(entry => entry.Transition).ToList();
-            }
+            var widgets = _outgoingWidgets ??= _outgoingEntries
+                .Select(entry => entry.Transition)
+                .ToList();
 
-            Assert.IsTrue(_outgoingEntries.Count == _outgoingWidgets.Count);
+            Assert.IsTrue(_outgoingEntries.Count == widgets.Count);
             Assert.IsTrue(
-                _outgoingEntries.Count == 0
-                    || _outgoingEntries.Last().Transition == _outgoingWidgets.Last()
+                _outgoingEntries.Count == 0 || _outgoingEntries.Last().Transition == widgets.Last()
             );
+
+            return widgets;
         }
 
         private class Entry
         {
-            public ILifetimeController LifetimeController;
-            public AnimationController AnimationController;
+            public Entry(
+                LifetimeController lifetimeController,
+                AnimationController animationController,
+                Widget transition,
+                Widget child
+            )
+            {
+                LifetimeController = lifetimeController;
+                AnimationController = animationController;
+                Transition = transition;
+                Child = child;
+            }
+
+            public readonly LifetimeController LifetimeController;
+            public readonly AnimationController AnimationController;
             public Widget Transition;
             public Widget Child;
         }
@@ -299,7 +314,7 @@ namespace UniMob.UI.Widgets
     );
 
     public delegate Widget AnimatedSwitcherLayoutBuilder(
-        Widget currentChild,
+        Widget? currentChild,
         IEnumerable<Widget> previousWidget
     );
 }

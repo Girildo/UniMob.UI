@@ -4,6 +4,7 @@ namespace UniMob.UI.Internal
     using System.Collections.Generic;
 
     internal class TriggerStateMachine<TState, TTrigger, TResult>
+        where TState : notnull
         where TTrigger : struct
     {
         private readonly Dictionary<Transition, TState> _transitions = new Dictionary<
@@ -11,8 +12,8 @@ namespace UniMob.UI.Internal
             TState
         >(new Comparer());
 
-        private readonly Dictionary<Transition, Func<TResult, TResult>> _postCallbacks =
-            new Dictionary<Transition, Func<TResult, TResult>>(new Comparer());
+        private readonly Dictionary<Transition, Func<TResult?, TResult?>> _postCallbacks =
+            new Dictionary<Transition, Func<TResult?, TResult?>>(new Comparer());
 
         private readonly Dictionary<Transition, Func<TResult>> _resultBuilders = new Dictionary<
             Transition,
@@ -33,7 +34,7 @@ namespace UniMob.UI.Internal
         ///     a chain innermost-first and would read <see cref="State"/> as wherever the chain ended
         ///     rather than as the state its own transition reached.
         /// </remarks>
-        public event Action<TState, TTrigger> Transitioned;
+        public event Action<TState, TTrigger>? Transitioned;
 
         public TriggerStateMachine(TState state) => State = state;
 
@@ -43,7 +44,7 @@ namespace UniMob.UI.Internal
         public void AddPostCallback(
             TState state,
             TTrigger trigger,
-            Func<TResult, TResult> callback
+            Func<TResult?, TResult?> callback
         ) => _postCallbacks.Add(Transition.Of(state, trigger), callback);
 
         public void AddResultBuilder(TState state, TTrigger trigger, Func<TResult> builder) =>
@@ -52,7 +53,11 @@ namespace UniMob.UI.Internal
         public bool CanTrigger(TTrigger trigger) =>
             _transitions.ContainsKey(Transition.Of(State, trigger));
 
-        public TResult Trigger(TTrigger trigger)
+        /// <summary>
+        ///     Runs <paramref name="trigger"/>, returning what the transition produces, or the default
+        ///     where it declares no result builder.
+        /// </summary>
+        public TResult? Trigger(TTrigger trigger)
         {
             var key = Transition.Of(State, trigger);
 
@@ -94,7 +99,7 @@ namespace UniMob.UI.Internal
                 return this;
             }
 
-            public Builder Allow(TState from, TState to, Func<TResult, TResult> postCallback)
+            public Builder Allow(TState from, TState to, Func<TResult?, TResult?> postCallback)
             {
                 _machine.AddTransition(from, _trigger, to);
                 _machine.AddPostCallback(from, _trigger, postCallback);

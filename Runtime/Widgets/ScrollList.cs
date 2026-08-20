@@ -132,7 +132,7 @@ namespace UniMob.UI.Widgets
 
         // Eager-mode resolver injected into the shared bridge: maps a visible index to its built child State
         // from the CreateChildren collection (null when out of range, matching the prior inline behavior).
-        private IState ResolveEagerIndex(int index)
+        private IState? ResolveEagerIndex(int index)
         {
             var all = _allChildren.Value;
             return index < all.Length ? all[index] : null;
@@ -148,7 +148,9 @@ namespace UniMob.UI.Widgets
         public MovementType MovementType => Widget.MovementType;
 
         [Atom]
-        public ScrollController ScrollController { get; private set; }
+        // Resolved in InitState: the widget's controller if it brought one, otherwise a
+        // controller of this state's own.
+        public ScrollController ScrollController { get; private set; } = null!;
 
         [Atom]
         public Vector2 ViewportSize { get; set; }

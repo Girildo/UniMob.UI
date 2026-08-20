@@ -42,13 +42,14 @@ namespace UniMob.UI.Internal
 
                 var ownerCtx = _buildContext;
 
-                while (
-                    ownerCtx?.Parent != null
-                    && ownerCtx?.State?.GetType().Namespace is var ns
-                    && ns != null
-                    && ns.StartsWith("UniMob")
-                )
+                while (ownerCtx?.Parent != null)
                 {
+                    var ns = ownerCtx.State?.GetType().Namespace;
+                    if (ns == null || !ns.StartsWith("UniMob"))
+                    {
+                        break;
+                    }
+
                     ownerCtx = ownerCtx.Parent;
                 }
 

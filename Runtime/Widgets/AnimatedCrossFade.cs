@@ -33,9 +33,10 @@ namespace UniMob.UI.Widgets
         private readonly Key _firstKey = Key.Of(CrossFadeState.ShowFirst);
         private readonly Key _secondKey = Key.Of(CrossFadeState.ShowSecond);
 
-        private AnimationController _controller;
-        private IAnimation<float> _firstAnimation;
-        private IAnimation<float> _secondAnimation;
+        // All three built by InitState, which runs before the first Build.
+        private AnimationController _controller = null!;
+        private IAnimation<float> _firstAnimation = null!;
+        private IAnimation<float> _secondAnimation = null!;
 
         public override void InitState()
         {

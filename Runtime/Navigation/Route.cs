@@ -275,7 +275,7 @@ namespace UniMob.UI.Navigation
             }
         }
 
-        private Func<Task, Task> ExecTransition(
+        private Func<Task?, Task> ExecTransition(
             Func<Task> handler,
             ScreenEvent? screenEvent = null
         ) => previous => ExecuteTransitionInternal(previous, handler, screenEvent);
@@ -288,7 +288,7 @@ namespace UniMob.UI.Navigation
         ///     so the guard would buy nothing.
         /// </remarks>
         private async Task ExecuteTransitionInternal(
-            Task previous,
+            Task? previous,
             Func<Task> handler,
             ScreenEvent? screenEvent
         )

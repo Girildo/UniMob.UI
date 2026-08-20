@@ -40,7 +40,7 @@ namespace UniMob.UI.Widgets
 
         // Which page is showing, which the tree cannot say: every tab is laid out, and the ones either
         // side of the current one sit just outside the viewport rather than being absent.
-        public override string GetDiagnosticInfo()
+        public override string? GetDiagnosticInfo()
         {
             var controller = TabController;
             return controller == null ? null : $"{controller.Index + 1}/{controller.TabCount}";

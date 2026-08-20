@@ -12,7 +12,7 @@ namespace UniMob.UI.Internal.ViewLoaders
         private readonly Dictionary<string, string> _registrars = new Dictionary<string, string>();
         private readonly Dictionary<string, IView> _cache = new Dictionary<string, IView>();
 
-        private GameObject templatesRootObject;
+        private GameObject? templatesRootObject;
 
         public InternalViewLoader()
         {

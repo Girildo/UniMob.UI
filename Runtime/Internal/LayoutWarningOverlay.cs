@@ -22,7 +22,7 @@ namespace UniMob.UI.Internal
     /// </remarks>
     internal sealed class LayoutWarningOverlay
     {
-        private static Sprite _stripeSprite;
+        private static Sprite? _stripeSprite;
 
         private readonly List<UnityEngine.UI.Image> _pool = new List<UnityEngine.UI.Image>();
         private int _used;

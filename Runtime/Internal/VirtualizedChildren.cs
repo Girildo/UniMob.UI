@@ -21,11 +21,11 @@ namespace UniMob.UI.Internal
 
         // Returns the owner's *current* Widget.ItemBuilder. Called inside tracked atom pulls (not captured
         // once) so a widget swap that changes the builder invalidates the built window -- see BuildWindow.
-        private readonly Func<IndexedWidgetBuilder> _itemBuilder;
+        private readonly Func<IndexedWidgetBuilder?> _itemBuilder;
 
         // Owner-provided eager resolver (index -> State from the owner's CreateChildren collection). Only
         // consulted in eager mode; in lazy mode the visible set resolves from _builtStates below.
-        private readonly Func<int, IState> _resolveEagerIndex;
+        private readonly Func<int, IState?> _resolveEagerIndex;
 
         // Cache of currently-built items by logical index. Deliberately NOT routed through
         // StateCollectionHolder (its reconciler disposes anything absent from the list it's given, so a
@@ -66,8 +66,8 @@ namespace UniMob.UI.Internal
         public VirtualizedChildren(
             Lifetime lifetime,
             BuildContext itemBuildContext,
-            Func<IndexedWidgetBuilder> itemBuilder,
-            Func<int, IState> resolveEagerIndex
+            Func<IndexedWidgetBuilder?> itemBuilder,
+            Func<int, IState?> resolveEagerIndex
         )
         {
             _itemBuildContext = itemBuildContext;
@@ -137,9 +137,13 @@ namespace UniMob.UI.Internal
                 // _builtStates is a plain field (untracked here) yet safe: it's only mutated in BuildWindow,
                 // which runs (via RequestBuildWindow) before SetVisibleChildren writes _visibleIndices in the
                 // same pass -- so by the time this recomputes, _builtStates already reflects the current pass.
-                visible[i] = lazy
-                    ? _builtStates.GetValueOrDefault(indices[i])
-                    : _resolveEagerIndex(indices[i]);
+                // Both resolvers answer null for an index the owner no longer has, which the visible
+                // index list is written to rule out; layout dereferences what it is handed.
+                visible[i] = (
+                    lazy
+                        ? _builtStates.GetValueOrDefault(indices[i])
+                        : _resolveEagerIndex(indices[i])
+                )!;
             }
 
             return visible;
@@ -179,23 +183,27 @@ namespace UniMob.UI.Internal
             // Re-run ItemBuilder for every index in the window each time this pull fires (not just
             // newly-entering ones) -- like the eager Children path re-diffing its whole list. UpdateChild is
             // cheap when unchanged (returns the same State) and rebuilds just the slots whose Key/Type moved.
-            for (var index = startIndexInclusive; index < endIndexExclusive; index++)
+            // No builder is the eager path, which reaches here only with an empty window.
+            if (itemBuilder != null)
             {
-                var widget = itemBuilder(_itemBuildContext, index);
-
-                using (Atom.NoWatch)
+                for (var index = startIndexInclusive; index < endIndexExclusive; index++)
                 {
-                    var built = StateUtilities.UpdateChild(
-                        _itemBuildContext,
-                        _builtStates.GetValueOrDefault(index),
-                        widget
-                    );
-                    // Never null: IndexedWidgetBuilder returns a widget, and UpdateChild answers
-                    // null only for a null one.
-                    _builtStates[index] = built!;
+                    var widget = itemBuilder(_itemBuildContext, index);
 
-                    if (built!.Key != null)
-                        _seenKeyToIndex[built.Key] = index;
+                    using (Atom.NoWatch)
+                    {
+                        var built = StateUtilities.UpdateChild(
+                            _itemBuildContext,
+                            _builtStates.GetValueOrDefault(index),
+                            widget
+                        );
+                        // Never null: IndexedWidgetBuilder returns a widget, and UpdateChild answers
+                        // null only for a null one.
+                        _builtStates[index] = built!;
+
+                        if (built!.Key != null)
+                            _seenKeyToIndex[built.Key] = index;
+                    }
                 }
             }
 
