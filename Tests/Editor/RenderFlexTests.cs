@@ -19,6 +19,26 @@ namespace UniMob.UI.Tests
         public float Spacing { get; set; }
     }
 
+    /// <summary>
+    ///     A flexible widget written outside the framework: it shares no base class with
+    ///     <see cref="Flexible"/> and answers only <see cref="IFlexibleState"/>.
+    /// </summary>
+    internal class Stretchy : SingleChildLayoutWidget
+    {
+        public int Weight { get; set; } = 1;
+
+        public override State CreateState() => new StretchyState();
+
+        public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
+            new RenderProxy((StretchyState)state);
+    }
+
+    internal class StretchyState : SingleChildLayoutState<Stretchy>, IFlexibleState
+    {
+        public int Flex => this.Widget.Weight;
+        public FlexFit Fit => FlexFit.Tight;
+    }
+
     public class RenderFlexTests
     {
         private static IState Box(float width, float height) =>
@@ -120,6 +140,44 @@ namespace UniMob.UI.Tests
             flex.Layout(LayoutConstraints.Tight(400, 50));
 
             // free space = 400 - 100 = 300, split 1:2 => 100 and 200
+            Assert.AreEqual(100f, flex.ChildrenLayout[1].Size.x, 0.01f);
+            Assert.AreEqual(200f, flex.ChildrenLayout[2].Size.x, 0.01f);
+        }
+
+        /// <summary>
+        ///     A flex shares its free space with whatever answers <see cref="IFlexibleState"/>, so
+        ///     taking part is open rather than reserved for <see cref="Expanded"/> and
+        ///     <see cref="Flexible"/>.
+        /// </summary>
+        [Test]
+        public void CustomFlexibleState_TakesItsShareOfTheFreeSpace()
+        {
+            var children = new[]
+            {
+                Box(100, 10),
+                TestHarness.Mount(
+                    new Stretchy
+                    {
+                        Weight = 1,
+                        Child = new FixedSizeBox { Size = new Vector2(0, 10) },
+                    }
+                ),
+                TestHarness.Mount(
+                    new Stretchy
+                    {
+                        Weight = 2,
+                        Child = new FixedSizeBox { Size = new Vector2(0, 10) },
+                    }
+                ),
+            };
+
+            var flex = new RenderFlex(
+                new FakeFlexContainerState { Children = children },
+                Axis.Horizontal
+            );
+            flex.Layout(LayoutConstraints.Tight(400, 50));
+
+            // free space = 400 - 100 = 300, split 1:2 => 100 and 200, exactly as for Expanded.
             Assert.AreEqual(100f, flex.ChildrenLayout[1].Size.x, 0.01f);
             Assert.AreEqual(200f, flex.ChildrenLayout[2].Size.x, 0.01f);
         }

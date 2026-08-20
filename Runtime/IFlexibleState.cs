@@ -8,7 +8,7 @@ namespace UniMob.UI
     /// to its own weight against the total. <see cref="Fit"/> decides whether the resulting extent is
     /// forced on the child or offered as a ceiling.
     /// </remarks>
-    internal interface IFlexibleState : ISingleChildLayoutState
+    public interface IFlexibleState : ISingleChildLayoutState
     {
         int Flex { get; }
         FlexFit Fit { get; }
