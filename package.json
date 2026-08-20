@@ -2,7 +2,7 @@
     "name": "com.codewriter.unimob.ui",
     "displayName": "UniMob.UI",
     "description": "A declarative library for building reactive user interfaces",
-    "version": "0.15.0",
+    "version": "1.0.0",
     "unity": "6000.3",
     "license": "MIT",
     "keywords": [
