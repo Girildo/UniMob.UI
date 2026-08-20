@@ -9,15 +9,37 @@ namespace UniMob.UI.Tests
 {
     public class RenderZStackTests
     {
-        // Fully headless: since RenderZStack now depends on IZStackState (not the concrete ZStackState --
-        // see Phase 1.1 of the RenderObjects consistency pass), it no longer needs a real ZStack widget
-        // mounted just to get a state object. Individual children still go through TestHarness.Mount
-        // since RenderZStack itself distinguishes them by checking for the framework's own concrete
-        // PositionedState, which can't be faked without real mounting.
+        // RenderZStack reads IZStackState, so the stack's own state is a fake. Children still go
+        // through TestHarness.Mount: they are laid out, and that needs a real render object.
         private class FakeZStackState : FakeState, IZStackState
         {
             public IState[] Children { get; set; } = Array.Empty<IState>();
             public Alignment Alignment { get; set; } = Alignment.Center;
+        }
+
+        /// <summary>
+        ///     A positioned widget written outside the framework: it shares no base class with
+        ///     <see cref="Positioned"/> and answers only <see cref="IPositionedState"/>.
+        /// </summary>
+        private class Anchored : SingleChildLayoutWidget
+        {
+            public float? Left { get; set; }
+            public float? Top { get; set; }
+
+            public override State CreateState() => new AnchoredState();
+
+            public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
+                new RenderProxy((AnchoredState)state);
+        }
+
+        private class AnchoredState : SingleChildLayoutState<Anchored>, IPositionedState
+        {
+            public float? Left => this.Widget.Left;
+            public float? Top => this.Widget.Top;
+            public float? Right => null;
+            public float? Bottom => null;
+            public float? Width => null;
+            public float? Height => null;
         }
 
         private static RenderZStack Layout(
@@ -187,6 +209,48 @@ namespace UniMob.UI.Tests
                 "Bottom 24 measured from the stack's bottom edge: 200 - 40 - 24."
             );
         }
+
+        /// <summary>
+        ///     The stack positions whatever answers <see cref="IPositionedState"/>, so positioning is
+        ///     extensible rather than reserved for <see cref="Positioned"/>.
+        /// </summary>
+        [Test]
+        public void CustomPositionedState_IsPlacedAgainstTheStackEdges()
+        {
+            var render = Layout(AnchoredChildren(), LayoutConstraints.Loose(200, 200));
+
+            Assert.AreEqual(
+                new Vector2(10, 10),
+                render.PeekSize(),
+                "a custom positioned child must not contribute to the stack's own size"
+            );
+            Assert.AreEqual(new Vector2(40, 5), render.ChildrenLayout[1].Position);
+            Assert.AreEqual(new Vector2(20, 20), render.ChildrenLayout[1].Size);
+        }
+
+        [Test]
+        public void CustomPositionedState_IsIgnoredByIntrinsicSize()
+        {
+            var render = new RenderZStack(new FakeZStackState { Children = AnchoredChildren() });
+
+            Assert.AreEqual(10f, render.GetIntrinsicWidth(float.PositiveInfinity), 0.01f);
+            Assert.AreEqual(10f, render.GetIntrinsicHeight(float.PositiveInfinity), 0.01f);
+        }
+
+        // A 10x10 box giving the stack a size, and a larger anchored child that must not change it.
+        private static IState[] AnchoredChildren() =>
+            new[]
+            {
+                TestHarness.Mount(new FixedSizeBox { Size = new Vector2(10, 10) }),
+                TestHarness.Mount(
+                    new Anchored
+                    {
+                        Left = 40,
+                        Top = 5,
+                        Child = new FixedSizeBox { Size = new Vector2(20, 20) },
+                    }
+                ),
+            };
 
         [Test]
         public void ComputeIntrinsicSize_IgnoresPositionedChildren()

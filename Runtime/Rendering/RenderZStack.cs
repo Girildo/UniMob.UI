@@ -31,7 +31,7 @@ namespace UniMob.UI.Rendering
             {
                 var child = _state.Children[i];
 
-                if (child.InnerViewState is PositionedState)
+                if (child.InnerViewState is IPositionedState)
                 {
                     // Add a placeholder. The positioned child will be fully laid out later.
                     ChildrenLayoutBuffer.Add(new LayoutInfo());
@@ -55,9 +55,9 @@ namespace UniMob.UI.Rendering
             for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
                 var child = _state.Children[i];
-                if (child.InnerViewState is PositionedState positioned)
+                if (child.InnerViewState is IPositionedState positioned)
                 {
-                    LayoutPositionedChild(i, child, (Positioned)positioned.RawWidget, size);
+                    LayoutPositionedChild(i, child, positioned, size);
                 }
                 else
                 {
@@ -76,7 +76,12 @@ namespace UniMob.UI.Rendering
             ChildrenLayoutBuffer[index] = layoutData;
         }
 
-        private void LayoutPositionedChild(int index, IState child, Positioned pos, Vector2 size)
+        private void LayoutPositionedChild(
+            int index,
+            IState child,
+            IPositionedState pos,
+            Vector2 size
+        )
         {
             float? x = pos.Left;
             float? y = pos.Top;
@@ -126,7 +131,7 @@ namespace UniMob.UI.Rendering
             float maxWidth = 0;
             foreach (var child in _state.Children)
             {
-                if (child.InnerViewState is PositionedState)
+                if (child.InnerViewState is IPositionedState)
                     continue;
                 maxWidth = Mathf.Max(maxWidth, child.RenderObject.GetIntrinsicWidth(height));
             }
@@ -138,7 +143,7 @@ namespace UniMob.UI.Rendering
             float maxHeight = 0;
             foreach (var child in _state.Children)
             {
-                if (child.InnerViewState is PositionedState)
+                if (child.InnerViewState is IPositionedState)
                     continue;
                 maxHeight = Mathf.Max(maxHeight, child.RenderObject.GetIntrinsicHeight(width));
             }

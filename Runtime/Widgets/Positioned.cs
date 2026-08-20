@@ -38,8 +38,15 @@ namespace UniMob.UI.Widgets
             };
     }
 
-    public class PositionedState : SingleChildLayoutState<Positioned>
+    public class PositionedState : SingleChildLayoutState<Positioned>, IPositionedState
     {
+        public float? Left => this.Widget.Left;
+        public float? Top => this.Widget.Top;
+        public float? Right => this.Widget.Right;
+        public float? Bottom => this.Widget.Bottom;
+        public float? Width => this.Widget.Width;
+        public float? Height => this.Widget.Height;
+
         public override void InitState()
         {
             if (this.Widget.Left != null && this.Widget.Right != null && this.Widget.Width != null)
