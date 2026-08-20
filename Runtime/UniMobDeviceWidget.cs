@@ -23,7 +23,7 @@ namespace UniMob.UI
     {
         private RectInt _lastFullArea;
         private RectInt _lastSafeArea;
-        private CanvasScaler _canvasScaler;
+        private CanvasScaler? _canvasScaler;
 
         [Atom]
         public RectPadding SafeArea { get; private set; }

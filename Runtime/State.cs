@@ -18,18 +18,21 @@ namespace UniMob.UI
     {
         private readonly MutableBuildContext _context;
 
-        private LifetimeController _stateLifetimeController;
-        private RenderObject _renderObject;
+        private LifetimeController? _stateLifetimeController;
+
+        // Null until InitRenderObject, which InflateWidget runs right after construction.
+        private RenderObject _renderObject = null!;
 
         public RenderObject RenderObject => _renderObject;
         public BuildContext Context => _context;
 
-        internal Widget RawWidget { get; private set; }
+        // Null until the first Update, which InflateWidget runs right after construction.
+        internal Widget RawWidget { get; private set; } = null!;
         Widget IState.RawWidget => RawWidget;
 
         public abstract IViewState InnerViewState { get; }
 
-        public Key Key => RawWidget.Key;
+        public Key? Key => RawWidget.Key;
 
         Lifetime ILifetimeScope.Lifetime => StateLifetime;
 

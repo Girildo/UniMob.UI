@@ -25,7 +25,7 @@ namespace UniMob.UI.Internal
         }
 
         [Conditional("UNIMOB_UI_ENABLE_REBUILD_RATE_LIMITER")]
-        public void TrackRebuild(Widget widget)
+        public void TrackRebuild(Widget? widget)
         {
             var frame = Time.frameCount;
 

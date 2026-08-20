@@ -8,18 +8,18 @@ namespace UniMob.UI
 {
     public abstract class ViewState : State, IViewState
     {
-        private LifetimeController _mountLifetimeController;
+        private LifetimeController? _mountLifetimeController;
 
-        private IView _mountedView;
-        private Canvas _rootCanvas;
-        private Atom<WidgetGeometry> _globalGeometry;
+        private IView? _mountedView;
+        private Canvas? _rootCanvas;
+        private Atom<WidgetGeometry>? _globalGeometry;
 
         public abstract WidgetViewReference View { get; }
 
         public sealed override IViewState InnerViewState => this;
 
         /// <inheritdoc/>
-        public IView MountedView => _mountedView;
+        public IView? MountedView => _mountedView;
 
         public Lifetime MountLifetime
         {

@@ -10,7 +10,7 @@ namespace UniMob.UI
     public abstract class ViewState<TWidget> : ViewState
         where TWidget : Widget
     {
-        private Dictionary<string, StateHolder> _renderChildCache;
+        private Dictionary<string, StateHolder>? _renderChildCache;
 
         private readonly MutableAtom<TWidget?> _widget = Atom.Value(default(TWidget));
 

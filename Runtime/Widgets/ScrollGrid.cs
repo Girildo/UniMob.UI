@@ -288,7 +288,7 @@ namespace UniMob.UI.Widgets
             int index,
             float duration,
             ScrollToPosition position,
-            Easing easing
+            Easing? easing
         )
         {
             return _view?.ScrollTo(index, duration, position, easing) ?? false;
@@ -298,7 +298,7 @@ namespace UniMob.UI.Widgets
             Key key,
             float duration,
             ScrollToPosition position,
-            Easing easing
+            Easing? easing
         )
         {
             int index;

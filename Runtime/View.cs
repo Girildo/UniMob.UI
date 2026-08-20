@@ -18,28 +18,32 @@ namespace UniMob.UI
         private readonly List<IViewTreeElement> _children = new List<IViewTreeElement>();
         private readonly LifetimeController _viewLifetimeController = new LifetimeController();
 
-        private Atom<Vector2Int> _bounds;
+        private Atom<Vector2Int>? _bounds;
 
         private List<Action>? _activationCallbacks;
 
         private List<Action>? _deactivationCallbacks;
 
-        private LifetimeController _stateLifetimeController;
+        private LifetimeController? _stateLifetimeController;
 
-        private TState _currentState;
-        private TState _nextState;
+        private TState? _currentState;
+        private TState? _nextState;
 
-        private Atom<TState> _doRebind;
-        private Atom<object?> _doRender;
+        // Created as a pair, lazily, by the first SetSource; nothing else reaches the render path.
+        private Atom<TState?>? _doRebind;
+        private Atom<object?>? _doRender;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        private CustomSampler _renderSampler;
+        private CustomSampler? _renderSampler;
 #endif
         public bool HasState => _currentState != null;
-        protected TState State => _currentState;
+
+        // Read from Render and the callbacks around it, all of which run only while a state is
+        // bound. Ask HasState anywhere the binding is in question.
+        protected TState State => _currentState!;
 
         /// <inheritdoc/>
-        IState IView.Source => _currentState;
+        IState? IView.Source => _currentState;
 
         internal virtual bool TriggerViewMountEvents => true;
 
@@ -197,11 +201,14 @@ namespace UniMob.UI
             Unmount();
         }
 
-        private TState DoRebind()
+        private TState? DoRebind()
         {
+            // Reached only through _doRebind, which is not created without _doRender.
+            var doRender = _doRender!;
+
             if (ReferenceEquals(_currentState, _nextState))
             {
-                _doRender.Get();
+                doRender.Get();
                 return _nextState;
             }
 
@@ -243,8 +250,8 @@ namespace UniMob.UI
                 }
             }
 
-            ((AtomBase)_doRender).Actualize(true);
-            _doRender.Get();
+            ((AtomBase)doRender).Actualize(true);
+            doRender.Get();
 
             using (Atom.NoWatch)
             {

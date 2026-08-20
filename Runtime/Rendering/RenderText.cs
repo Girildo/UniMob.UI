@@ -49,6 +49,14 @@ namespace UniMob.UI.Rendering
             if (!s_textMeshProMeasurers.TryGetValue(viewRefence, out var sizer) || sizer == null)
             {
                 var prefab = UniMobViewContext.Loader.LoadViewPrefab(viewRefence);
+
+                if (prefab == null)
+                {
+                    throw new InvalidOperationException(
+                        $"No view could be loaded for {viewRefence}, so text cannot be measured."
+                    );
+                }
+
                 var go = Object.Instantiate(prefab.gameObject);
                 go.name = "TextMeshPro Measurer -- " + viewRefence;
                 Object.DontDestroyOnLoad(go);

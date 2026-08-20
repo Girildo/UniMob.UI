@@ -6,7 +6,7 @@ namespace UniMob.UI
 {
     public interface IState
     {
-        Key Key { get; }
+        Key? Key { get; }
 
         Widget RawWidget { get; }
 

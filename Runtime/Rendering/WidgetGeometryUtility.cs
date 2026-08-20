@@ -17,7 +17,7 @@ namespace UniMob.UI.Rendering
 
         public static bool TryCompute(
             RectTransform rectTransform,
-            Canvas rootCanvas,
+            Canvas? rootCanvas,
             out WidgetGeometry geometry
         )
         {

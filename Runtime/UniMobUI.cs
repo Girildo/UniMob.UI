@@ -12,7 +12,7 @@ namespace UniMob.UI
             StateProvider stateProvider,
             ViewPanel root,
             WidgetBuilder<Widget> builder,
-            string debugName = null
+            string? debugName = null
         )
         {
             if (root == null)
@@ -35,7 +35,10 @@ namespace UniMob.UI
             IView view = root;
             lifetime.Register(() => view.ResetSource());
 
-            Atom.Reaction(lifetime, () => root.Render(stateHolder.Value), debugName: debugName);
+            // The builder wraps whatever it is given in a UniMobDeviceWidget, so the holder always
+            // has a state.
+            // debugName!: UniMob core defaults the parameter to null without annotating it nullable.
+            Atom.Reaction(lifetime, () => root.Render(stateHolder.Value!), debugName: debugName!);
         }
     }
 }

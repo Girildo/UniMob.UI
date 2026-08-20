@@ -11,7 +11,8 @@ namespace UniMob
         private List<Action> _nextFrame = new List<Action>();
         private List<Action> _nextFrameExecuting = new List<Action>();
 
-        public static Zone Current { get; set; }
+        // Assigned by Init below, which the runtime calls before any scene loads.
+        public static Zone Current { get; set; } = null!;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         internal static void Init()

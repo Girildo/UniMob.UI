@@ -216,7 +216,7 @@ namespace UniMob.UI
         public CurvedAnimation(
             IAnimation<float> controller,
             Func<float, float> curve,
-            Func<float, float> reverseCurve = null
+            Func<float, float>? reverseCurve = null
         )
         {
             _controller = controller;

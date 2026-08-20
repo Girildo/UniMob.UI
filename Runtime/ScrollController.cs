@@ -5,7 +5,7 @@ namespace UniMob.UI
 {
     public class ScrollController : ILifetimeScope
     {
-        private IScrollControllerExecutor _executor;
+        private IScrollControllerExecutor? _executor;
 
         public ScrollController(Lifetime lifetime)
         {
@@ -37,7 +37,7 @@ namespace UniMob.UI
             int index,
             float duration = 0,
             ScrollToPosition? position = null,
-            Easing easing = null
+            Easing? easing = null
         )
         {
             return _executor?.ScrollTo(
@@ -57,7 +57,7 @@ namespace UniMob.UI
             Key key,
             float duration = 0,
             ScrollToPosition? position = null,
-            Easing easing = null
+            Easing? easing = null
         )
         {
             return _executor?.ScrollTo(
@@ -94,7 +94,7 @@ namespace UniMob.UI
     /// </summary>
     internal interface IScrollControllerExecutor
     {
-        bool ScrollTo(int index, float duration, ScrollToPosition position, Easing easing);
-        bool ScrollTo(Key key, float duration, ScrollToPosition position, Easing easing);
+        bool ScrollTo(int index, float duration, ScrollToPosition position, Easing? easing);
+        bool ScrollTo(Key key, float duration, ScrollToPosition position, Easing? easing);
     }
 }

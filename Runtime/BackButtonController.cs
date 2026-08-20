@@ -4,7 +4,7 @@ namespace UniMob.UI
 {
     public class BackButtonController
     {
-        private Func<bool> _handler;
+        private Func<bool>? _handler;
 
         /// <summary>
         /// Registers callback for back button

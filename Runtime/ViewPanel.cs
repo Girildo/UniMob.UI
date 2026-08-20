@@ -8,7 +8,7 @@ namespace UniMob.UI
     [AddComponentMenu("UniMob/Views/ViewPanel")]
     public sealed class ViewPanel : View<IViewState>
     {
-        private Atom<LayoutConstraints> _layoutConstraints;
+        private Atom<LayoutConstraints>? _layoutConstraints;
 
         // The state this panel roots its layout chain at. Distinct from State, which is that state's
         // InnerViewState: a panel wrapping a build-only widget has an outer state that owns the chain
@@ -20,7 +20,7 @@ namespace UniMob.UI
         // which is the same one -- the caller passes a fresh state by calling Render(state) again,
         // which reassigns this first. The null fallback below covers the one case the ordering does
         // not: a render before any caller has passed a state at all.
-        private IState _layoutRoot;
+        private IState? _layoutRoot;
 
         /// <summary>
         ///     The top of this panel's layout chain, for tools that need to find live widget trees.
@@ -32,9 +32,9 @@ namespace UniMob.UI
         ///     widget has an outer state owning the chain and an inner one owning the view, and only the
         ///     outer one has the whole tree beneath it.
         /// </remarks>
-        public IState LayoutRoot => _layoutRoot;
+        public IState? LayoutRoot => _layoutRoot;
 
-        private ViewMapperBase _mapper;
+        private ViewMapperBase _mapper = null!;
 
         internal override bool TriggerViewMountEvents => false;
 
