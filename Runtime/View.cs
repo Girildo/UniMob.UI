@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UniMob.Core;
 using UniMob.UI;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Rendering;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -163,7 +164,7 @@ namespace UniMob.UI
                     }
                     catch (Exception ex)
                     {
-                        Zone.Current.HandleUncaughtException(ex);
+                        UniMobError.Report(new UniMobFault(ex, "DidViewUnmount", _currentState));
                     }
 
                     try
@@ -172,7 +173,7 @@ namespace UniMob.UI
                     }
                     catch (Exception ex)
                     {
-                        Zone.Current.HandleUncaughtException(ex);
+                        UniMobError.Report(new UniMobFault(ex, "Deactivate", _currentState));
                     }
                 }
             }
@@ -225,7 +226,7 @@ namespace UniMob.UI
                     }
                     catch (Exception ex)
                     {
-                        Zone.Current.HandleUncaughtException(ex);
+                        UniMobError.Report(new UniMobFault(ex, "DidViewUnmount", _currentState));
                     }
 
                     try
@@ -234,7 +235,7 @@ namespace UniMob.UI
                     }
                     catch (Exception ex)
                     {
-                        Zone.Current.HandleUncaughtException(ex);
+                        UniMobError.Report(new UniMobFault(ex, "Deactivate", _currentState));
                     }
                 }
 
@@ -246,7 +247,7 @@ namespace UniMob.UI
                 }
                 catch (Exception ex)
                 {
-                    Zone.Current.HandleUncaughtException(ex);
+                    UniMobError.Report(new UniMobFault(ex, "Activate", _currentState));
                 }
             }
 
@@ -264,7 +265,7 @@ namespace UniMob.UI
                 }
                 catch (Exception ex)
                 {
-                    Zone.Current.HandleUncaughtException(ex);
+                    UniMobError.Report(new UniMobFault(ex, "DidViewMount", _currentState));
                 }
             }
 
@@ -294,7 +295,7 @@ namespace UniMob.UI
             }
             catch (Exception ex)
             {
-                Zone.Current.HandleUncaughtException(ex);
+                UniMobError.Report(new UniMobFault(ex, "WatchLayout", currentState));
             }
 
             using (_renderScope.Enter(this))
@@ -316,7 +317,7 @@ namespace UniMob.UI
                 }
                 catch (Exception ex)
                 {
-                    Zone.Current.HandleUncaughtException(ex);
+                    UniMobError.Report(new UniMobFault(ex, "Render", currentState));
                 }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 _renderSampler.End();

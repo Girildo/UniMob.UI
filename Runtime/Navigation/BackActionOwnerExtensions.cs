@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using UniMob.UI.Diagnostics;
 
 namespace UniMob.UI.Navigation
 {
@@ -44,7 +45,7 @@ namespace UniMob.UI.Navigation
         }
 
         /// <summary>
-        ///     Reports a faulted request to the zone. A back press has no caller to hand the outcome to,
+        ///     Reports a faulted request as a fault. A back press has no caller to hand the outcome to,
         ///     and the route's decision runs outside the command loop's catch, so a hook that throws on
         ///     back would otherwise fail in silence. Cancellation is not a failure and is not reported.
         /// </summary>
@@ -52,7 +53,9 @@ namespace UniMob.UI.Navigation
         {
             request.ContinueWith(
                 faulted =>
-                    Zone.Current.HandleUncaughtException(faulted.Exception.GetBaseException()),
+                    UniMobError.Report(
+                        new UniMobFault(faulted.Exception.GetBaseException(), "BackAction")
+                    ),
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
             );
         }

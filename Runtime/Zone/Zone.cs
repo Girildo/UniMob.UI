@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UniMob.UI.Diagnostics;
 using UnityEngine;
 
 namespace UniMob
@@ -35,7 +36,7 @@ namespace UniMob
                 }
                 catch (Exception ex)
                 {
-                    HandleUncaughtException(ex);
+                    UniMobError.Report(new UniMobFault(ex, "Ticker"));
                 }
             }
 
@@ -51,16 +52,11 @@ namespace UniMob
                 }
                 catch (Exception ex)
                 {
-                    HandleUncaughtException(ex);
+                    UniMobError.Report(new UniMobFault(ex, "NextFrame"));
                 }
             }
 
             _nextFrameExecuting.Clear();
-        }
-
-        public void HandleUncaughtException(Exception exception)
-        {
-            Debug.LogException(exception);
         }
 
         public void AddTicker(Action action)
