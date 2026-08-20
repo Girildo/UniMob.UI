@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 
 namespace UniMob.UI
 {
@@ -11,7 +10,7 @@ namespace UniMob.UI
 
         public override int GetHashCode() => throw new InvalidOperationException();
 
-        public static Key Of([NotNull] object value) => new ObjectKey(value);
+        public static Key Of(object value) => new ObjectKey(value);
 
         public static bool operator ==(Key a, Key b) => a?.Equals(b) ?? ReferenceEquals(b, null);
 
@@ -22,7 +21,7 @@ namespace UniMob.UI
     {
         public object Value { get; }
 
-        internal ObjectKey([NotNull] object value)
+        internal ObjectKey(object value)
         {
             Value = value ?? throw new ArgumentNullException(nameof(value));
         }

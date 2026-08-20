@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace UniMob.UI
@@ -25,8 +24,7 @@ namespace UniMob.UI
         ///         Read-only and observational. Setting the source stays <see cref="SetSource"/>'s job.
         ///     </para>
         /// </remarks>
-        [CanBeNull]
-        IState Source { get; }
+        IState? Source { get; }
 
         void SetSource(IState source, bool link);
         void ResetSource();

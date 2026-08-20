@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using JetBrains.Annotations;
 
 namespace UniMob.UI.Diagnostics
 {
@@ -25,7 +24,7 @@ namespace UniMob.UI.Diagnostics
         private static readonly StringBuilder SharedBuilder = new StringBuilder();
         private static bool _walking;
 
-        public static string From([CanBeNull] IState state, int maxDepth = DefaultMaxDepth)
+        public static string From(IState? state, int maxDepth = DefaultMaxDepth)
         {
             if (state is null)
             {

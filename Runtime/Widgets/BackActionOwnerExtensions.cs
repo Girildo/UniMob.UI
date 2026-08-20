@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 
 namespace UniMob.UI.Widgets
 {
@@ -11,7 +10,6 @@ namespace UniMob.UI.Widgets
         ///     is chrome: it does not own the route, so it asks rather than pops, and like any other asker
         ///     it says what it is asking with.
         /// </summary>
-        [PublicAPI]
         public static TBackActionOwner WithPopOnBack<TBackActionOwner>(
             this TBackActionOwner owner,
             NavigatorState navigatorState,

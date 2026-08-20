@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine.Assertions;
@@ -54,7 +53,7 @@ namespace UniMob.UI
 
         public abstract Widget Build(BuildContext context);
 
-        public virtual void DidUpdateWidget([NotNull] TWidget oldWidget)
+        public virtual void DidUpdateWidget(TWidget oldWidget)
         {
             Assert.IsNull(Atom.CurrentScope);
         }

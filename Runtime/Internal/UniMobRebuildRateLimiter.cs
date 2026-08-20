@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using JetBrains.Annotations;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -66,7 +65,6 @@ namespace UniMob.UI.Internal
             }
         }
 
-        [PublicAPI]
         public static void Ignore<T>()
             where T : IState
         {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.Views;
 
@@ -27,7 +26,7 @@ namespace UniMob.UI.Diagnostics
     {
         public const int DefaultMaxDepth = 8;
 
-        public static string Describe([CanBeNull] IState root, int maxDepth = DefaultMaxDepth)
+        public static string Describe(IState? root, int maxDepth = DefaultMaxDepth)
         {
             var builder = new StringBuilder();
 
@@ -41,7 +40,7 @@ namespace UniMob.UI.Diagnostics
 
         private static void Append(
             StringBuilder builder,
-            [CanBeNull] IState state,
+            IState? state,
             int depth,
             int maxDepth,
             int index
@@ -89,7 +88,7 @@ namespace UniMob.UI.Diagnostics
         ///         inside a pass, and callers are responsible for their own <c>Atom.NoWatch</c>.
         ///     </para>
         /// </remarks>
-        public static IReadOnlyList<IState> ChildrenOf([CanBeNull] IState state)
+        public static IReadOnlyList<IState> ChildrenOf(IState? state)
         {
             switch (state)
             {

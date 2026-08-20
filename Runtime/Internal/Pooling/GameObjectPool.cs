@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using JetBrains.Annotations;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
@@ -18,7 +17,7 @@ namespace UniMob.UI.Internal.Pooling
             Pools.Clear();
         }
 
-        public static Pool GetPool([NotNull] GameObject prefab)
+        public static Pool GetPool(GameObject prefab)
         {
             if (prefab == null)
                 throw new ArgumentNullException(nameof(prefab));
@@ -42,7 +41,7 @@ namespace UniMob.UI.Internal.Pooling
         }
 
         public static GameObject Instantiate(
-            [NotNull] GameObject prefab,
+            GameObject prefab,
             Transform parent = null,
             bool worldPositionStays = true
         )
@@ -107,7 +106,7 @@ namespace UniMob.UI.Internal.Pooling
                 _poolDestroyed = true;
             }
 
-            public void Init([NotNull] GameObject prefab)
+            public void Init(GameObject prefab)
             {
                 if (prefab == null)
                     throw new ArgumentNullException(nameof(prefab));

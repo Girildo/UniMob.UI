@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UniMob.UI.Internal;
 
 namespace UniMob.UI
@@ -12,18 +11,13 @@ namespace UniMob.UI
         private readonly Action<TType> _prepare;
         private readonly Action<TType> _recycle;
 
-        public ClassPool(
-            [NotNull] Func<TType> create,
-            [NotNull] Action<TType> prepare,
-            [NotNull] Action<TType> recycle
-        )
+        public ClassPool(Func<TType> create, Action<TType> prepare, Action<TType> recycle)
         {
             _create = create ?? throw new ArgumentNullException(nameof(create));
             _prepare = prepare ?? throw new ArgumentNullException(nameof(prepare));
             _recycle = recycle ?? throw new ArgumentNullException(nameof(recycle));
         }
 
-        [NotNull]
         public TType Get()
         {
             var item = _pool.Count > 0 ? _pool.Pop() : _create();
@@ -31,7 +25,7 @@ namespace UniMob.UI
             return item;
         }
 
-        public void Recycle([NotNull] TType item)
+        public void Recycle(TType item)
         {
             if (item == null)
                 throw new ArgumentNullException(nameof(item));

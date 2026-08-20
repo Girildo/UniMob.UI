@@ -35,7 +35,7 @@ namespace UniMob.UI
             }
         }
 
-        public virtual void DidUpdateWidget([NotNull] TWidget oldWidget)
+        public virtual void DidUpdateWidget(TWidget oldWidget)
         {
             Assert.IsNull(Atom.CurrentScope);
         }

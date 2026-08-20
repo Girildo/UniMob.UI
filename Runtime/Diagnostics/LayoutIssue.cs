@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UnityEngine;
 
@@ -127,10 +126,10 @@ namespace UniMob.UI.Diagnostics
     {
         public LayoutIssue(
             LayoutIssueCode code,
-            [CanBeNull] IState subject,
+            IState? subject,
             LayoutAxes axes,
-            [CanBeNull] string remedy,
-            [CanBeNull] IState culprit = null,
+            string? remedy,
+            IState? culprit = null,
             LayoutConstraints? constraints = null,
             Vector2? size = null,
             float amount = 0f
@@ -149,15 +148,13 @@ namespace UniMob.UI.Diagnostics
         public LayoutIssueCode Code { get; }
 
         /// <summary>The state that noticed. A role in this report, not a relationship.</summary>
-        [CanBeNull]
-        public IState Subject { get; }
+        public IState? Subject { get; }
 
         /// <summary>
         ///     The state this report blames, when that differs from the <see cref="Subject"/>: a Row is
         ///     the subject of an overflow, and the child that did not fit is the culprit.
         /// </summary>
-        [CanBeNull]
-        public IState Culprit { get; }
+        public IState? Culprit { get; }
 
         public LayoutAxes Axes { get; }
 
@@ -171,7 +168,6 @@ namespace UniMob.UI.Diagnostics
         public float Amount { get; }
 
         /// <summary>What to change, written next to the algorithm that knows.</summary>
-        [CanBeNull]
-        public string Remedy { get; }
+        public string? Remedy { get; }
     }
 }

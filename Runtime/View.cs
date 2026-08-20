@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UniMob.Core;
 using UniMob.UI.Layout;
 using UnityEngine;
@@ -13,20 +12,16 @@ namespace UniMob.UI
     public abstract class View<TState> : UIBehaviour, IView, IViewTreeElement
         where TState : class, IState
     {
-        [NotNull]
         private readonly ViewRenderScope _renderScope = new ViewRenderScope();
 
-        [NotNull]
         private readonly List<IViewTreeElement> _children = new List<IViewTreeElement>();
         private readonly LifetimeController _viewLifetimeController = new LifetimeController();
 
         private Atom<Vector2Int> _bounds;
 
-        [CanBeNull]
-        private List<Action> _activationCallbacks;
+        private List<Action>? _activationCallbacks;
 
-        [CanBeNull]
-        private List<Action> _deactivationCallbacks;
+        private List<Action>? _deactivationCallbacks;
 
         private LifetimeController _stateLifetimeController;
 

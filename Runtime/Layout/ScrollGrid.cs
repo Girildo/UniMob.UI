@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
@@ -109,8 +108,7 @@ namespace UniMob.UI.Layout
         private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
         private readonly VirtualizedChildren _virtualized;
 
-        [CanBeNull]
-        private ScrollListView _view;
+        private ScrollListView? _view;
 
         public ScrollGridState()
         {

@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
@@ -32,7 +31,6 @@ namespace UniMob.UI
         /// Gets diagnostics info useful for debugging and locating the state in the tree.
         /// Returning <c>null</c> means no such info are meaningful.
         /// </summary>
-        [CanBeNull]
-        public string GetDiagnosticInfo();
+        public string? GetDiagnosticInfo();
     }
 }

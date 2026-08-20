@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
@@ -13,7 +12,7 @@ namespace UniMob.UI.Layout
 
         public SizedBox() { }
 
-        public SizedBox([CanBeNull] Widget child, float? width = null, float? height = null)
+        public SizedBox(Widget? child, float? width = null, float? height = null)
         {
             Width = width;
             Height = height;
@@ -31,17 +30,17 @@ namespace UniMob.UI.Layout
             return new RenderConstrainedBox((IConstrainedBoxState)state);
         }
 
-        public static SizedBox FromWidth(float width, [CanBeNull] Widget child = null)
+        public static SizedBox FromWidth(float width, Widget? child = null)
         {
             return new SizedBox(child, width, null);
         }
 
-        public static SizedBox FromHeight(float height, [CanBeNull] Widget child = null)
+        public static SizedBox FromHeight(float height, Widget? child = null)
         {
             return new SizedBox(child, null, height);
         }
 
-        public static SizedBox Square(float size, [CanBeNull] Widget child = null)
+        public static SizedBox Square(float size, Widget? child = null)
         {
             return new SizedBox(child, size, size);
         }
@@ -51,7 +50,7 @@ namespace UniMob.UI.Layout
             return new SizedBox(null, 0, 0);
         }
 
-        public static SizedBox Expand([CanBeNull] Widget child = null)
+        public static SizedBox Expand(Widget? child = null)
         {
             return new SizedBox(child, float.PositiveInfinity, float.PositiveInfinity);
         }

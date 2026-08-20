@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UnityEngine.Assertions;
 
@@ -162,7 +161,7 @@ namespace UniMob.UI.Internal
             return newChildren;
         }
 
-        public static void DeactivateChild([NotNull] State child)
+        public static void DeactivateChild(State child)
         {
             if (child == null)
                 throw new ArgumentNullException(nameof(child));
@@ -176,11 +175,7 @@ namespace UniMob.UI.Internal
             child.Dispose();
         }
 
-        public static State UpdateChild(
-            BuildContext context,
-            [CanBeNull] State child,
-            [CanBeNull] Widget newWidget
-        )
+        public static State UpdateChild(BuildContext context, State? child, Widget? newWidget)
         {
             Assert.IsNull(Atom.CurrentScope);
 
@@ -215,7 +210,7 @@ namespace UniMob.UI.Internal
             return InflateWidget(context, newWidget);
         }
 
-        public static State InflateWidget(BuildContext context, [NotNull] Widget newWidget)
+        public static State InflateWidget(BuildContext context, Widget newWidget)
         {
             if (newWidget == null)
                 throw new ArgumentNullException(nameof(newWidget));

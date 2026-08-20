@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI.Layout
@@ -28,7 +27,7 @@ namespace UniMob.UI.Layout
         /// Returns a positioned widget that fills the stack by setting <see cref="Left"/>, <see cref="Right"/>,
         /// <see cref="Top"/>, <see cref="Bottom"/> all to 0.
         /// </summary>
-        public static Positioned Fill([CanBeNull] Widget child) =>
+        public static Positioned Fill(Widget? child) =>
             new()
             {
                 Left = 0,

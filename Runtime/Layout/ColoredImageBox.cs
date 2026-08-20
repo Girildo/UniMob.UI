@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UnityEngine;
 
@@ -12,8 +11,7 @@ namespace UniMob.UI.Layout
     {
         public Color Color { get; set; } = Color.clear;
 
-        [CanBeNull]
-        public Sprite Image { get; set; } = null;
+        public Sprite? Image { get; set; } = null;
 
         public override State CreateState() => new ColoredImageBoxState();
 

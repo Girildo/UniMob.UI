@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal;
 using UniMob.UI.Layout.Internal.RenderObjects;
@@ -106,8 +105,7 @@ namespace UniMob.UI.Layout
 
         private bool IsLazy => Widget.ItemBuilder != null;
 
-        [CanBeNull]
-        private ScrollListView _view;
+        private ScrollListView? _view;
 
         public ScrollListState()
         {

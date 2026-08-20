@@ -1,5 +1,4 @@
 ﻿using System;
-using JetBrains.Annotations;
 
 namespace UniMob.UI
 {
@@ -12,8 +11,7 @@ namespace UniMob.UI
         /// </summary>
         /// <param name="lifetime">Registration lifetime.</param>
         /// <param name="handler">Back Button handler.</param>
-        [PublicAPI]
-        public void RegisterHandler(Lifetime lifetime, [NotNull] Func<bool> handler)
+        public void RegisterHandler(Lifetime lifetime, Func<bool> handler)
         {
             if (handler == null)
             {
@@ -34,7 +32,6 @@ namespace UniMob.UI
         /// Invokes back button handler.
         /// </summary>
         /// <returns>Returns true if any handler was invoked, otherwise false.</returns>
-        [PublicAPI]
         public bool HandleBack()
         {
             return _handler?.Invoke() ?? false;
@@ -51,9 +48,8 @@ namespace UniMob.UI
         ///   (context, controller, secondaryAnimation) => new ExampleWidget(bbc)
         /// ));
         /// </example>
-        [PublicAPI]
         public static TBackActionOwner Create<TBackActionOwner>(
-            [NotNull] Func<BackButtonController, TBackActionOwner> func
+            Func<BackButtonController, TBackActionOwner> func
         )
             where TBackActionOwner : IBackActionOwner
         {

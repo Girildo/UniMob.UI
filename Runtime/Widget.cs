@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI
@@ -72,7 +71,6 @@ namespace UniMob.UI
         ///     it can see, and wins when it does.
         /// </para>
         /// </remarks>
-        [CanBeNull]
-        string GetDiagnosticInfo();
+        string? GetDiagnosticInfo();
     }
 }

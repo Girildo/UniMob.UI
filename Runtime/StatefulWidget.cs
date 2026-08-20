@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
 namespace UniMob.UI
@@ -10,17 +9,14 @@ namespace UniMob.UI
 
         public Type Type => _type ?? (_type = GetType());
 
-        [CanBeNull]
-        public Key Key { get; set; }
+        public Key? Key { get; set; }
 
-        [NotNull]
         public virtual State CreateState(StateProvider provider)
         {
             return provider.Of(this);
         }
 
-        [CanBeNull]
-        public virtual State CreateState()
+        public virtual State? CreateState()
         {
             return null;
         }
@@ -46,7 +42,6 @@ namespace UniMob.UI
         }
 
         /// <inheritdoc/>
-        [CanBeNull]
-        public virtual string GetDiagnosticInfo() => null;
+        public virtual string? GetDiagnosticInfo() => null;
     }
 }

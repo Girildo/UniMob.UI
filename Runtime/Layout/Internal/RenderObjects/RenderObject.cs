@@ -4,7 +4,6 @@
 
 using System;
 using System.Diagnostics;
-using JetBrains.Annotations;
 using UniMob.UI.Diagnostics;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -69,10 +68,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///     sizing pass, which is exactly the aliasing that moving layout onto the render object
         ///     removed. Widening it later breaks nobody; narrowing it would.
         /// </remarks>
-        [NotNull]
         protected IState Owner { get; }
 
-        protected RenderObject([NotNull] IState owner)
+        protected RenderObject(IState owner)
         {
             this.Owner = owner ?? throw new ArgumentNullException(nameof(owner));
             this.Lifetime = owner.StateLifetime;
@@ -754,8 +752,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <summary>
         ///     The child at <paramref name="index"/>, for a render object with ordered children.
         /// </summary>
-        [CanBeNull]
-        protected virtual IState ChildAt(int index) => null;
+        protected virtual IState? ChildAt(int index) => null;
 
         /// <summary>
         ///     Records that a specific child is implicated, for the in-scene marker.

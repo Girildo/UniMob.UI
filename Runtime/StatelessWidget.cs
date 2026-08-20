@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
@@ -14,8 +13,7 @@ namespace UniMob.UI
 
         public Type Type => _type ?? (_type = GetType());
 
-        [CanBeNull]
-        public Key Key { get; set; }
+        public Key? Key { get; set; }
 
         public abstract Widget Build(BuildContext context);
 
@@ -27,13 +25,10 @@ namespace UniMob.UI
             );
 
         /// <inheritdoc/>
-        [CanBeNull]
-        public virtual string GetDiagnosticInfo() => null;
+        public virtual string? GetDiagnosticInfo() => null;
 
-        [CanBeNull]
-        public State CreateState(StateProvider provider) => null;
+        public State? CreateState(StateProvider provider) => null;
 
-        [NotNull]
         public State CreateState()
         {
             return new StatelessElement(this);

@@ -4,7 +4,6 @@ namespace UniMob.UI.Widgets
     using System.Collections;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using JetBrains.Annotations;
     using UniMob.UI.Layout.Internal.Views;
     using UnityEngine;
 
@@ -470,7 +469,7 @@ namespace UniMob.UI.Widgets
         ///     Queues a batch of commands, and starts the loop that drains the queue if one is not already
         ///     running.
         /// </summary>
-        private void ApplyCommands([NotNull] params NavigatorCommand[] commands)
+        private void ApplyCommands(params NavigatorCommand[] commands)
         {
             _pendingCommands.Enqueue(commands);
 
@@ -514,7 +513,7 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private async Task ProcessCommands([NotNull] NavigatorCommand[] commands)
+        private async Task ProcessCommands(NavigatorCommand[] commands)
         {
             if (commands == null)
                 throw new ArgumentNullException(nameof(commands));
@@ -530,7 +529,7 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private async Task ProcessCommand([NotNull] NavigatorCommand command)
+        private async Task ProcessCommand(NavigatorCommand command)
         {
             if (command == null)
                 throw new ArgumentNullException(nameof(command));
@@ -1027,7 +1026,7 @@ namespace UniMob.UI.Widgets
                     TaskCreationOptions.RunContinuationsAsynchronously
                 );
 
-            public Pop([NotNull] Route target, PopResult result)
+            public Pop(Route target, PopResult result)
             {
                 Target = target;
                 Result = result;
@@ -1044,14 +1043,14 @@ namespace UniMob.UI.Widgets
         {
             public Route Route { get; }
 
-            public PopTo([CanBeNull] Route route) => Route = route;
+            public PopTo(Route? route) => Route = route;
         }
 
         public class Push : NavigatorCommand
         {
             public Route Route { get; }
 
-            public Push([NotNull] Route route) => Route = route;
+            public Push(Route route) => Route = route;
         }
 
         /// <summary>
@@ -1063,19 +1062,14 @@ namespace UniMob.UI.Widgets
         {
             public Route Route { get; }
 
-            [CanBeNull]
-            public Route Target { get; }
+            public Route? Target { get; }
             public PopResult OutgoingResult { get; }
             public TaskCompletionSource<PopOutcome> Outcome { get; } =
                 new TaskCompletionSource<PopOutcome>(
                     TaskCreationOptions.RunContinuationsAsynchronously
                 );
 
-            public Replace(
-                [NotNull] Route route,
-                [CanBeNull] Route target,
-                PopResult outgoingResult
-            )
+            public Replace(Route route, Route? target, PopResult outgoingResult)
             {
                 Route = route;
                 Target = target;

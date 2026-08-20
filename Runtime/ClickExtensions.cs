@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
@@ -7,7 +6,7 @@ namespace UniMob.UI
 {
     public static class ClickExtensions
     {
-        public static void Click([NotNull] this Button button, [NotNull] Func<Action> call)
+        public static void Click(this Button button, Func<Action> call)
         {
             if (button == null)
                 throw new ArgumentNullException(nameof(button));
@@ -15,7 +14,7 @@ namespace UniMob.UI
             Bind(button.onClick, call);
         }
 
-        public static void Click([NotNull] this Button button, [NotNull] Action call)
+        public static void Click(this Button button, Action call)
         {
             if (button == null)
                 throw new ArgumentNullException(nameof(button));
@@ -23,7 +22,7 @@ namespace UniMob.UI
             Bind(button.onClick, call);
         }
 
-        public static void Bind([NotNull] this UnityEvent unityEvent, [NotNull] Func<Action> call)
+        public static void Bind(this UnityEvent unityEvent, Func<Action> call)
         {
             if (unityEvent == null)
                 throw new ArgumentNullException(nameof(unityEvent));
@@ -42,7 +41,7 @@ namespace UniMob.UI
             unityEvent.AddListener(Listener);
         }
 
-        public static void Bind([NotNull] this UnityEvent unityEvent, [NotNull] Action call)
+        public static void Bind(this UnityEvent unityEvent, Action call)
         {
             if (unityEvent == null)
                 throw new ArgumentNullException(nameof(unityEvent));
@@ -60,10 +59,7 @@ namespace UniMob.UI
             unityEvent.AddListener(Listener);
         }
 
-        public static void Bind<T>(
-            [NotNull] this UnityEvent<T> unityEvent,
-            [NotNull] Func<Action<T>> call
-        )
+        public static void Bind<T>(this UnityEvent<T> unityEvent, Func<Action<T>> call)
         {
             if (unityEvent == null)
                 throw new ArgumentNullException(nameof(unityEvent));
@@ -82,10 +78,7 @@ namespace UniMob.UI
             unityEvent.AddListener(Listener);
         }
 
-        public static void Bind<T>(
-            [NotNull] this UnityEvent<T> unityEvent,
-            [NotNull] Action<T> call
-        )
+        public static void Bind<T>(this UnityEvent<T> unityEvent, Action<T> call)
         {
             if (unityEvent == null)
                 throw new ArgumentNullException(nameof(unityEvent));

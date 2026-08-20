@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace UniMob.UI.Diagnostics
@@ -16,7 +15,6 @@ namespace UniMob.UI.Diagnostics
     {
         private static IDiagnosticsReporter _reporter = new UnityConsoleReporter();
 
-        [NotNull]
         public static IDiagnosticsReporter Reporter => _reporter;
 
         public static void Report(in LayoutIssue issue)
@@ -27,7 +25,7 @@ namespace UniMob.UI.Diagnostics
         /// <summary>
         ///     Installs <paramref name="reporter"/> until the returned scope is disposed.
         /// </summary>
-        public static IDisposable Override([NotNull] IDiagnosticsReporter reporter)
+        public static IDisposable Override(IDiagnosticsReporter reporter)
         {
             if (reporter == null)
             {

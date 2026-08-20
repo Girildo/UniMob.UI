@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 
 namespace UniMob.UI
@@ -18,8 +17,7 @@ namespace UniMob.UI
         /// makes the entry select the widget when clicked. Plain and non-reactive: it is written by
         /// <see cref="DidViewMount"/> and read from inside a layout pass, so it must not be an atom.
         /// </remarks>
-        [CanBeNull]
-        IView MountedView { get; }
+        IView? MountedView { get; }
 
         /// <summary>
         /// Reads the widget's current on-screen box in canvas space. Returns <c>false</c> (and

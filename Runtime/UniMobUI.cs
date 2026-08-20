@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UniMob.UI.Layout;
 using UniMob.UI.Widgets;
 using UnityEngine;
@@ -11,8 +10,8 @@ namespace UniMob.UI
         public static void RunApp(
             Lifetime lifetime,
             StateProvider stateProvider,
-            [NotNull] ViewPanel root,
-            [NotNull] WidgetBuilder<Widget> builder,
+            ViewPanel root,
+            WidgetBuilder<Widget> builder,
             string debugName = null
         )
         {

@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using JetBrains.Annotations;
 
 namespace UniMob.UI.Diagnostics
 {
@@ -26,7 +25,7 @@ namespace UniMob.UI.Diagnostics
         ///     dependency: the whole read is inside <c>Atom.NoWatch</c>, which is what lets a label be a
         ///     live value without dragging whoever is reporting into a dependency on it.
         /// </summary>
-        public static string Describe([CanBeNull] IState state)
+        public static string Describe(IState? state)
         {
             var builder = new StringBuilder();
             AppendTo(builder, state);
@@ -37,12 +36,12 @@ namespace UniMob.UI.Diagnostics
         ///     Channel 0 alone: the widget's type, with no Key and no label. What a summary sentence
         ///     wants, where the full node would bury the fault it is describing.
         /// </summary>
-        internal static string NameOf([CanBeNull] IState state)
+        internal static string NameOf(IState? state)
         {
             return state is null ? "<null>" : TypeName(state);
         }
 
-        internal static void AppendTo(StringBuilder builder, [CanBeNull] IState state)
+        internal static void AppendTo(StringBuilder builder, IState? state)
         {
             if (state is null)
             {
@@ -138,8 +137,7 @@ namespace UniMob.UI.Diagnostics
         ///     failure a label exists to prevent. <see cref="Sanitize"/> only backstops the pathological
         ///     case.
         /// </remarks>
-        [CanBeNull]
-        public static string Truncate([CanBeNull] string value, int max)
+        public static string? Truncate(string? value, int max)
         {
             if (string.IsNullOrEmpty(value) || value.Length <= max || max < 0)
             {

@@ -1,5 +1,4 @@
 using System;
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace UniMob.UI.Internal
@@ -21,7 +20,7 @@ namespace UniMob.UI.Internal
     {
         public Type FactoryType { get; }
 
-        public RegisterCustomViewFactoryAttribute([NotNull] Type factoryType)
+        public RegisterCustomViewFactoryAttribute(Type factoryType)
         {
             FactoryType = factoryType ?? throw new ArgumentNullException(nameof(factoryType));
         }

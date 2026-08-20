@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -26,7 +25,6 @@ namespace UniMob.UI.Internal.ViewLoaders
             }
         }
 
-        [PublicAPI]
         public static void RegisterAddressablesLoader(
             Lifetime lifetime,
             IUniMobAddressablesLoader loader
@@ -121,7 +119,6 @@ namespace UniMob.UI.Internal.ViewLoaders
 
     public static class AddressableViewLoaderInternal
     {
-        [PublicAPI]
         public static void RegisterAddressablesLoader(
             Lifetime lifetime,
             IUniMobAddressablesLoader loader
