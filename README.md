@@ -1,12 +1,24 @@
-# UniMob.UI [![Github license](https://img.shields.io/github/license/codewriter-packages/UniMob.UI.svg?style=flat-square)](#) [![Unity 2019.3](https://img.shields.io/badge/Unity-2019.3+-2296F3.svg?style=flat-square)](#) ![GitHub package.json version](https://img.shields.io/github/package-json/v/codewriter-packages/UniMob.UI?style=flat-square) [![openupm](https://img.shields.io/npm/v/com.codewriter.unimob.ui?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.codewriter.unimob.ui/)
+# UniMob.UI [![Github license](https://img.shields.io/github/license/Girildo/UniMob.UI.svg?style=flat-square)](#) [![Unity 6000.3](https://img.shields.io/badge/Unity-6000.3+-2296F3.svg?style=flat-square)](#)
 
-A declarative library for building reactive user interface. Built over [UniMob](https://github.com/codewriter-packages/UniMob).
+A declarative library for building reactive user interfaces, built over [UniMob](https://github.com/codewriter-packages/UniMob).
+
+## About this fork
+
+This is a fork of [codewriter-packages/UniMob.UI](https://github.com/codewriter-packages/UniMob.UI) that has diverged
+far enough not to be mergeable with it. The layout system was replaced with a Flutter-style one -- a parent passes
+`LayoutConstraints` down, a child returns a size up, and a pure-C# `RenderObject` does the arithmetic -- and the
+original bottom-up `WidgetSize` layer has been removed rather than kept alongside it.
+
+Upstream is kept as a read-only remote for archaeology. Changes are not taken from it and are not offered back to it.
+
+The `UniMob` core package it depends on is *not* forked, which is why the namespaces and the package name still say
+`UniMob`.
 
 ## Getting Started
 
-#### 1. Create view
+#### 1. Create a view
 
-View are regular MonoBehaviour that should be attached to gameObject.
+A view is a regular MonoBehaviour attached to a GameObject.
 
 ```csharp
 using UniMob.UI;
@@ -16,7 +28,6 @@ public class CounterView : View<ICounterState>
     public UnityEngine.UI.Text counterText;
     public UnityEngine.UI.Button incrementButton;
 
-    // initial setup
     protected override void Awake()
     {
         base.Awake();
@@ -24,42 +35,51 @@ public class CounterView : View<ICounterState>
         incrementButton.Click(() => State.Increment);
     }
 
-    // update view with data provided by State
-    // Render() is called automatically when data changes
-    // so view always be synchronized with state
+    // Called automatically whenever the data it reads changes, so the view is always in sync.
     protected override void Render()
     {
-        counterText.text = "Conter: " + State.Counter;
+        counterText.text = "Counter: " + State.Counter;
     }
 }
 
-// describes the data required for the view 
-// and the actions performed by the view 
-public interface IConterState : IViewState {
-  int Counter { get; }
-  
-  void Increment();
+// The data the view needs and the actions it performs.
+public interface ICounterState : IViewState
+{
+    int Counter { get; }
+
+    void Increment();
 }
 ```
 
-#### 2. Create widget
+#### 2. Create a widget
 
-A widget is an immutable description of an interface element. May contain additional data if necessary.
+A widget is an immutable description of an interface element. Its properties are `init`-only: a widget is
+constructed, handed to the framework, and replaced rather than edited.
+
+A widget that paints must also say how it measures, by returning a `RenderObject`. Forgetting to is an
+exception rather than a default.
 
 ```csharp
 using UniMob.UI;
+using UniMob.UI.Layout.Internal.RenderObjects;
 
 public class CounterWidget : StatefulWidget
 {
-    public int IncrementStep { get; set; }
+    public int IncrementStep { get; init; } = 1;
 
     public override State CreateState() => new CounterState();
+
+    public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
+        new RenderCounter((CounterState) state);
 }
 ```
 
-#### 3. Create state
+A widget that is defined purely in terms of other widgets needs no render object at all: derive its state from
+`HocState<TWidget>` and return a subtree from `Build(context)`.
 
-The State provides data for the View and optionally contains mutable state of this interface part.
+#### 3. Create a state
+
+The state provides data to the view and owns whatever mutable state that part of the interface has.
 
 ```csharp
 using UniMob;
@@ -67,23 +87,20 @@ using UniMob.UI;
 
 public class CounterState : ViewState<CounterWidget>, ICounterState
 {
-    // where to load the view from? 
-    public override WidgetViewReference View {
-        // supports direct prefab link, Resources and Addressables
-        get => WidgetViewReference.Resource("Prefabs/Counter View");
-    }
-    
+    // Where to load the view from; supports a direct prefab link, Resources and Addressables.
+    public override WidgetViewReference View => WidgetViewReference.Resource("Prefabs/Counter View");
+
     [Atom] public int Counter { get; private set; }
 
     public void Increment()
     {
-        // atom modification will automatically update UI
+        // Writing an atom updates the UI on its own.
         Counter += Widget.IncrementStep;
     }
 }
 ```
 
-#### 3. Run app
+#### 4. Run the app
 
 ```csharp
 using UniMob;
@@ -93,114 +110,116 @@ public class CounterApp : UniMobUIApp
 {
     protected override Widget Build(BuildContext context)
     {
-        return new ConterWidget() {
-            IncrementStep = 1
-        };
+        return new CounterWidget { IncrementStep = 1 };
     }
 }
 ```
 
-## Widget Composition
+## Widget composition
 
-Widgets are the building blocks of a app’s user interface.
-Widgets form a hierarchy based on composition.
-
-Composition of widgets allows you to build complex custom interfaces that will automatically update when needed.
+Widgets are the building blocks of an interface and form a hierarchy by composition, which is what lets a complex
+custom interface update itself only where it needs to.
 
 ```csharp
-private Widget Build(BuildContext context) {
-    return new ScrollGridFlow {
+private Widget Build(BuildContext context)
+{
+    return new ScrollGrid
+    {
         CrossAxisAlignment = CrossAxisAlignment.Center,
-        MaxCrossAxisExtent = 750.0f,
-        Children = {
+        MaxCrossAxisExtent = 750f,
+        Children =
+        {
             this.BuildDailyOffers(),
-            
+
             this.BuildGemsHeader(),
             this.BuildGemsSlots(),
-
-            this.BuildGoldHeader(),
-            this.BuildGoldSlots(),
-        }
+        },
     };
 }
 
-private IEnumerable<StoreItem> BuildDailyOffers() {
+private IEnumerable<Widget> BuildDailyOffers()
+{
     return this.DailyOffersModel
         .GetAllOffers()
-        .Where(offer => offer.Visible) // subscribe to 'Visible' atom
-        .Select(offer => this.BuildDailyOffer(offer.Id);
+        .Where(offer => offer.Visible) // subscribes to the 'Visible' atom
+        .Select(offer => this.BuildDailyOffer(offer.Id));
 }
 
-private Widget BuildDailyOffer(string offerId) {
-    return new DailyOfferWidget(offerId) {
-        // keys must be set for list elements
-        Key = Key.Of($"store_item_{offerId}")
+private Widget BuildDailyOffer(string offerId)
+{
+    return new DailyOfferWidget(offerId)
+    {
+        // List elements need keys.
+        Key = Key.Of($"store_item_{offerId}"),
     };
 }
-
-// ...
 ```
-
-More code samples are located in  [UniMob.UI Samples](https://github.com/codewriter-packages/UniMob.UI-Samples) repository.
 
 ## Built-in widgets
 
-UniMob.UI comes with a suite of powerful basic widgets:
+**Layout**
 
-> **[Row](./Runtime/Widgets/Row.cs), [Column](./Runtime/Widgets/Column.cs)**<br/>
-> These widgets let you create layouts in both the horizontal (Row) and vertical (Column) directions.
+> **[Row](./Runtime/Layout/Row.cs), [Column](./Runtime/Layout/Column.cs)** -- lay children out along the horizontal or vertical axis.
 >
->**[ZStack](./Runtime/Widgets/ZStack.cs)**<br/>
->A Stack widget lets you place widgets on top of each other in paint order.
+> **[ZStack](./Runtime/Layout/ZStack.cs)** -- place children on top of each other in paint order.
 >
->**[Container](./Runtime/Widgets/Container.cs)**<br/>
->The Container widget lets you create a rectangular visual element that has background color and custom size.
+> **[Wrap](./Runtime/Layout/Wrap.cs)** -- lay children out in a line that wraps onto the next one when it runs out of room.
 >
-> **[Empty](./Runtime/Widgets/Empty.cs)**<br/>
-> Widget that displays nothing.
+> **[Expanded](./Runtime/Layout/Flexible.cs), [Flexible](./Runtime/Layout/Flexible.cs), [Spacer](./Runtime/Layout/Spacer.cs)** -- divide a Row or Column's remaining space between its children.
 >
->**[Scroll Grid Flow](./Runtime/Widgets/ScrollGridFlow.cs)**<br/>
->The ScrollGridFlow widget lets you create a virtualized scrollable grid of elements.
+> **[Align](./Runtime/Layout/Align.cs), [Positioned](./Runtime/Layout/Positioned.cs), [AnchoredBox](./Runtime/Layout/AnchoredBox.cs)** -- place a child within the space its parent gave it.
 >
->**[Grid Flow](./Runtime/Widgets/GridFlow.cs)**<br/>
-> A widget lets you create grid of elements.
+> **[PaddingBox](./Runtime/Layout/PaddingBox.cs)** -- inset a child.
 >
->**[Vertical Split Box](./Runtime/Widgets/VerticalSplitBox.cs)**<br/>
-> Column with two elements. Unlike a [column](./Runtime/Widgets/Column.cs) allows to specify a stretched size for elements.
+> **[SizedBox](./Runtime/Layout/SizedBox.cs), [ConstrainedBox](./Runtime/Layout/ConstrainedBox.cs), [AspectRatio](./Runtime/Layout/AspectRatio.cs), [IntrinsicWidth/IntrinsicHeight](./Runtime/Layout/IntrinsicSize.cs)** -- impose a size or a shape on a child.
 >
-> **[Tabs](./Runtime/Widgets/Tabs.cs)**<br/>
-> Widget that displays horizontally scrollable and draggable list of tabs.
+> **[ConstrainedBuilder](./Runtime/Layout/ConstrainedBuilder.cs)** -- build a subtree from the constraints the parent handed down.
 >
->**[Navigator](./Runtime/Widgets/Navigator.cs)**<br/>
-> A widget that manages a set of child widgets.
+> **[Container](./Runtime/Layout/Container.cs)** -- a rectangle with a background colour, a size and alignment.
 >
->**[Composite Transition](./Runtime/Widgets/CompositeTransition.cs)**<br/>
-> Animates the opacity, position, rotation and scale of a widget.
->
->**[Animated Cross Fade](./Runtime/Widgets/AnimatedCrossFade.cs)**<br/>
-> A widget that cross-fades between two given children and animates itself between their sizes.
->
->**[Animated Switcher](./Runtime/Widgets/AnimatedSwitcher.cs)**<br/>
-> A widget that by default does a cross-fade between a new widget and the widget previously set on the AnimatedSwitcher as a child.
->
->**[Dismissible Dialog](./Runtime/Widgets/DismissibleDialog.cs)**<br/>
-> A widget with swipe-down-to-dismiss and swipe-up-to-expand callbacks.
->
->**[Padding Box](./Runtime/Widgets/PaddingBox.cs)**<br/>
-> Widget that add extra padding for inner element.
->
->**[UniMob Button](./Runtime/Widgets/UniMobButton.cs)**<br/>
-> Widget that detects clicks.
->
->**[UniMob Text](./Runtime/Widgets/UniMobText.cs)**<br/>
-> Display and style text.
->
+> **[Empty](./Runtime/Widgets/Empty.cs)** -- occupies nothing, whatever the parent offers.
 
-## How to Install
-Minimal Unity Version is 2019.3.
+**Scrolling**
 
-Library distributed as git package ([How to install package from git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html))
-<br>Git URL (UniMob.UI): `https://github.com/codewriter-packages/UniMob.UI.git`
+> **[ScrollList](./Runtime/Layout/ScrollList.cs), [ScrollGrid](./Runtime/Layout/ScrollGrid.cs)** -- virtualized scrollable list and grid, on either axis.
+
+**Painting and input**
+
+> **[Text](./Runtime/Layout/Text.cs)** -- display and style text.
+>
+> **[Image](./Runtime/Layout/Image.cs), [ColoredImageBox](./Runtime/Layout/ColoredImageBox.cs)** -- display a sprite.
+>
+> **[GestureDetector](./Runtime/Layout/GestureDetector.cs), [Clickable](./Runtime/Layout/Clickable.cs)** -- recognize taps, presses, drags and pointer movement.
+>
+> **[IgnorePointer](./Runtime/Layout/IgnorePointer.cs)** -- make a subtree invisible to hit testing.
+>
+> **[Opacity](./Runtime/Layout/Opacity.cs)** -- fade a subtree.
+
+**Animation and navigation**
+
+> **[CompositeTransition](./Runtime/Layout/CompositeTransition.cs)** -- animate a subtree's opacity, position, rotation and scale together.
+>
+> **[AnimatedCrossFade](./Runtime/Layout/AnimatedCrossFade.cs)** -- cross-fade between two children.
+>
+> **[AnimatedSwitcher](./Runtime/Layout/AnimatedSwitcher.cs)** -- animate a child out and its replacement in.
+>
+> **[Tabs](./Runtime/Layout/Tabs.cs)** -- a horizontally scrollable, draggable list of tabs.
+>
+> **[Navigator](./Runtime/Widgets/Navigator.cs)** -- a stack of routes, with push, pop and transitions.
+>
+> **[Builder](./Runtime/Widgets/Builder.cs)** -- build a subtree inline from a delegate.
+
+Conventions for adding a widget, and the vocabulary the layout system uses, are in
+[Runtime/Layout/README.md](./Runtime/Layout/README.md).
+
+## How to install
+
+Minimum Unity version is 6000.3.
+
+Distributed as a git package
+([how to install a package from a git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html)).
+
+<br>Git URL (UniMob.UI): `https://github.com/Girildo/UniMob.UI.git`
 <br>Git URL (UniMob): `https://github.com/codewriter-packages/UniMob.git`
 
 ## License
