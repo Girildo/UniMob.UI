@@ -13,7 +13,7 @@ namespace UniMob.UI
 
         public Type Type => _type ?? (_type = GetType());
 
-        public Key? Key { get; set; }
+        public Key? Key { get; init; }
 
         public abstract Widget Build(BuildContext context);
 
