@@ -15,7 +15,7 @@
     "author": "Girildo (https://github.com/Girildo)",
     "homepage": "https://github.com/Girildo/UniMob.UI#readme",
     "dependencies": {
-        "com.codewriter.unimob": "2.5.0",
+        "com.codewriter.unimob": "2.6.0",
         "com.unity.addressables": "2.9.0",
         "com.unity.textmeshpro": "5.0.0"
     }
