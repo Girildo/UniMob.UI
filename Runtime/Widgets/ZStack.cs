@@ -34,6 +34,6 @@ namespace UniMob.UI.Widgets
 
         public IState[] Children => _children.Value;
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+            WidgetViewReference.Registered("UniMob.MultiChildLayoutView");
     }
 }

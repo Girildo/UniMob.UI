@@ -1,9 +1,10 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.ColoredImageBoxView",
+    "UniMob.ColoredImageBoxView",
     typeof(UniMob.UI.Internal.Views.ColoredImageBoxView)
 )]
 

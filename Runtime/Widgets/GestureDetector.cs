@@ -82,6 +82,6 @@ namespace UniMob.UI.Widgets
         public Action<DragDetails>? OnDragUpdate => Widget.OnDragUpdate;
 
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.GestureDetector");
+            WidgetViewReference.Registered("UniMob.GestureDetectorView");
     }
 }

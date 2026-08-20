@@ -38,6 +38,6 @@ namespace UniMob.UI.Widgets
             Widget.Image != null ? Widget.Image : UniMobViewContext.DefaultWhiteImage;
 
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.ColoredImageBoxView");
+            WidgetViewReference.Registered("UniMob.ColoredImageBoxView");
     }
 }

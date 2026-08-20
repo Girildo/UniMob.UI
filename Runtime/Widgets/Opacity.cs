@@ -24,7 +24,7 @@ namespace UniMob.UI.Widgets
     internal class OpacityState : SingleChildLayoutState<Opacity>, IOpacityState
     {
         public override WidgetViewReference View { get; } =
-            WidgetViewReference.Resource("$$_Layout.Opacity");
+            WidgetViewReference.Registered("UniMob.OpacityView");
 
         public IAnimation<float> OpacityValue => Widget.OpacityValue;
     }

@@ -4,7 +4,7 @@ using UniMob.UI.Rendering;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.SingleChildLayoutView",
+    "UniMob.SingleChildLayoutView",
     typeof(UniMob.UI.Internal.Views.SingleChildLayoutView)
 )]
 

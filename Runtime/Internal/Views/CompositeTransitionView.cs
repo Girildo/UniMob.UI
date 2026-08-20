@@ -1,9 +1,10 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Rendering;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.CompositeTransition",
+    "UniMob.CompositeTransitionView",
     typeof(RectTransform),
     typeof(CanvasGroup),
     typeof(UniMob.UI.Internal.Views.CompositeTransitionView)

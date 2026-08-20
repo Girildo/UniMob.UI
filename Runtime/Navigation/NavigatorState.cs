@@ -27,7 +27,7 @@ namespace UniMob.UI.Navigation
         private bool _processing;
 
         public override WidgetViewReference View { get; } =
-            WidgetViewReference.Resource("$$_Navigator");
+            WidgetViewReference.Registered("UniMob.NavigatorView");
 
         public NavigatorState()
         {

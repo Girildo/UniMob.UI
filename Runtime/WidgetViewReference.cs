@@ -67,6 +67,20 @@ namespace UniMob.UI
             return new WidgetViewReference(WidgetViewReferenceType.Resource, path, null, null);
         }
 
+        /// <summary>
+        /// A view built in source by an <see cref="IViewFactory"/> that some assembly registered
+        /// under this name, rather than loaded from an asset.
+        /// </summary>
+        /// <remarks>
+        /// A registered name and a Resources path are separate namespaces, so a name here can never
+        /// collide with an asset path. Two assemblies registering the same name is an error the
+        /// loader raises at start-up.
+        /// </remarks>
+        public static WidgetViewReference Registered(string name)
+        {
+            return new WidgetViewReference(WidgetViewReferenceType.Registered, name, null, null);
+        }
+
         public static WidgetViewReference FromPrefab(GameObject prefab)
         {
             return new WidgetViewReference(WidgetViewReferenceType.Prefab, null, null, prefab);
@@ -83,5 +97,6 @@ namespace UniMob.UI
         Resource,
         Addressable,
         Prefab,
+        Registered,
     }
 }

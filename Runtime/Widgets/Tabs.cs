@@ -64,6 +64,6 @@ namespace UniMob.UI.Widgets
         // the pages either side of the current one are always laid out just outside the viewport, so
         // an unmasked Tabs is not a different look, it is one that paints over its surroundings.
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.MaskedMultiChildLayoutView");
+            WidgetViewReference.Registered("UniMob.MaskedMultiChildLayoutView");
     }
 }

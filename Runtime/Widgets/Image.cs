@@ -80,6 +80,6 @@ namespace UniMob.UI.Widgets
         public ImageFit Fit => Widget.Fit;
         public Alignment Alignment => Widget.Alignment;
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.ImageView");
+            WidgetViewReference.Registered("UniMob.ImageView");
     }
 }

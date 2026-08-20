@@ -1,4 +1,5 @@
 using System;
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
@@ -7,7 +8,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.GestureDetector",
+    "UniMob.GestureDetectorView",
     typeof(RectTransform),
     typeof(InvisibleRaycastTarget),
     typeof(GestureDetectorView)

@@ -1,8 +1,13 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Empty", typeof(RectTransform), typeof(EmptyView))]
+[assembly: RegisterComponentViewFactory(
+    "UniMob.EmptyView",
+    typeof(RectTransform),
+    typeof(EmptyView)
+)]
 
 namespace UniMob.UI.Widgets
 {

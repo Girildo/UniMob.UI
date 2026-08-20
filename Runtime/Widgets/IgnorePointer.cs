@@ -22,7 +22,7 @@ namespace UniMob.UI.Widgets
     internal class IgnorePointerState : SingleChildLayoutState<IgnorePointer>, IIgnorePointerState
     {
         public override WidgetViewReference View { get; } =
-            WidgetViewReference.Resource("$$_Layout.IgnorePointer");
+            WidgetViewReference.Registered("UniMob.IgnorePointerView");
         public bool Ignoring => Widget.Ignoring;
     }
 }

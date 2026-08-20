@@ -1,10 +1,11 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Rendering;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.Opacity",
+    "UniMob.OpacityView",
     typeof(RectTransform),
     typeof(CanvasGroup),
     typeof(UniMob.UI.Internal.Views.OpacityView)

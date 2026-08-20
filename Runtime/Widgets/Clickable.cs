@@ -28,7 +28,7 @@ namespace UniMob.UI.Widgets
     internal class ClickableState : SingleChildLayoutState<Clickable>, IClickableState
     {
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.ClickableView");
+            WidgetViewReference.Registered("UniMob.ClickableView");
         public bool Interactable => Widget.Interactable;
 
         public void OnClick()

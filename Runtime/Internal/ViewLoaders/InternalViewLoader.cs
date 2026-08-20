@@ -7,8 +7,9 @@ namespace UniMob.UI.Internal.ViewLoaders
 {
     internal class InternalViewLoader : IViewLoader
     {
-        private readonly Dictionary<string, Func<GameObject>> _builders =
-            new Dictionary<string, Func<GameObject>>();
+        private readonly Dictionary<string, IViewFactory> _factories =
+            new Dictionary<string, IViewFactory>();
+        private readonly Dictionary<string, string> _registrars = new Dictionary<string, string>();
         private readonly Dictionary<string, IView> _cache = new Dictionary<string, IView>();
 
         private GameObject templatesRootObject;
@@ -30,23 +31,30 @@ namespace UniMob.UI.Internal.ViewLoaders
                     }
 
                     var name = factory.Name;
-                    if (_builders.ContainsKey(name))
+                    var registrar = assembly.GetName().Name;
+
+                    // A throw rather than a log: the loser of a name collision is decided by assembly
+                    // load order, so logging it leaves half the app rendering the wrong view and the
+                    // other half working. Both registrars are named because neither one alone can be
+                    // assumed to be the mistake.
+                    if (_registrars.TryGetValue(name, out var owner))
                     {
-                        Debug.LogError($"Multiple view factory for {name}");
-                        continue;
+                        throw new InvalidOperationException(
+                            $"Two assemblies register a view named '{name}': {owner} and "
+                                + $"{registrar}. Registered view names are global, so give one of "
+                                + "them a name of its own."
+                        );
                     }
 
-                    _builders.Add(name, factory.Create);
+                    _factories.Add(name, factory);
+                    _registrars.Add(name, registrar);
                 }
             }
         }
 
         public IView LoadViewPrefab(WidgetViewReference viewReference)
         {
-            if (
-                viewReference.Type != WidgetViewReferenceType.Resource
-                || !viewReference.Path.StartsWith("$$_")
-            )
+            if (viewReference.Type != WidgetViewReferenceType.Registered)
             {
                 return null;
             }
@@ -58,9 +66,13 @@ namespace UniMob.UI.Internal.ViewLoaders
                 return view;
             }
 
-            if (!_builders.TryGetValue(name, out var builder))
+            if (!_factories.TryGetValue(name, out var factory))
             {
-                throw new InvalidOperationException("No builder");
+                throw new InvalidOperationException(
+                    $"No view is registered under the name '{name}'. Register one with "
+                        + $"[assembly: {nameof(RegisterComponentViewFactoryAttribute)}] or "
+                        + $"[assembly: {nameof(RegisterCustomViewFactoryAttribute)}]."
+                );
             }
 
             if (templatesRootObject == null)
@@ -69,7 +81,7 @@ namespace UniMob.UI.Internal.ViewLoaders
                 Object.DontDestroyOnLoad(templatesRootObject);
             }
 
-            var template = builder();
+            var template = factory.Create();
             template.transform.SetParent(templatesRootObject.transform, worldPositionStays: true);
 
             view = template.GetComponent<IView>();

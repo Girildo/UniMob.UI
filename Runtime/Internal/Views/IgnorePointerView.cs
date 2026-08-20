@@ -1,10 +1,11 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.IgnorePointer",
+    "UniMob.IgnorePointerView",
     typeof(RectTransform),
     typeof(CanvasGroup),
     typeof(IgnorePointerView)

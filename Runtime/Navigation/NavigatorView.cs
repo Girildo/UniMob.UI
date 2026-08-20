@@ -1,3 +1,4 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Navigation;
 using UniMob.UI.Rendering;
@@ -5,7 +6,7 @@ using UniMob.UI.Widgets;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Navigator",
+    "UniMob.NavigatorView",
     typeof(RectTransform),
     typeof(NavigatorView)
 )]

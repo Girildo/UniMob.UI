@@ -15,6 +15,6 @@ namespace UniMob.UI.Widgets
     internal class EmptyState : ViewState<Empty>, IEmptyState
     {
         public override WidgetViewReference View { get; } =
-            WidgetViewReference.Resource("$$_Empty");
+            WidgetViewReference.Registered("UniMob.EmptyView");
     }
 }

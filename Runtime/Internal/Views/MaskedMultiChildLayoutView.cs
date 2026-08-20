@@ -1,3 +1,4 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UnityEngine;
@@ -12,7 +13,7 @@ using UnityEngine.UI;
 // there would hang one off every column in the app. A widget asks for whichever of the two it needs.
 // Tabs is currently the only one that needs this one, and needs it unconditionally.
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.MaskedMultiChildLayoutView",
+    "UniMob.MaskedMultiChildLayoutView",
     typeof(RectTransform),
     typeof(RectMask2D),
     typeof(MultiChildLayoutView)

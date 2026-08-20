@@ -1,10 +1,11 @@
+using UniMob.UI;
 using UniMob.UI.Internal;
 using UniMob.UI.Widgets;
 using UnityEngine;
 using UnityEngine.UI;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.ClickableView",
+    "UniMob.ClickableView",
     typeof(UniMob.UI.Internal.Views.ClickableView)
 )]
 

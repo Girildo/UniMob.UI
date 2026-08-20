@@ -39,6 +39,6 @@ namespace UniMob.UI.Widgets
         }
 
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.SingleChildLayoutView");
+            WidgetViewReference.Registered("UniMob.SingleChildLayoutView");
     }
 }

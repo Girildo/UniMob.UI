@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using UniMob.UI;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
@@ -16,7 +17,7 @@ using UnityEngine;
 #endif
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.MultiChildLayoutView",
+    "UniMob.MultiChildLayoutView",
     typeof(RectTransform),
     typeof(MultiChildLayoutView)
 )]

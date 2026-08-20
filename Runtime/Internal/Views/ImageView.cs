@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [assembly: RegisterComponentViewFactory(
-    "$$_Layout.ImageView",
+    "UniMob.ImageView",
     typeof(RectTransform),
     typeof(UniMob.UI.Internal.Views.ImageView)
 )]

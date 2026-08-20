@@ -52,6 +52,6 @@ namespace UniMob.UI.Widgets
 
         // Provide the non-painting layout view reference standard for single child layouts
         public override WidgetViewReference View =>
-            WidgetViewReference.Resource("$$_Layout.SingleChildLayoutView");
+            WidgetViewReference.Registered("UniMob.SingleChildLayoutView");
     }
 }

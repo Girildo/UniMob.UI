@@ -29,7 +29,7 @@ namespace UniMob.UI.Widgets
             ICompositeTransitionState
     {
         public override WidgetViewReference View { get; } =
-            WidgetViewReference.Resource("$$_Layout.CompositeTransition");
+            WidgetViewReference.Registered("UniMob.CompositeTransitionView");
 
         public IAnimation<float> Opacity => Widget.Opacity;
         public IAnimation<Vector2> Position => Widget.Position;
