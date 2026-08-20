@@ -52,7 +52,7 @@ namespace UniMob.UI.Internal.ViewLoaders
             }
         }
 
-        public IView LoadViewPrefab(WidgetViewReference viewReference)
+        public IView? LoadViewPrefab(WidgetViewReference viewReference)
         {
             if (viewReference.Type != WidgetViewReferenceType.Registered)
             {
@@ -60,6 +60,12 @@ namespace UniMob.UI.Internal.ViewLoaders
             }
 
             var name = viewReference.Path;
+
+            if (name == null)
+            {
+                Debug.LogError("A Registered view reference carries no name.");
+                return null;
+            }
 
             if (_cache.TryGetValue(name, out var view))
             {

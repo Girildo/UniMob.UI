@@ -25,7 +25,7 @@ namespace UniMob.UI.Widgets
     internal interface IColoredImageBoxState : ISingleChildLayoutState
     {
         Color BackgroundColor { get; }
-        Sprite BackgroundImage { get; }
+        Sprite? BackgroundImage { get; }
     }
 
     internal class ColoredImageBoxState
@@ -34,7 +34,7 @@ namespace UniMob.UI.Widgets
     {
         public Color BackgroundColor => Widget.Color;
 
-        public Sprite BackgroundImage =>
+        public Sprite? BackgroundImage =>
             Widget.Image != null ? Widget.Image : UniMobViewContext.DefaultWhiteImage;
 
         public override WidgetViewReference View =>

@@ -8,7 +8,7 @@ namespace UniMob.UI.Internal.ViewLoaders
         private readonly Dictionary<string, IView> _viewPrefabCache =
             new Dictionary<string, IView>();
 
-        public IView LoadViewPrefab(WidgetViewReference viewReference)
+        public IView? LoadViewPrefab(WidgetViewReference viewReference)
         {
             if (viewReference.Type != WidgetViewReferenceType.Resource)
             {
@@ -16,6 +16,12 @@ namespace UniMob.UI.Internal.ViewLoaders
             }
 
             var path = viewReference.Path;
+
+            if (path == null)
+            {
+                Debug.LogError("A Resource view reference carries no path.");
+                return null;
+            }
 
             if (_viewPrefabCache.TryGetValue(path, out var view))
             {

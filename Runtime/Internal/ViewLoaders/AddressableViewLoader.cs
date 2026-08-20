@@ -39,7 +39,7 @@ namespace UniMob.UI.Internal.ViewLoaders
             lifetime.Register(() => Loaders.Remove(loader));
         }
 
-        public IView LoadViewPrefab(WidgetViewReference viewReference)
+        public IView? LoadViewPrefab(WidgetViewReference viewReference)
         {
             if (viewReference.Type != WidgetViewReferenceType.Addressable)
             {
@@ -47,6 +47,14 @@ namespace UniMob.UI.Internal.ViewLoaders
             }
 
             var path = viewReference.Path ?? GetAddressableAssetPath(viewReference);
+
+            if (path == null)
+            {
+                Debug.LogError(
+                    "An Addressable view reference carries neither a path nor an asset reference."
+                );
+                return null;
+            }
 
             if (!TryGetAddressablePrefab(path, out var prefab))
             {
@@ -75,8 +83,13 @@ namespace UniMob.UI.Internal.ViewLoaders
             return view;
         }
 
-        private static string GetAddressableAssetPath(WidgetViewReference viewReference)
+        private static string? GetAddressableAssetPath(WidgetViewReference viewReference)
         {
+            if (viewReference.Reference == null)
+            {
+                return null;
+            }
+
             var key = viewReference.Reference.RuntimeKey;
 
             if (RuntimeKeyToPath.TryGetValue(key, out var path))
@@ -102,7 +115,7 @@ namespace UniMob.UI.Internal.ViewLoaders
             );
         }
 
-        private static bool TryGetAddressablePrefab(string path, out GameObject prefab)
+        private static bool TryGetAddressablePrefab(string path, out GameObject? prefab)
         {
             foreach (var handle in Loaders)
             {

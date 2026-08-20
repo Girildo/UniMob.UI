@@ -28,7 +28,9 @@ namespace UniMob.UI.Internal.Views
             if (_backgroundImage == null)
                 return;
 
-            _backgroundImage.sprite = State.BackgroundImage;
+            // Image.sprite is unannotated, but a null sprite is how the component draws its plain
+            // quad, which is exactly the no-image case.
+            _backgroundImage.sprite = State.BackgroundImage!;
             _backgroundImage.color = State.BackgroundColor;
         }
     }

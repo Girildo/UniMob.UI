@@ -19,7 +19,7 @@ namespace UniMob.UI
 
         private class Scope : IDisposable
         {
-            private IViewTreeElement _prevElement;
+            private IViewTreeElement? _prevElement;
 
             public void Link(IViewTreeElement self)
             {

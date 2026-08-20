@@ -9,7 +9,7 @@ namespace UniMob.UI.Internal.ViewLoaders
             _loaders = loaders;
         }
 
-        public IView LoadViewPrefab(WidgetViewReference viewReference)
+        public IView? LoadViewPrefab(WidgetViewReference viewReference)
         {
             foreach (var loader in _loaders)
             {

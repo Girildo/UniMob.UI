@@ -14,13 +14,20 @@ namespace UniMob.UI.Internal
         private List<Item> _items = new List<Item>();
         private List<Item> _next = new List<Item>();
 
-        private IDisposable _activeRender;
+        private IDisposable? _activeRender;
 
         private class Item
         {
+            public Item(IState state, IView view, WidgetViewReference viewReference)
+            {
+                State = state;
+                View = view;
+                ViewReference = viewReference;
+            }
+
             public WidgetViewReference ViewReference;
             public IView View;
-            public IState State;
+            public readonly IState State;
         }
 
         protected ViewMapperBase(bool link)
@@ -113,7 +120,8 @@ namespace UniMob.UI.Internal
             var viewState = state.InnerViewState;
             var nextViewReference = viewState.View;
 
-            Item item;
+            Item? item = null;
+
             if (TryFindActiveItemIndex(state, out var itemIndex))
             {
                 item = _items[itemIndex];
@@ -121,24 +129,17 @@ namespace UniMob.UI.Internal
                 _items[itemIndex] = _items[_items.Count - 1];
                 _items.RemoveAt(_items.Count - 1);
 
+                // A view that no longer matches the reference is recycled and the item with it; the
+                // replacement below carries the same State, which is what the lookup matches on.
                 if (!item.ViewReference.Equals(nextViewReference))
                 {
                     item.View.ResetSource();
                     RecycleView(item.View);
-                    item.View = null;
+                    item = null;
                 }
             }
-            else
-            {
-                item = new Item { State = state };
-            }
 
-            if (item.View == null)
-            {
-                item.View = ResolveOrReuseView(nextViewReference);
-            }
-
-            item.ViewReference = nextViewReference;
+            item ??= new Item(state, ResolveOrReuseView(nextViewReference), nextViewReference);
 
             _next.Add(item);
 

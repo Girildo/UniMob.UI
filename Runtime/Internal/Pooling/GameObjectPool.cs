@@ -42,7 +42,7 @@ namespace UniMob.UI.Internal.Pooling
 
         public static GameObject Instantiate(
             GameObject prefab,
-            Transform parent = null,
+            Transform? parent = null,
             bool worldPositionStays = true
         )
         {
@@ -97,8 +97,11 @@ namespace UniMob.UI.Internal.Pooling
         public sealed class Pool : MonoBehaviour
         {
             private readonly Queue<GameObject> _stack = new Queue<GameObject>();
-            private GameObject _prefab;
-            private string _prefabName;
+
+            // Two-phase: the pool is added as a component and initialised in the same breath by
+            // GetPool, so Init is the constructor as far as these two are concerned.
+            private GameObject _prefab = null!;
+            private string _prefabName = null!;
             private bool _poolDestroyed;
 
             private void OnDestroy()
@@ -117,7 +120,7 @@ namespace UniMob.UI.Internal.Pooling
                 EditorUpdateName();
             }
 
-            public GameObject Get(Transform parent = null, bool worldPositionStays = true)
+            public GameObject Get(Transform? parent = null, bool worldPositionStays = true)
             {
                 if (_poolDestroyed)
                 {

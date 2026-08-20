@@ -24,6 +24,16 @@ namespace UniMob.UI.Internal
             using (Atom.NoWatch)
             {
                 var prefab = UniMobViewContext.Loader.LoadViewPrefab(viewReference);
+
+                // Loaders log the reason and return null; without this the failure only surfaces as a
+                // null dereference one line down, with the reference no longer in hand to name.
+                if (prefab == null)
+                {
+                    throw new InvalidOperationException(
+                        $"No view could be loaded for {viewReference}."
+                    );
+                }
+
                 var view = GameObjectPool
                     .Instantiate(prefab.gameObject, _parentSelector.Invoke(), _worldPositionStays)
                     .GetComponent<IView>();

@@ -8,9 +8,9 @@ namespace UniMob.UI
     {
         private WidgetViewReference(
             WidgetViewReferenceType type,
-            string path,
-            AssetReferenceGameObject reference,
-            GameObject prefab
+            string? path,
+            AssetReferenceGameObject? reference,
+            GameObject? prefab
         )
         {
             Type = type;
@@ -19,10 +19,20 @@ namespace UniMob.UI
             Prefab = prefab;
         }
 
+        /// <summary>
+        /// How this reference names its view. Which of <see cref="Path"/>, <see cref="Reference"/>
+        /// and <see cref="Prefab"/> is populated follows from it; the rest are null.
+        /// </summary>
         public WidgetViewReferenceType Type { get; }
-        public string Path { get; }
-        public AssetReferenceGameObject Reference { get; }
-        public GameObject Prefab { get; }
+
+        /// <summary>The resource path or registered name, when the type names its view by string.</summary>
+        public string? Path { get; }
+
+        /// <summary>The addressable handle, when the type names its view by asset reference.</summary>
+        public AssetReferenceGameObject? Reference { get; }
+
+        /// <summary>The prefab itself, when the type carries one directly.</summary>
+        public GameObject? Prefab { get; }
 
         public bool Equals(WidgetViewReference other)
         {
@@ -32,7 +42,7 @@ namespace UniMob.UI
                 && Prefab == other.Prefab;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is WidgetViewReference other && Equals(other);
         }
