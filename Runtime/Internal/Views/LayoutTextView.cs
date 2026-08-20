@@ -7,6 +7,14 @@ using UniMob.UI.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
+[assembly: RegisterComponentViewFactory(
+    "UniMob.LayoutTextView",
+    typeof(RectTransform),
+    typeof(CanvasRenderer),
+    typeof(UniMobTextMeshProBehaviour),
+    typeof(UniMob.UI.Internal.Views.LayoutTextView)
+)]
+
 namespace UniMob.UI.Internal.Views
 {
     [RequireComponent(typeof(UniMobTextMeshProBehaviour))]
@@ -18,6 +26,12 @@ namespace UniMob.UI.Internal.Views
         protected override void Awake()
         {
             base.Awake();
+
+            // Serialized when this view comes from a prefab, absent when it is built in source.
+            if (text == null)
+            {
+                TryGetComponent(out text);
+            }
 
             // Registered once per component, not once per activation: the callback list is append-only
             // and is never cleared, so re-registering would grow it for the life of the view.

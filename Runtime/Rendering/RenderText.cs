@@ -82,6 +82,13 @@ namespace UniMob.UI.Rendering
                 measurerCanvas.renderMode = RenderMode.WorldSpace;
                 go.transform.position = new Vector3(1_000_000f, 1_000_000f, 1_000_000f);
 
+                // The pool activates everything it hands out; this instance bypasses the pool, so it
+                // has to activate itself. A template built in source arrives inactive, and TMP does
+                // all of its initialisation -- font asset, default settings, text info -- in Awake,
+                // which never runs on an inactive object. Last, so Awake finds the canvas and the
+                // position already in place.
+                go.SetActive(true);
+
                 // Assign, don't Add: the branch above is also taken when the key is already present but
                 // its measurer was destroyed (Unity's fake-null), and Add on a live key throws.
                 s_textMeshProMeasurers[viewRefence] = behaviour;

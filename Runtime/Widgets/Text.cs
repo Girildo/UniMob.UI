@@ -108,7 +108,7 @@ namespace UniMob.UI.Widgets
         public TextOverflowModes OverflowMode => Widget.OverflowMode ?? TextOverflowModes.Ellipsis;
 
         public override WidgetViewReference View =>
-            Widget.ViewReference ?? WidgetViewReference.Resource("Layout/UniMob.Text");
+            Widget.ViewReference ?? WidgetViewReference.Registered("UniMob.LayoutTextView");
     }
 
     public interface ITextState : IViewState
