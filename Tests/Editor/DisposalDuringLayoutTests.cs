@@ -170,7 +170,7 @@ namespace UniMob.UI.Tests
             var root = TestHarness.Mount(
                 new Builder(_ => new CountingBox { BoxSize = new Vector2(30, 40) })
             );
-            TestHarness.DriveFrame(root, Constraints);
+            TestHarness.DriveLayoutAndView(root, Constraints);
 
             var render = root.RenderObject;
             StateUtilities.DeactivateChild(root);
@@ -194,7 +194,7 @@ namespace UniMob.UI.Tests
             var root = TestHarness.Mount(
                 new Builder(_ => new CountingBox { BoxSize = new Vector2(30, 40) })
             );
-            TestHarness.DriveFrame(root, Constraints);
+            TestHarness.DriveLayoutAndView(root, Constraints);
 
             var render = root.RenderObject;
             StateUtilities.DeactivateChild(root);

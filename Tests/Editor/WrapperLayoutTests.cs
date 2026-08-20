@@ -56,7 +56,7 @@ namespace UniMob.UI.Tests
             var root = TestHarness.Mount(tree);
             var constraints = LayoutConstraints.Tight(80, 60);
 
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
 
             Assert.AreEqual(
                 constraints,
@@ -95,8 +95,8 @@ namespace UniMob.UI.Tests
         {
             var root = TestHarness.Mount(Hoc(Stateless(Leaf())));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(80, 60));
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(20, 25));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(80, 60));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(20, 25));
 
             Assert.AreEqual(LayoutConstraints.Tight(20, 25), RenderOf(root).LastConstraints);
             Assert.AreEqual(new Vector2(20, 25), root.RenderObject.PeekSize());
@@ -119,13 +119,13 @@ namespace UniMob.UI.Tests
             );
             var constraints = LayoutConstraints.Tight(80, 60);
 
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
             // The wrapper's own proxy survives a child rebuild, so the check looks at the leaf.
             var firstRenderObject = root.InnerViewState.RenderObject;
 
             // A new Key makes the child irreconcilable, so it is discarded and rebuilt from scratch.
             childKey.Value = Key.Of("second");
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
 
             Assert.AreNotSame(
                 firstRenderObject,
@@ -146,11 +146,11 @@ namespace UniMob.UI.Tests
             );
             var constraints = LayoutConstraints.Loose(100, 100);
 
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
             Assert.AreEqual(new Vector2(30, 40), root.RenderObject.PeekSize());
 
             size.Value = new Vector2(55, 65);
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
 
             Assert.AreEqual(new Vector2(55, 65), root.RenderObject.PeekSize());
         }
@@ -197,7 +197,7 @@ namespace UniMob.UI.Tests
         {
             var root = TestHarness.Mount(Leaf());
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(100, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(1, RenderOf(root).SizingPasses);
         }
@@ -207,7 +207,7 @@ namespace UniMob.UI.Tests
         {
             var root = TestHarness.Mount(Stateless(Leaf()));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(100, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(1, RenderOf(root).SizingPasses);
         }
@@ -217,7 +217,7 @@ namespace UniMob.UI.Tests
         {
             var root = TestHarness.Mount(Hoc(Leaf()));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(100, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(1, RenderOf(root).SizingPasses);
         }
@@ -227,7 +227,7 @@ namespace UniMob.UI.Tests
         {
             var root = TestHarness.Mount(Hoc(Stateless(Hoc(Leaf()))));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(100, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(100, 100));
 
             Assert.AreEqual(1, RenderOf(root).SizingPasses);
         }
@@ -239,8 +239,8 @@ namespace UniMob.UI.Tests
             var root = TestHarness.Mount(Hoc(Leaf()));
             var constraints = LayoutConstraints.Loose(100, 100);
 
-            TestHarness.DriveFrame(root, constraints);
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
 
             Assert.AreEqual(1, RenderOf(root).SizingPasses);
         }
@@ -250,8 +250,8 @@ namespace UniMob.UI.Tests
         {
             var root = TestHarness.Mount(Hoc(Leaf()));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(100, 100));
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(50, 50));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(100, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(50, 50));
 
             Assert.AreEqual(2, RenderOf(root).SizingPasses);
         }

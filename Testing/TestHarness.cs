@@ -63,10 +63,13 @@ namespace UniMob.UI.Tests
         // That path bypasses the reactive layer entirely, so it cannot see a render object being driven
         // twice, or constraints arriving by the wrong route.
         //
-        // The three below go through the reactive layer instead, reproducing what the runtime actually
-        // does in a frame. They are the only place that knows how layout is driven, so when ownership of
-        // the layout atom moves, this is the sole thing that changes and every assertion built on it
-        // keeps its meaning.
+        // The three below go through the reactive layer instead, applying the pulls the runtime
+        // applies. They are the only place that knows how layout is driven, so when ownership of the
+        // layout atom moves, this is the sole thing that changes and every assertion built on it keeps
+        // its meaning.
+        //
+        // None of them advances time. A frame belongs to the clock -- TestZone.Pump and its relatives --
+        // and these are the layout pulls a frame happens to contain.
 
         /// <summary>
         ///     Applies a parent's layout push, as <c>RenderObject.LayoutChild</c> does.
@@ -85,10 +88,10 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
-        ///     Applies both pulls a real frame makes, in runtime order. Where a build-only wrapper is
-        ///     involved these reach the same render object, which is what makes double-driving visible.
+        ///     Applies both layout pulls, in runtime order. Where a build-only wrapper is involved these
+        ///     reach the same render object, which is what makes double-driving visible.
         /// </summary>
-        internal static void DriveFrame(State state, LayoutConstraints constraints)
+        internal static void DriveLayoutAndView(State state, LayoutConstraints constraints)
         {
             DriveLayout(state, constraints);
             DriveViewPass(state);

@@ -53,7 +53,7 @@ namespace UniMob.UI.Tests
             var recorder = new Recorder();
             var root = TestHarness.Mount(Build(recorder, new Vector2(10, 10)));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(80, 60));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(80, 60));
 
             Assert.AreEqual(LayoutConstraints.Tight(80, 60), recorder.Last);
         }
@@ -64,8 +64,8 @@ namespace UniMob.UI.Tests
             var recorder = new Recorder();
             var root = TestHarness.Mount(Build(recorder, new Vector2(10, 10)));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(80, 60));
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(20, 25));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(80, 60));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(20, 25));
 
             Assert.AreEqual(LayoutConstraints.Tight(20, 25), recorder.Last);
         }
@@ -88,10 +88,10 @@ namespace UniMob.UI.Tests
                 }
             );
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(200, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(200, 100));
             Assert.AreEqual(new Vector2(100, 10), root.RenderObject.PeekSize());
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(60, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(60, 100));
             Assert.AreEqual(
                 new Vector2(30, 10),
                 root.RenderObject.PeekSize(),
@@ -106,10 +106,10 @@ namespace UniMob.UI.Tests
             var root = TestHarness.Mount(Build(recorder, new Vector2(10, 10)));
             var constraints = LayoutConstraints.Tight(80, 60);
 
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
             var afterFirstFrame = recorder.Count;
 
-            TestHarness.DriveFrame(root, constraints);
+            TestHarness.DriveLayoutAndView(root, constraints);
 
             Assert.AreEqual(
                 afterFirstFrame,
@@ -124,10 +124,10 @@ namespace UniMob.UI.Tests
             var recorder = new Recorder();
             var root = TestHarness.Mount(Build(recorder, new Vector2(10, 10)));
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(80, 60));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(80, 60));
             var afterFirstFrame = recorder.Count;
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(20, 25));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(20, 25));
 
             Assert.AreEqual(
                 afterFirstFrame + 1,
@@ -149,7 +149,7 @@ namespace UniMob.UI.Tests
                 new Builder(_ => new Builder(__ => Build(recorder, new Vector2(10, 10))))
             );
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Tight(80, 60));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Tight(80, 60));
 
             Assert.AreEqual(LayoutConstraints.Tight(80, 60), recorder.Last);
         }
@@ -179,7 +179,7 @@ namespace UniMob.UI.Tests
                 }
             );
 
-            TestHarness.DriveFrame(root, LayoutConstraints.Loose(200, 100));
+            TestHarness.DriveLayoutAndView(root, LayoutConstraints.Loose(200, 100));
 
             Assert.AreEqual(200f, outer.Last.MaxWidth, 0.01f);
             Assert.AreEqual(
