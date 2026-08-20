@@ -13,7 +13,8 @@ namespace UniMob.UI.Widgets
         private readonly StateCollectionHolder _states;
         private readonly NavigatorStack _stack;
 
-        private readonly Queue<NavigatorCommand[]> _pendingCommands = new Queue<NavigatorCommand[]>();
+        private readonly Queue<NavigatorCommand[]> _pendingCommands =
+            new Queue<NavigatorCommand[]>();
         private readonly Stack<Route> _pendingPause = new Stack<Route>();
 
         // One request per route at a time. A second requester arriving while the route is still deciding
@@ -25,8 +26,8 @@ namespace UniMob.UI.Widgets
         private Task _task = Task.CompletedTask;
         private bool _processing;
 
-        public override WidgetViewReference View { get; }
-            = WidgetViewReference.Resource("$$_Navigator");
+        public override WidgetViewReference View { get; } =
+            WidgetViewReference.Resource("$$_Navigator");
 
         public NavigatorState()
         {
@@ -126,7 +127,8 @@ namespace UniMob.UI.Widgets
 
         public Route Push(Route route)
         {
-            if (route == null) throw new ArgumentNullException(nameof(route));
+            if (route == null)
+                throw new ArgumentNullException(nameof(route));
 
             // Attached when the push is issued, not when the command runs: an owner that pops its route
             // while the command waits behind an exit animation must find a navigator to queue the pop with.
@@ -147,12 +149,14 @@ namespace UniMob.UI.Widgets
         /// </summary>
         public Route NewRoot(Route route)
         {
-            if (route == null) throw new ArgumentNullException(nameof(route));
+            if (route == null)
+                throw new ArgumentNullException(nameof(route));
 
             route.AttachTo(this);
             ApplyCommands(
                 new NavigatorCommand.PopTo(null),
-                new NavigatorCommand.Replace(route, null, PopResult.Teardown()));
+                new NavigatorCommand.Replace(route, null, PopResult.Teardown())
+            );
             return route;
         }
 
@@ -169,7 +173,8 @@ namespace UniMob.UI.Widgets
         /// </summary>
         public Route Replace(Route route)
         {
-            if (route == null) throw new ArgumentNullException(nameof(route));
+            if (route == null)
+                throw new ArgumentNullException(nameof(route));
 
             route.AttachTo(this);
             ApplyCommands(new NavigatorCommand.Replace(route, null, PopResult.Teardown()));
@@ -191,8 +196,10 @@ namespace UniMob.UI.Widgets
         /// </remarks>
         public Task<PopOutcome> RequestPop(Route route, object request)
         {
-            if (route == null) throw new ArgumentNullException(nameof(route));
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (route == null)
+                throw new ArgumentNullException(nameof(route));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
             // Before the topmost check: a route deciding behind its own dialog is not on top, and a second
             // requester must still join it. A pending entry only exists for a route that was ours and on
@@ -207,7 +214,11 @@ namespace UniMob.UI.Widgets
                 return Task.FromResult(PopOutcome.NotTopmost);
             }
 
-            return StartRequest(route, request, decision => PopRoute(route, decision.ToResult(request)));
+            return StartRequest(
+                route,
+                request,
+                decision => PopRoute(route, decision.ToResult(request))
+            );
         }
 
         /// <summary>
@@ -222,9 +233,12 @@ namespace UniMob.UI.Widgets
         /// </returns>
         public Task<PopOutcome> RequestReplace(Route outgoing, Route incoming, object request)
         {
-            if (outgoing == null) throw new ArgumentNullException(nameof(outgoing));
-            if (incoming == null) throw new ArgumentNullException(nameof(incoming));
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (outgoing == null)
+                throw new ArgumentNullException(nameof(outgoing));
+            if (incoming == null)
+                throw new ArgumentNullException(nameof(incoming));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
             // Before the topmost check, as in RequestPop.
             if (_pendingRequests.TryGetValue(outgoing, out var pending))
@@ -239,7 +253,11 @@ namespace UniMob.UI.Widgets
                 return Task.FromResult(PopOutcome.NotTopmost);
             }
 
-            return StartRequest(outgoing, request, decision => ReplaceRoute(outgoing, incoming, decision.ToResult(request)));
+            return StartRequest(
+                outgoing,
+                request,
+                decision => ReplaceRoute(outgoing, incoming, decision.ToResult(request))
+            );
         }
 
         /// <summary>
@@ -254,7 +272,8 @@ namespace UniMob.UI.Widgets
         public Task<PopToOutcome> RequestPopTo(Route target, object request)
         {
             // Outside the async body, so a bad argument throws at the call rather than faulting the task.
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
             return RequestPopToAsync(target, request);
         }
@@ -294,14 +313,22 @@ namespace UniMob.UI.Widgets
             return command.Outcome.Task;
         }
 
-        private Task<PopOutcome> ReplaceRoute(Route outgoing, Route incoming, PopResult outgoingResult)
+        private Task<PopOutcome> ReplaceRoute(
+            Route outgoing,
+            Route incoming,
+            PopResult outgoingResult
+        )
         {
             var command = new NavigatorCommand.Replace(incoming, outgoing, outgoingResult);
             ApplyCommands(command);
             return command.Outcome.Task;
         }
 
-        private async Task<PopOutcome> RunRequest(Route route, object request, Func<PopDecision, Task<PopOutcome>> commit)
+        private async Task<PopOutcome> RunRequest(
+            Route route,
+            object request,
+            Func<PopDecision, Task<PopOutcome>> commit
+        )
         {
             try
             {
@@ -323,7 +350,11 @@ namespace UniMob.UI.Widgets
         /// <summary>
         ///     Takes the route's slot, then asks. The slot is what every later requester joins.
         /// </summary>
-        private Task<PopOutcome> StartRequest(Route route, object request, Func<PopDecision, Task<PopOutcome>> commit)
+        private Task<PopOutcome> StartRequest(
+            Route route,
+            object request,
+            Func<PopDecision, Task<PopOutcome>> commit
+        )
         {
             // The slot is a placeholder registered before any route code runs. The hook runs synchronously
             // up to its first await and may navigate from there; a second request for the same route
@@ -344,21 +375,24 @@ namespace UniMob.UI.Widgets
             // Synchronously: RunRequest frees the slot in its finally, so a requester that resumes and asks
             // again must start a fresh question, not join this finished one. Inner exceptions, not the
             // aggregate, so awaiting the slot throws what RunRequest threw.
-            run.ContinueWith(finished =>
-            {
-                if (finished.IsCanceled)
+            run.ContinueWith(
+                finished =>
                 {
-                    pending.TrySetCanceled();
-                }
-                else if (finished.IsFaulted)
-                {
-                    pending.TrySetException(finished.Exception.InnerExceptions);
-                }
-                else
-                {
-                    pending.TrySetResult(finished.Result);
-                }
-            }, TaskContinuationOptions.ExecuteSynchronously);
+                    if (finished.IsCanceled)
+                    {
+                        pending.TrySetCanceled();
+                    }
+                    else if (finished.IsFaulted)
+                    {
+                        pending.TrySetException(finished.Exception.InnerExceptions);
+                    }
+                    else
+                    {
+                        pending.TrySetResult(finished.Result);
+                    }
+                },
+                TaskContinuationOptions.ExecuteSynchronously
+            );
         }
 
         private static async Task<PopOutcome> MapJoined(Task<PopOutcome> pending)
@@ -482,7 +516,8 @@ namespace UniMob.UI.Widgets
 
         private async Task ProcessCommands([NotNull] NavigatorCommand[] commands)
         {
-            if (commands == null) throw new ArgumentNullException(nameof(commands));
+            if (commands == null)
+                throw new ArgumentNullException(nameof(commands));
 
             foreach (var command in commands)
             {
@@ -497,7 +532,8 @@ namespace UniMob.UI.Widgets
 
         private async Task ProcessCommand([NotNull] NavigatorCommand command)
         {
-            if (command == null) throw new ArgumentNullException(nameof(command));
+            if (command == null)
+                throw new ArgumentNullException(nameof(command));
 
             try
             {
@@ -702,9 +738,11 @@ namespace UniMob.UI.Widgets
         {
             if (_stack.Count <= 1)
             {
-                pop.Outcome.TrySetResult(_stack.Count == 1 && _stack.Peek() == pop.Target
-                    ? PopOutcome.LastRoute
-                    : PopOutcome.NotTopmost);
+                pop.Outcome.TrySetResult(
+                    _stack.Count == 1 && _stack.Peek() == pop.Target
+                        ? PopOutcome.LastRoute
+                        : PopOutcome.NotTopmost
+                );
                 return;
             }
 
@@ -828,7 +866,11 @@ namespace UniMob.UI.Widgets
         // walk untracked, so that an observer reading NavigationStack or a route's ScreenState cannot graft
         // that dependency onto whatever computation the navigation was started from.
 
-        private void NotifyWillPush(INavigatorObserver[] observers, Route route, Route previousRoute)
+        private void NotifyWillPush(
+            INavigatorObserver[] observers,
+            Route route,
+            Route previousRoute
+        )
         {
             using (Atom.NoWatch)
             {
@@ -900,7 +942,11 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private void NotifyWillReplace(INavigatorObserver[] observers, Route newRoute, Route oldRoute)
+        private void NotifyWillReplace(
+            INavigatorObserver[] observers,
+            Route newRoute,
+            Route oldRoute
+        )
         {
             using (Atom.NoWatch)
             {
@@ -918,7 +964,11 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private void NotifyDidReplace(INavigatorObserver[] observers, Route newRoute, Route oldRoute)
+        private void NotifyDidReplace(
+            INavigatorObserver[] observers,
+            Route newRoute,
+            Route oldRoute
+        )
         {
             using (Atom.NoWatch)
             {
@@ -943,16 +993,17 @@ namespace UniMob.UI.Widgets
         ///     Told that processing this command threw. A command that answers a requester fails that
         ///     answer here; commands nobody awaits have nothing to do.
         /// </summary>
-        public virtual void Fail(Exception exception)
-        {
-        }
+        public virtual void Fail(Exception exception) { }
 
         /// <summary>
         ///     Fails an outcome the way an async method would: cancellation cancels it, anything else
         ///     faults it. No-op for an outcome already answered, as a pop whose removal committed before
         ///     its transition failed has.
         /// </summary>
-        protected static void FailOutcome(TaskCompletionSource<PopOutcome> outcome, Exception exception)
+        protected static void FailOutcome(
+            TaskCompletionSource<PopOutcome> outcome,
+            Exception exception
+        )
         {
             if (exception is OperationCanceledException)
             {
@@ -972,7 +1023,9 @@ namespace UniMob.UI.Widgets
             public Route Target { get; }
             public PopResult Result { get; }
             public TaskCompletionSource<PopOutcome> Outcome { get; } =
-                new TaskCompletionSource<PopOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+                new TaskCompletionSource<PopOutcome>(
+                    TaskCreationOptions.RunContinuationsAsynchronously
+                );
 
             public Pop([NotNull] Route target, PopResult result)
             {
@@ -1009,12 +1062,20 @@ namespace UniMob.UI.Widgets
         public class Replace : NavigatorCommand
         {
             public Route Route { get; }
-            [CanBeNull] public Route Target { get; }
+
+            [CanBeNull]
+            public Route Target { get; }
             public PopResult OutgoingResult { get; }
             public TaskCompletionSource<PopOutcome> Outcome { get; } =
-                new TaskCompletionSource<PopOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+                new TaskCompletionSource<PopOutcome>(
+                    TaskCreationOptions.RunContinuationsAsynchronously
+                );
 
-            public Replace([NotNull] Route route, [CanBeNull] Route target, PopResult outgoingResult)
+            public Replace(
+                [NotNull] Route route,
+                [CanBeNull] Route target,
+                PopResult outgoingResult
+            )
             {
                 Route = route;
                 Target = target;
@@ -1077,7 +1138,6 @@ namespace UniMob.UI.Widgets
             }
         }
 
-
         public Route Peek() => _stack.Peek();
 
         /// <summary>
@@ -1111,11 +1171,9 @@ namespace UniMob.UI.Widgets
 
         public void Push(Route screen)
         {
-            _widgets.Add(new Builder(screen.Build)
-            {
-                Key = Key.Of(screen),
-                OnDispose = screen.Dispose,
-            });
+            _widgets.Add(
+                new Builder(screen.Build) { Key = Key.Of(screen), OnDispose = screen.Dispose }
+            );
             _stack.Push(screen);
             _version.Value = ++_revision;
         }

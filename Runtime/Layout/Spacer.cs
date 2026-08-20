@@ -8,20 +8,15 @@ namespace UniMob.UI.Layout
     public class Spacer : StatefulWidget
     {
         public int Flex { get; set; } = 1;
+
         public override State CreateState() => new SpacerState();
-
-
     }
+
     public class SpacerState : HocState<Spacer>
     {
         public override Widget Build(BuildContext context)
         {
-            return new Expanded()
-            {
-                Child = SizedBox.Shrink(),
-                Flex = Widget.Flex
-            };
+            return new Expanded() { Child = SizedBox.Shrink(), Flex = Widget.Flex };
         }
     }
-
 }

@@ -10,7 +10,8 @@ namespace UniMob.UI
 
         public Type Type => _type ?? (_type = GetType());
 
-        [CanBeNull] public Key Key { get; set; }
+        [CanBeNull]
+        public Key Key { get; set; }
 
         [NotNull]
         public virtual State CreateState(StateProvider provider)
@@ -40,7 +41,8 @@ namespace UniMob.UI
             throw new NotSupportedException(
                 $"{GetType().Name} has no view to render and no render object of its own. A state "
                     + "that builds rather than paints must own a proxy over its child (see "
-                    + "HocState.CreateOwnRenderObject), not borrow its child's.");
+                    + "HocState.CreateOwnRenderObject), not borrow its child's."
+            );
         }
 
         /// <inheritdoc/>

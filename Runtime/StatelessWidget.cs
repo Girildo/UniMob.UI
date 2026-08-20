@@ -14,10 +14,10 @@ namespace UniMob.UI
 
         public Type Type => _type ?? (_type = GetType());
 
-        [CanBeNull] public Key Key { get; set; }
+        [CanBeNull]
+        public Key Key { get; set; }
 
         public abstract Widget Build(BuildContext context);
-
 
         // Unreachable: StatelessElement owns a proxy over the widget it builds and never asks the
         // widget for a render object. Present only because Widget declares it.
@@ -40,11 +40,12 @@ namespace UniMob.UI
         }
     }
 
-
     internal sealed class StatelessElement : State, ISingleChildLayoutState
     {
         private readonly StateHolder _stateHolder;
-        private readonly MutableAtom<StatelessWidget> _widget = Atom.Value(default(StatelessWidget));
+        private readonly MutableAtom<StatelessWidget> _widget = Atom.Value(
+            default(StatelessWidget)
+        );
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
         public IState Child => _stateHolder.Value;
@@ -56,7 +57,11 @@ namespace UniMob.UI
         public StatelessElement(StatelessWidget widget)
         {
             _widget.Value = widget;
-            _stateHolder = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), BuildChild);
+            _stateHolder = Create<Widget, IState>(
+                StateLifetime,
+                new BuildContext(this, Context),
+                BuildChild
+            );
         }
 
         private Widget BuildChild(BuildContext context)
@@ -76,7 +81,9 @@ namespace UniMob.UI
             }
             else
             {
-                throw new InvalidOperationException("StatelessElement can only update with a StatelessWidget");
+                throw new InvalidOperationException(
+                    "StatelessElement can only update with a StatelessWidget"
+                );
             }
         }
     }

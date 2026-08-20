@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 
 namespace UniMob.UI.Widgets
 {
-
     /// <summary>
     ///     A route that leaves the stack with a value of a known type.
     /// </summary>
@@ -17,11 +16,12 @@ namespace UniMob.UI.Widgets
     {
         // Asynchronous continuations, like the untyped completer: see Route.CompletePop.
         private readonly TaskCompletionSource<PopResult<T>> _resultCompleter =
-            new TaskCompletionSource<PopResult<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            new TaskCompletionSource<PopResult<T>>(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
 
-        protected Route(RouteSettings settings) : base(settings)
-        {
-        }
+        protected Route(RouteSettings settings)
+            : base(settings) { }
 
         /// <summary>
         ///     Completes when the route has left the stack, with what it left with, typed.
@@ -60,13 +60,16 @@ namespace UniMob.UI.Widgets
             return base.OnPopRequested(request);
         }
 
-        internal sealed override async Task<PopDecision> DecideAsync(object request) => await DecidePop(request);
+        internal sealed override async Task<PopDecision> DecideAsync(object request) =>
+            await DecidePop(request);
 
         protected sealed override void OnPopCompleted(PopResult result)
         {
             if (!result.HasValue)
             {
-                _resultCompleter.TrySetResult(new PopResult<T>(result.Cause, result.Request, false, default));
+                _resultCompleter.TrySetResult(
+                    new PopResult<T>(result.Cause, result.Request, false, default)
+                );
                 return;
             }
 
@@ -75,13 +78,23 @@ namespace UniMob.UI.Widgets
             // awaiting rather than hidden.
             if (result.Value is T || result.Value == null && default(T) == null)
             {
-                _resultCompleter.TrySetResult(new PopResult<T>(result.Cause, result.Request, true, (T) result.Value));
+                _resultCompleter.TrySetResult(
+                    new PopResult<T>(result.Cause, result.Request, true, (T)result.Value)
+                );
                 return;
             }
 
-            _resultCompleter.TrySetException(new InvalidCastException(
-                "Route '" + Key + "' was popped with a " + result.Value.GetType().Name +
-                " but is a Route<" + typeof(T).Name + ">."));
+            _resultCompleter.TrySetException(
+                new InvalidCastException(
+                    "Route '"
+                        + Key
+                        + "' was popped with a "
+                        + result.Value.GetType().Name
+                        + " but is a Route<"
+                        + typeof(T).Name
+                        + ">."
+                )
+            );
         }
     }
 }

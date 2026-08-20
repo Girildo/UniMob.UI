@@ -6,7 +6,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly IPaddingState _state;
 
-        public RenderPadding(IPaddingState state) : base(state)
+        public RenderPadding(IPaddingState state)
+            : base(state)
         {
             _state = state;
         }
@@ -15,7 +16,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             var padding = _state.Padding;
 
-            if(_state.Child == null)
+            if (_state.Child == null)
             {
                 // If there is no child, the size is simply the padding size.
                 var empty = new Vector2(padding.Horizontal, padding.Vertical);

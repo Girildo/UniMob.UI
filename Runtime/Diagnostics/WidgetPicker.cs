@@ -165,7 +165,7 @@ namespace UniMob.UI.Diagnostics
 
             root.AddComponent<GraphicRaycaster>();
 
-            _canvasRect = (RectTransform) root.transform;
+            _canvasRect = (RectTransform)root.transform;
 
             // Painted in this order, because a later sibling draws over an earlier one: the wash over
             // the whole app, then the mark on the widget, then its outline, then the click surface.
@@ -415,7 +415,8 @@ namespace UniMob.UI.Diagnostics
 
             // A click ends the hunt: the listener calls StopPicking, which is the expectation a browser's
             // element picker sets. Until then the app receives nothing, which is what the toggle is for.
-            public void OnPointerClick(PointerEventData eventData) => Picked?.Invoke(eventData.position);
+            public void OnPointerClick(PointerEventData eventData) =>
+                Picked?.Invoke(eventData.position);
         }
     }
 }

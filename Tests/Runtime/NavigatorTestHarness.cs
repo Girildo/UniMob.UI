@@ -181,8 +181,12 @@ namespace UniMob.UI.Tests
         private readonly RouteTracer _tracer;
         private readonly DestroyFailure _destroyFailure;
 
-        public TracingRoute(NavigatorTrace trace, string key, RouteModalType modalType,
-            DestroyFailure destroyFailure = DestroyFailure.None)
+        public TracingRoute(
+            NavigatorTrace trace,
+            string key,
+            RouteModalType modalType,
+            DestroyFailure destroyFailure = DestroyFailure.None
+        )
             : base(new RouteSettings(key, modalType))
         {
             _tracer = new RouteTracer(trace, key);
@@ -266,17 +270,29 @@ namespace UniMob.UI.Tests
     {
         private readonly RouteTracer _tracer;
 
-        public TracingPageRoute(NavigatorTrace trace, string key, RouteModalType modalType, float duration)
+        public TracingPageRoute(
+            NavigatorTrace trace,
+            string key,
+            RouteModalType modalType,
+            float duration
+        )
             : base(new RouteSettings(key, modalType), duration, duration)
         {
             _tracer = new RouteTracer(trace, key);
         }
 
-        protected override Widget BuildPage(BuildContext context, AnimationController animation,
-            AnimationController secondaryAnimation) => new Empty();
+        protected override Widget BuildPage(
+            BuildContext context,
+            AnimationController animation,
+            AnimationController secondaryAnimation
+        ) => new Empty();
 
-        protected override Widget BuildTransitions(BuildContext context, AnimationController animation,
-            AnimationController secondaryAnimation, Widget child) => child;
+        protected override Widget BuildTransitions(
+            BuildContext context,
+            AnimationController animation,
+            AnimationController secondaryAnimation,
+            Widget child
+        ) => child;
 
         protected override Task OnInitialize()
         {
@@ -370,17 +386,23 @@ namespace UniMob.UI.Tests
             _trace = trace;
         }
 
-        public void WillPush(Route route, Route previousRoute) => Record("WillPush", route, previousRoute);
+        public void WillPush(Route route, Route previousRoute) =>
+            Record("WillPush", route, previousRoute);
 
-        public void DidPush(Route route, Route previousRoute) => Record("DidPush", route, previousRoute);
+        public void DidPush(Route route, Route previousRoute) =>
+            Record("DidPush", route, previousRoute);
 
-        public void WillPop(Route route, Route previousRoute) => Record("WillPop", route, previousRoute);
+        public void WillPop(Route route, Route previousRoute) =>
+            Record("WillPop", route, previousRoute);
 
-        public void DidPop(Route route, Route previousRoute) => Record("DidPop", route, previousRoute);
+        public void DidPop(Route route, Route previousRoute) =>
+            Record("DidPop", route, previousRoute);
 
-        public void WillReplace(Route newRoute, Route oldRoute) => Record("WillReplace", newRoute, oldRoute);
+        public void WillReplace(Route newRoute, Route oldRoute) =>
+            Record("WillReplace", newRoute, oldRoute);
 
-        public void DidReplace(Route newRoute, Route oldRoute) => Record("DidReplace", newRoute, oldRoute);
+        public void DidReplace(Route newRoute, Route oldRoute) =>
+            Record("DidReplace", newRoute, oldRoute);
 
         private void Record(string callback, Route route, Route other)
         {
@@ -422,8 +444,13 @@ namespace UniMob.UI.Tests
         private readonly Dictionary<string, Func<Route>> _routes;
         private readonly TracingObserver _recorder;
 
-        private NavigatorHost(NavigatorTrace trace, NavigatorState navigator, string rootKey,
-            Dictionary<string, Func<Route>> routes, TracingObserver recorder)
+        private NavigatorHost(
+            NavigatorTrace trace,
+            NavigatorState navigator,
+            string rootKey,
+            Dictionary<string, Func<Route>> routes,
+            TracingObserver recorder
+        )
         {
             Trace = trace;
             Navigator = navigator;
@@ -443,8 +470,12 @@ namespace UniMob.UI.Tests
         ///     The recorder has to exist before the widget does, because the initial route is pushed from
         ///     <c>InitState</c> and an observer supplied at construction is expected to hear it.
         /// </remarks>
-        public static NavigatorHost Mount(string rootKey, RouteModalType rootModal, RouteFlavour rootFlavour,
-            params INavigatorObserver[] observers)
+        public static NavigatorHost Mount(
+            string rootKey,
+            RouteModalType rootModal,
+            RouteFlavour rootFlavour,
+            params INavigatorObserver[] observers
+        )
         {
             var trace = new NavigatorTrace();
             trace.Command("mount " + rootKey);
@@ -457,7 +488,7 @@ namespace UniMob.UI.Tests
             var recorder = new TracingObserver(trace);
             var widget = CreateWidget(rootKey, routes, recorder, observers);
 
-            var state = (NavigatorState) TestHarness.Mount(widget);
+            var state = (NavigatorState)TestHarness.Mount(widget);
             return new NavigatorHost(trace, state, rootKey, routes, recorder);
         }
 
@@ -476,8 +507,12 @@ namespace UniMob.UI.Tests
             TestHarness.Update(Navigator, CreateWidget(_rootKey, _routes, _recorder, observers));
         }
 
-        private static Navigator CreateWidget(string rootKey, Dictionary<string, Func<Route>> routes,
-            TracingObserver recorder, INavigatorObserver[] observers)
+        private static Navigator CreateWidget(
+            string rootKey,
+            Dictionary<string, Func<Route>> routes,
+            TracingObserver recorder,
+            INavigatorObserver[] observers
+        )
         {
             var composed = new List<INavigatorObserver> { recorder };
             composed.AddRange(observers);
@@ -493,8 +528,12 @@ namespace UniMob.UI.Tests
             return Build(Trace, key, modalType, flavour);
         }
 
-        private static Route Build(NavigatorTrace trace, string key, RouteModalType modalType,
-            RouteFlavour flavour)
+        private static Route Build(
+            NavigatorTrace trace,
+            string key,
+            RouteModalType modalType,
+            RouteFlavour flavour
+        )
         {
             switch (flavour)
             {
@@ -514,7 +553,11 @@ namespace UniMob.UI.Tests
                     return new TracingRoute(trace, key, modalType, DestroyFailure.Asynchronous);
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(flavour), flavour, "Unknown route flavour");
+                    throw new ArgumentOutOfRangeException(
+                        nameof(flavour),
+                        flavour,
+                        "Unknown route flavour"
+                    );
             }
         }
 
@@ -569,8 +612,13 @@ namespace UniMob.UI.Tests
             // kept the navigator busy indefinitely. Say so rather than letting the fixture assert against
             // a half-recorded trace and fail somewhere less informative.
             Assert.Fail(
-                "Navigator did not settle within " + MaxFrames + " frames (pending handlers: " +
-                Trace.Pending + ").\n\n--- trace so far ---\n" + Trace);
+                "Navigator did not settle within "
+                    + MaxFrames
+                    + " frames (pending handlers: "
+                    + Trace.Pending
+                    + ").\n\n--- trace so far ---\n"
+                    + Trace
+            );
         }
 
         /// <summary>
@@ -672,9 +720,12 @@ namespace UniMob.UI.Tests
             {
                 if (!string.Equals(expected[i], actual[i], StringComparison.Ordinal))
                 {
-                    return "First difference at line " + (i + 1) +
-                           "\n  expected: " + expected[i] +
-                           "\n  actual:   " + actual[i];
+                    return "First difference at line "
+                        + (i + 1)
+                        + "\n  expected: "
+                        + expected[i]
+                        + "\n  actual:   "
+                        + actual[i];
                 }
             }
 

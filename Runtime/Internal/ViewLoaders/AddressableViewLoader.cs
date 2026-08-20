@@ -8,8 +8,10 @@ namespace UniMob.UI.Internal.ViewLoaders
 {
     internal class AddressableViewLoader : IViewLoader
     {
-        private static readonly List<IUniMobAddressablesLoader> Loaders = new List<IUniMobAddressablesLoader>();
-        private static readonly Dictionary<object, string> RuntimeKeyToPath = new Dictionary<object, string>();
+        private static readonly List<IUniMobAddressablesLoader> Loaders =
+            new List<IUniMobAddressablesLoader>();
+        private static readonly Dictionary<object, string> RuntimeKeyToPath =
+            new Dictionary<object, string>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Initialize()
@@ -19,12 +21,16 @@ namespace UniMob.UI.Internal.ViewLoaders
                 Loaders.Clear();
 
                 Debug.LogError(
-                    "[UniMob] You must Dispose all UniMobAddressablesPreloadHandle when application is closed");
+                    "[UniMob] You must Dispose all UniMobAddressablesPreloadHandle when application is closed"
+                );
             }
         }
 
         [PublicAPI]
-        public static void RegisterAddressablesLoader(Lifetime lifetime, IUniMobAddressablesLoader loader)
+        public static void RegisterAddressablesLoader(
+            Lifetime lifetime,
+            IUniMobAddressablesLoader loader
+        )
         {
             if (lifetime.IsDisposed)
             {
@@ -46,8 +52,10 @@ namespace UniMob.UI.Internal.ViewLoaders
 
             if (!TryGetAddressablePrefab(path, out var prefab))
             {
-                Debug.LogError($"Failed to resolve addressable '{path}'. Not preloaded?\n" +
-                               $"Addressable prefabs must be preloaded with {nameof(UniMobAddressablesPreloadHandle)}");
+                Debug.LogError(
+                    $"Failed to resolve addressable '{path}'. Not preloaded?\n"
+                        + $"Addressable prefabs must be preloaded with {nameof(UniMobAddressablesPreloadHandle)}"
+                );
 
                 return null;
             }
@@ -60,7 +68,9 @@ namespace UniMob.UI.Internal.ViewLoaders
 
             if (!prefab.TryGetComponent(out IView view))
             {
-                Debug.LogError($"Failed to get IView from addressable '{path}'. Missing view component?");
+                Debug.LogError(
+                    $"Failed to get IView from addressable '{path}'. Missing view component?"
+                );
                 return null;
             }
 
@@ -89,7 +99,9 @@ namespace UniMob.UI.Internal.ViewLoaders
                 }
             }
 
-            throw new InvalidOperationException($"Failed to resolve addressable asset path from '{key}'");
+            throw new InvalidOperationException(
+                $"Failed to resolve addressable asset path from '{key}'"
+            );
         }
 
         private static bool TryGetAddressablePrefab(string path, out GameObject prefab)
@@ -110,7 +122,10 @@ namespace UniMob.UI.Internal.ViewLoaders
     public static class AddressableViewLoaderInternal
     {
         [PublicAPI]
-        public static void RegisterAddressablesLoader(Lifetime lifetime, IUniMobAddressablesLoader loader)
+        public static void RegisterAddressablesLoader(
+            Lifetime lifetime,
+            IUniMobAddressablesLoader loader
+        )
         {
             AddressableViewLoader.RegisterAddressablesLoader(lifetime, loader);
         }

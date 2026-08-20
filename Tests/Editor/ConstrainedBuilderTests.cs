@@ -84,10 +84,7 @@ namespace UniMob.UI.Tests
                     // Half the width it is offered, so the resulting size can only be right if the
                     // build and the measurement agree on which constraints are current.
                     Builder = (_, constraints) =>
-                        new CountingBox
-                        {
-                            BoxSize = new Vector2(constraints.MaxWidth / 2f, 10),
-                        },
+                        new CountingBox { BoxSize = new Vector2(constraints.MaxWidth / 2f, 10) },
                 }
             );
 

@@ -5,7 +5,8 @@ namespace UniMob.UI.Internal.ViewLoaders
 {
     internal class BuiltinResourcesViewLoader : IViewLoader
     {
-        private readonly Dictionary<string, IView> _viewPrefabCache = new Dictionary<string, IView>();
+        private readonly Dictionary<string, IView> _viewPrefabCache =
+            new Dictionary<string, IView>();
 
         public IView LoadViewPrefab(WidgetViewReference viewReference)
         {
@@ -31,7 +32,9 @@ namespace UniMob.UI.Internal.ViewLoaders
             view = prefab.GetComponent<IView>();
             if (view == null)
             {
-                Debug.LogError($"Failed to get IView from prefab '{path}'. Missing view component?");
+                Debug.LogError(
+                    $"Failed to get IView from prefab '{path}'. Missing view component?"
+                );
                 return null;
             }
 

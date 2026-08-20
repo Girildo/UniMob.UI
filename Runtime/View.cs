@@ -13,14 +13,20 @@ namespace UniMob.UI
     public abstract class View<TState> : UIBehaviour, IView, IViewTreeElement
         where TState : class, IState
     {
-        [NotNull] private readonly ViewRenderScope _renderScope = new ViewRenderScope();
-        [NotNull] private readonly List<IViewTreeElement> _children = new List<IViewTreeElement>();
+        [NotNull]
+        private readonly ViewRenderScope _renderScope = new ViewRenderScope();
+
+        [NotNull]
+        private readonly List<IViewTreeElement> _children = new List<IViewTreeElement>();
         private readonly LifetimeController _viewLifetimeController = new LifetimeController();
 
         private Atom<Vector2Int> _bounds;
 
-        [CanBeNull] private List<Action> _activationCallbacks;
-        [CanBeNull] private List<Action> _deactivationCallbacks;
+        [CanBeNull]
+        private List<Action> _activationCallbacks;
+
+        [CanBeNull]
+        private List<Action> _deactivationCallbacks;
 
         private LifetimeController _stateLifetimeController;
 
@@ -42,7 +48,7 @@ namespace UniMob.UI
         internal virtual bool TriggerViewMountEvents => true;
 
         // ReSharper disable once InconsistentNaming
-        public RectTransform rectTransform => (RectTransform) transform;
+        public RectTransform rectTransform => (RectTransform)transform;
 
         bool IView.IsDestroyed => this == null;
 
@@ -52,11 +58,15 @@ namespace UniMob.UI
             {
                 if (_bounds == null)
                 {
-                    _bounds = Atom.Computed(ViewLifetime, () =>
-                    {
-                        var size = rectTransform.rect.size;
-                        return new Vector2Int((int) size.x, (int) size.y);
-                    }, debugName: "View._bounds");
+                    _bounds = Atom.Computed(
+                        ViewLifetime,
+                        () =>
+                        {
+                            var size = rectTransform.rect.size;
+                            return new Vector2Int((int)size.x, (int)size.y);
+                        },
+                        debugName: "View._bounds"
+                    );
                 }
 
                 return _bounds.Value;
@@ -80,7 +90,7 @@ namespace UniMob.UI
 
         public void Render(TState state, bool link = false)
         {
-            var self = (IView) this;
+            var self = (IView)this;
             self.SetSource(state, link);
         }
 
@@ -88,13 +98,23 @@ namespace UniMob.UI
         {
             if (_doRebind == null)
             {
-                _doRebind = Atom.Computed(ViewLifetime, DoRebind, keepAlive: true, debugName: $"View._doRebind");
-                _doRender = Atom.Computed(ViewLifetime, DoRender, keepAlive: true, debugName: $"View._doRender");
+                _doRebind = Atom.Computed(
+                    ViewLifetime,
+                    DoRebind,
+                    keepAlive: true,
+                    debugName: $"View._doRebind"
+                );
+                _doRender = Atom.Computed(
+                    ViewLifetime,
+                    DoRender,
+                    keepAlive: true,
+                    debugName: $"View._doRender"
+                );
             }
 
             _renderScope.Link(this);
 
-            var doRebindAtom = ((AtomBase) _doRebind);
+            var doRebindAtom = ((AtomBase)_doRebind);
 
             if (!ReferenceEquals(newSource, _currentState))
             {
@@ -106,7 +126,9 @@ namespace UniMob.UI
                 {
                     var expected = typeof(TState).Name;
                     var actual = newSource.GetType().Name;
-                    Debug.LogError($"Wrong model type at '{name}': expected={expected}, actual={actual}");
+                    Debug.LogError(
+                        $"Wrong model type at '{name}': expected={expected}, actual={actual}"
+                    );
                     return;
                 }
 
@@ -225,7 +247,7 @@ namespace UniMob.UI
                 }
             }
 
-            ((AtomBase) _doRender).Actualize(true);
+            ((AtomBase)_doRender).Actualize(true);
             _doRender.Get();
 
             using (Atom.NoWatch)

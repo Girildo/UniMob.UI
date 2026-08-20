@@ -6,7 +6,6 @@ namespace UniMob.UI.Layout
         Widget? Child { get; set; }
     }
 
-
     /// <summary>
     /// Represents a widget that manages the layout of a single child widget.
     /// </summary>
@@ -22,7 +21,9 @@ namespace UniMob.UI.Layout
     /// This class provides a default implementation for the <see cref="View"/> property, which returns a reference to a
     /// non-painting layout view. Subclasses can override this property if they need to provide a different view.
     /// </remarks>
-    public abstract class SingleChildLayoutState<TWidget> : ViewState<TWidget>, ISingleChildLayoutState
+    public abstract class SingleChildLayoutState<TWidget>
+        : ViewState<TWidget>,
+            ISingleChildLayoutState
         where TWidget : ISingleChildLayoutWidget
     {
         private readonly StateHolder? _child;

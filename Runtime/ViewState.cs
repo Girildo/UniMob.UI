@@ -73,7 +73,11 @@ namespace UniMob.UI
                 return false;
             }
 
-            return WidgetGeometryUtility.TryCompute(_mountedView.rectTransform, _rootCanvas, out geometry);
+            return WidgetGeometryUtility.TryCompute(
+                _mountedView.rectTransform,
+                _rootCanvas,
+                out geometry
+            );
         }
 
         /// <summary>
@@ -88,8 +92,11 @@ namespace UniMob.UI
                 if (_globalGeometry == null)
                 {
                     WidgetGeometryTicker.EnsureStarted();
-                    _globalGeometry = Atom.Computed(StateLifetime, ComputeGlobalGeometry,
-                        debugName: "ViewState.GlobalGeometry");
+                    _globalGeometry = Atom.Computed(
+                        StateLifetime,
+                        ComputeGlobalGeometry,
+                        debugName: "ViewState.GlobalGeometry"
+                    );
                 }
 
                 return _globalGeometry.Value;

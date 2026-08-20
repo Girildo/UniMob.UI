@@ -17,9 +17,8 @@ namespace UniMob.UI.Layout
         Right = 0x4,
         Justified = 0x8,
         Flush = 0x10,
-        Geometry = 0x20
+        Geometry = 0x20,
     }
-
 
     public class Text : StatefulWidget
     {
@@ -64,7 +63,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderText((TextState) state);
+            return new RenderText((TextState)state);
         }
 
         // The one label every tree needs: a screen full of Text nodes is otherwise indistinguishable.
@@ -90,13 +89,15 @@ namespace UniMob.UI.Layout
         {
             get
             {
-                if (!string.IsNullOrEmpty(Widget.StyleName) && StyleSheet?.GetStyle(Widget.StyleName) is { } style)
+                if (
+                    !string.IsNullOrEmpty(Widget.StyleName)
+                    && StyleSheet?.GetStyle(Widget.StyleName) is { } style
+                )
                     return style;
 
                 return TMP_Style.NormalStyle;
             }
         }
-
 
         public int MaxLines => Widget.MaxLines ?? int.MaxValue;
 
@@ -111,7 +112,6 @@ namespace UniMob.UI.Layout
         public override WidgetViewReference View =>
             Widget.ViewReference ?? WidgetViewReference.Resource("Layout/UniMob.Text");
     }
-
 
     public interface ITextState : IViewState
     {

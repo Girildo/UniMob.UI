@@ -62,7 +62,6 @@ namespace UniMob.UI.Layout
         /// </summary>
         public float? VirtualizationCacheExtent { get; set; }
 
-
         public override State CreateState()
         {
             return new ScrollListState();
@@ -70,7 +69,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderSliverList((ISliverState) state);
+            return new RenderSliverList((ISliverState)state);
         }
 
         // The logical count, off the widget's own fields. Not the visible window: the state's Children
@@ -83,7 +82,6 @@ namespace UniMob.UI.Layout
         }
     }
 
-
     // The reactive half of the virtualized list -- the full architecture & pitfalls are documented at the top of
     // RenderSliverList.cs; this file only adds the reactive-bridge hazards specific to it.
     //
@@ -91,11 +89,15 @@ namespace UniMob.UI.Layout
     // logical shape (it needs every item, visible or not, to compute layout), while IMultiChildLayoutState exposes
     // only the *visible* States to the View. The imperative layout pass writes indices while the View reads a
     // computed [Atom] -- that impedance mismatch is why this class exists, and why the NoWatch scoping below is fiddly.
-    public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState, IScrollControllerExecutor
+    public class ScrollListState
+        : ViewState<ScrollList>,
+            ISliverState,
+            IScrollingListState,
+            IScrollControllerExecutor
     {
-
         private readonly StateCollectionHolder _allChildren;
         private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
+
         // The shared lazy-build + visible-index reactive bridge (see VirtualizedChildren). The eager path
         // stays here (below) because it goes through the protected CreateChildren; the bridge owns the rest.
         private readonly VirtualizedChildren _virtualized;
@@ -104,7 +106,8 @@ namespace UniMob.UI.Layout
 
         private bool IsLazy => Widget.ItemBuilder != null;
 
-        [CanBeNull] private ScrollListView _view;
+        [CanBeNull]
+        private ScrollListView _view;
 
         public ScrollListState()
         {
@@ -115,7 +118,8 @@ namespace UniMob.UI.Layout
                 for (var i = 0; i < children.Count; i++)
                 {
                     var key = children[i]?.Key;
-                    if (key != null) _childKeyToIndexMap.Add(key, i);
+                    if (key != null)
+                        _childKeyToIndexMap.Add(key, i);
                 }
 
                 return children;
@@ -125,7 +129,8 @@ namespace UniMob.UI.Layout
                 StateLifetime,
                 new BuildContext(this, Context),
                 () => Widget.ItemBuilder,
-                ResolveEagerIndex);
+                ResolveEagerIndex
+            );
         }
 
         // Eager-mode resolver injected into the shared bridge: maps a visible index to its built child State
@@ -145,13 +150,17 @@ namespace UniMob.UI.Layout
         [Atom]
         public MovementType MovementType => Widget.MovementType;
 
-        [Atom] public ScrollController ScrollController { get; private set; }
-        [Atom] public Vector2 ViewportSize { get; set; }
+        [Atom]
+        public ScrollController ScrollController { get; private set; }
+
+        [Atom]
+        public Vector2 ViewportSize { get; set; }
 
         // Pixel offset, not NormalizedValue -- see ScrollController.PixelOffset's doc for why RenderSliverList's
         // estimation-based lazy windowing needs an absolute value that doesn't drift when its own estimated
         // total content size changes between layout passes.
-        [Atom] public float ScrollPixelOffset => ScrollController.PixelOffset;
+        [Atom]
+        public float ScrollPixelOffset => ScrollController.PixelOffset;
 
         [Atom]
         public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
@@ -168,7 +177,6 @@ namespace UniMob.UI.Layout
         [Atom]
         public float? VirtualizationCacheExtent => Widget.VirtualizationCacheExtent;
 
-
         public override void DidViewMount(IView view)
         {
             base.DidViewMount(view);
@@ -181,15 +189,16 @@ namespace UniMob.UI.Layout
             _view = null;
         }
 
-        public override WidgetViewReference View => WidgetViewReference.Resource("Layout/UniMob.ScrollList");
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("Layout/UniMob.ScrollList");
 
         float? ISliverState.VirtualizationCacheExtent => VirtualizationCacheExtent;
 
-        void ISliverState.SetVisibleChildren(List<IndexedLayoutData> visibleChildren)
-            => _virtualized.SetVisibleChildren(visibleChildren);
+        void ISliverState.SetVisibleChildren(List<IndexedLayoutData> visibleChildren) =>
+            _virtualized.SetVisibleChildren(visibleChildren);
 
-        IState[] ISliverState.RequestBuildWindow(int startIndexInclusive, int endIndexExclusive)
-            => _virtualized.RequestBuildWindow(startIndexInclusive, endIndexExclusive);
+        IState[] ISliverState.RequestBuildWindow(int startIndexInclusive, int endIndexExclusive) =>
+            _virtualized.RequestBuildWindow(startIndexInclusive, endIndexExclusive);
 
         public override void InitState()
         {
@@ -227,22 +236,37 @@ namespace UniMob.UI.Layout
 
             if (hasBuilder && hasChildren)
                 throw new InvalidOperationException(
-                    "ScrollList cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount " +
-                    "for lazy building, or Children for eager building, not both.");
+                    "ScrollList cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount "
+                        + "for lazy building, or Children for eager building, not both."
+                );
 
             if (hasBuilder && Widget.ItemCount == null)
-                throw new InvalidOperationException("ScrollList.ItemCount must be set when ItemBuilder is provided.");
+                throw new InvalidOperationException(
+                    "ScrollList.ItemCount must be set when ItemBuilder is provided."
+                );
 
             if (!hasBuilder && Widget.ItemCount != null)
-                throw new InvalidOperationException("ScrollList.ItemCount has no effect without ItemBuilder.");
+                throw new InvalidOperationException(
+                    "ScrollList.ItemCount has no effect without ItemBuilder."
+                );
         }
 
-        bool IScrollControllerExecutor.ScrollTo(int index, float duration, ScrollToPosition position, Easing easing)
+        bool IScrollControllerExecutor.ScrollTo(
+            int index,
+            float duration,
+            ScrollToPosition position,
+            Easing easing
+        )
         {
             return _view?.ScrollTo(index, duration, position, easing) ?? false;
         }
 
-        bool IScrollControllerExecutor.ScrollTo(Key key, float duration, ScrollToPosition position, Easing easing)
+        bool IScrollControllerExecutor.ScrollTo(
+            Key key,
+            float duration,
+            ScrollToPosition position,
+            Easing easing
+        )
         {
             int index;
 
@@ -251,7 +275,8 @@ namespace UniMob.UI.Layout
                 if (Widget.KeyToIndexResolver != null)
                 {
                     var resolved = Widget.KeyToIndexResolver(key);
-                    if (resolved == null) return false;
+                    if (resolved == null)
+                        return false;
                     index = resolved.Value;
                 }
                 else if (!_virtualized.TryResolveSeenKey(key, out index))
@@ -264,7 +289,7 @@ namespace UniMob.UI.Layout
                 return false;
             }
 
-            return ((IScrollControllerExecutor) this).ScrollTo(index, duration, position, easing);
+            return ((IScrollControllerExecutor)this).ScrollTo(index, duration, position, easing);
         }
     }
 }

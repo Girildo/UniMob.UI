@@ -42,7 +42,12 @@ namespace UniMob.UI.Layout
             base.InitState();
 
             var completed = Widget.CrossFadeState == CrossFadeState.ShowSecond;
-            _controller = new AnimationController(StateLifetime, Widget.Duration, Widget.ReverseDuration, completed);
+            _controller = new AnimationController(
+                StateLifetime,
+                Widget.Duration,
+                Widget.ReverseDuration,
+                completed
+            );
 
             _firstAnimation = _controller.Drive(new FloatTween(1, 0));
             _secondAnimation = _controller.Drive(new FloatTween(0, 1));
@@ -55,14 +60,29 @@ namespace UniMob.UI.Layout
                 Alignment = Widget.Alignment,
                 Children =
                 {
-                    BuildLayer(_firstKey, Widget.FirstChild, _firstAnimation, _controller.IsCompleted),
-                    BuildLayer(_secondKey, Widget.SecondChild, _secondAnimation, _controller.IsDismissed),
+                    BuildLayer(
+                        _firstKey,
+                        Widget.FirstChild,
+                        _firstAnimation,
+                        _controller.IsCompleted
+                    ),
+                    BuildLayer(
+                        _secondKey,
+                        Widget.SecondChild,
+                        _secondAnimation,
+                        _controller.IsDismissed
+                    ),
                 },
             };
         }
 
         // Unmounts a faded-out layer (unless KeepMounted); the ZStack slot stays stable by index.
-        private Widget BuildLayer(Key key, Widget child, IAnimation<float> opacity, bool fullyHidden)
+        private Widget BuildLayer(
+            Key key,
+            Widget child,
+            IAnimation<float> opacity,
+            bool fullyHidden
+        )
         {
             if (!Widget.KeepMounted && fullyHidden)
             {
@@ -86,7 +106,10 @@ namespace UniMob.UI.Layout
                 _controller.Duration = Widget.Duration;
             }
 
-            if (Math.Abs(oldWidget.GetReverseDuration() - Widget.GetReverseDuration()) > float.Epsilon)
+            if (
+                Math.Abs(oldWidget.GetReverseDuration() - Widget.GetReverseDuration())
+                > float.Epsilon
+            )
             {
                 _controller.ReverseDuration = Widget.GetReverseDuration();
             }

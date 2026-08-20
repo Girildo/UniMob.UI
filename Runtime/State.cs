@@ -29,7 +29,6 @@ namespace UniMob.UI
 
         public abstract IViewState InnerViewState { get; }
 
-
         public Key Key => RawWidget.Key;
 
         Lifetime ILifetimeScope.Lifetime => StateLifetime;
@@ -88,9 +87,7 @@ namespace UniMob.UI
             return RawWidget.CreateRenderObject(Context, this);
         }
 
-        public virtual void InitState()
-        {
-        }
+        public virtual void InitState() { }
 
         public virtual void Dispose()
         {
@@ -100,7 +97,8 @@ namespace UniMob.UI
         internal static StateHolder<TState> Create<TWidget, TState>(
             Lifetime lifetime,
             BuildContext context,
-            WidgetBuilder<TWidget> builder)
+            WidgetBuilder<TWidget> builder
+        )
             where TWidget : Widget
             where TState : class, IState
         {
@@ -110,8 +108,8 @@ namespace UniMob.UI
         internal static StateCollectionHolder CreateList(
             Lifetime lifetime,
             BuildContext context,
-            Func<BuildContext,
-                List<Widget>> builder)
+            Func<BuildContext, List<Widget>> builder
+        )
         {
             return new StateCollectionHolder(lifetime, context, builder);
         }
@@ -122,13 +120,13 @@ namespace UniMob.UI
         /// </summary>
         protected void AddPostFrameCallback(Action callback)
         {
-            if (callback == null) throw new ArgumentNullException(nameof(callback));
-            Zone.Current.NextFrame(()=>
-                {
-                    if(!this.StateLifetime.IsDisposed)
-                        callback();
-                }
-            );
+            if (callback == null)
+                throw new ArgumentNullException(nameof(callback));
+            Zone.Current.NextFrame(() =>
+            {
+                if (!this.StateLifetime.IsDisposed)
+                    callback();
+            });
         }
 
         /// <summary>
@@ -190,11 +188,19 @@ namespace UniMob.UI
 
         public IState[] Value => _statesAtom.Value;
 
-        public StateCollectionHolder(Lifetime lifetime, BuildContext context, Func<BuildContext, List<Widget>> builder)
+        public StateCollectionHolder(
+            Lifetime lifetime,
+            BuildContext context,
+            Func<BuildContext, List<Widget>> builder
+        )
         {
             _context = context;
             _builder = builder;
-            _statesAtom = Atom.Computed(lifetime, ComputeStates, debugName: "StateCollectionHolder._statesAtom");
+            _statesAtom = Atom.Computed(
+                lifetime,
+                ComputeStates,
+                debugName: "StateCollectionHolder._statesAtom"
+            );
 
             lifetime.Register(DeactivateStates);
         }
@@ -249,7 +255,11 @@ namespace UniMob.UI
         {
             _context = context;
             _builder = builder;
-            _stateAtom = Atom.Computed(lifetime, ComputeState, debugName: "StateHolder._statesAtom");
+            _stateAtom = Atom.Computed(
+                lifetime,
+                ComputeState,
+                debugName: "StateHolder._statesAtom"
+            );
 
 #if UNIMOB_ENABLE_REBUILD_RATE_LIMITER
             _rebuildRateLimiter = new UniMobRebuildRateLimiter(context);

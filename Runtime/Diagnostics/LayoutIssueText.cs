@@ -29,10 +29,11 @@ namespace UniMob.UI.Diagnostics
         {
             // Both overflows are a layout that still renders, wrongly and visibly. The other three are
             // a widget that will not render at all.
-            return code
-                is LayoutIssueCode.Overflow
-                    or LayoutIssueCode.ContentOverflow
-                    or LayoutIssueCode.ChildOutOfBounds
+            return
+                code
+                    is LayoutIssueCode.Overflow
+                        or LayoutIssueCode.ContentOverflow
+                        or LayoutIssueCode.ChildOutOfBounds
                 ? LogType.Warning
                 : LogType.Error;
         }

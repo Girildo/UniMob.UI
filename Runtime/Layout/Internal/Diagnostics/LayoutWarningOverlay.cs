@@ -89,7 +89,11 @@ namespace UniMob.UI.Layout.Internal.Diagnostics
             }
             else
             {
-                var go = new GameObject("LayoutWarning", typeof(RectTransform), typeof(UnityEngine.UI.Image))
+                var go = new GameObject(
+                    "LayoutWarning",
+                    typeof(RectTransform),
+                    typeof(UnityEngine.UI.Image)
+                )
                 {
                     hideFlags = HideFlags.DontSave,
                 };

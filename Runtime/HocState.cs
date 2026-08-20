@@ -6,9 +6,7 @@ using UnityEngine.Assertions;
 
 namespace UniMob.UI
 {
-    public interface IHocState : IState
-    {
-    }
+    public interface IHocState : IState { }
 
     public abstract class HocState<TWidget> : State, IHocState, ISingleChildLayoutState
         where TWidget : Widget
@@ -17,7 +15,6 @@ namespace UniMob.UI
         private readonly MutableAtom<TWidget> _widget = Atom.Value(default(TWidget));
 
         protected TWidget Widget => _widget.Value;
-
 
         public sealed override IViewState InnerViewState => _child.Value.InnerViewState;
 
@@ -35,8 +32,6 @@ namespace UniMob.UI
         {
             _child = Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), Build);
         }
-
-        
 
         internal sealed override void Update(Widget widget)
         {
@@ -56,8 +51,6 @@ namespace UniMob.UI
                 DidUpdateWidget(oldWidget);
             }
         }
-
-        
 
         public abstract Widget Build(BuildContext context);
 

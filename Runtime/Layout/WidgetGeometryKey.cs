@@ -38,7 +38,8 @@ namespace UniMob.UI.Layout
 
         public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
-        public override string ToString() => $"[WidgetGeometryKey #{RuntimeHelpers.GetHashCode(this)}]";
+        public override string ToString() =>
+            $"[WidgetGeometryKey #{RuntimeHelpers.GetHashCode(this)}]";
 
         /// <summary>
         /// One-shot read of the keyed widget's on-screen box in canvas space. Returns <c>false</c> (and

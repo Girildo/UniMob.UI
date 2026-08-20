@@ -15,9 +15,8 @@ namespace UniMob.UI.Tests
     /// </summary>
     internal sealed class FailingToInitializeRoute : Route
     {
-        public FailingToInitializeRoute(string key) : base(new RouteSettings(key, RouteModalType.Popup))
-        {
-        }
+        public FailingToInitializeRoute(string key)
+            : base(new RouteSettings(key, RouteModalType.Popup)) { }
 
         public override Widget Build(BuildContext context) => new Empty();
 
@@ -35,7 +34,11 @@ namespace UniMob.UI.Tests
     {
         private readonly Func<object, Task<PopDecision>> _decide;
 
-        public DecidingRoute(string key, RouteModalType modalType, Func<object, Task<PopDecision>> decide)
+        public DecidingRoute(
+            string key,
+            RouteModalType modalType,
+            Func<object, Task<PopDecision>> decide
+        )
             : base(new RouteSettings(key, modalType))
         {
             _decide = decide;
@@ -83,12 +86,23 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(PopOutcome.Popped, outcome.Result);
             Assert.AreEqual(1, route.TimesAsked);
-            Assert.AreSame(request, route.LastRequest, "the route is handed the request as it was given");
+            Assert.AreSame(
+                request,
+                route.LastRequest,
+                "the route is handed the request as it was given"
+            );
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
 
             Assert.IsTrue(route.PopTask.IsCompleted);
-            Assert.IsFalse(route.PopTask.Result.HasValue, "an untyped route cannot attach a value to its answer");
-            Assert.AreSame(request, route.PopTask.Result.Request, "the result names the request that popped it");
+            Assert.IsFalse(
+                route.PopTask.Result.HasValue,
+                "an untyped route cannot attach a value to its answer"
+            );
+            Assert.AreSame(
+                request,
+                route.PopTask.Result.Request,
+                "the result names the request that popped it"
+            );
         }
 
         [UnityTest]
@@ -106,7 +120,10 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(PopOutcome.Refused, outcome.Result);
             Assert.AreSame(route, host.Navigator.TopmostRoute);
-            Assert.IsFalse(route.PopTask.IsCompleted, "a refused route has not left, so nothing awaiting it resumes");
+            Assert.IsFalse(
+                route.PopTask.IsCompleted,
+                "a refused route has not left, so nothing awaiting it resumes"
+            );
         }
 
         [UnityTest]
@@ -167,7 +184,11 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(PopOutcome.Popped, first.Result);
             Assert.AreEqual(PopOutcome.Popped, second.Result);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
-            Assert.AreEqual("first", route.PopTask.Result.Request, "the pop carries the request that started the question");
+            Assert.AreEqual(
+                "first",
+                route.PopTask.Result.Request,
+                "the pop carries the request that started the question"
+            );
         }
 
         [UnityTest]
@@ -179,13 +200,17 @@ namespace UniMob.UI.Tests
             // The route answers by pushing a "confirmation" and waiting for it, which is only possible
             // because the decision runs outside the command loop.
             Route confirmation = null;
-            var route = new DecidingRoute("D", RouteModalType.Popup, async _ =>
-            {
-                confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
-                host.Navigator.Push(confirmation);
-                await confirmation.PopTask;
-                return PopDecision.Allow();
-            });
+            var route = new DecidingRoute(
+                "D",
+                RouteModalType.Popup,
+                async _ =>
+                {
+                    confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
+                    host.Navigator.Push(confirmation);
+                    await confirmation.PopTask;
+                    return PopDecision.Allow();
+                }
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
@@ -193,7 +218,11 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Assert.IsFalse(outcome.IsCompleted);
-            Assert.AreSame(confirmation, host.Navigator.TopmostRoute, "the confirmation is up while D decides");
+            Assert.AreSame(
+                confirmation,
+                host.Navigator.TopmostRoute,
+                "the confirmation is up while D decides"
+            );
 
             confirmation.Pop();
             yield return host.Settle();
@@ -214,24 +243,36 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Route confirmation = null;
-            var route = new DecidingRoute("D", RouteModalType.Popup, async _ =>
-            {
-                confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
-                host.Navigator.Push(confirmation);
-                await confirmation.PopTask;
-                return PopDecision.Allow();
-            });
+            var route = new DecidingRoute(
+                "D",
+                RouteModalType.Popup,
+                async _ =>
+                {
+                    confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
+                    host.Navigator.Push(confirmation);
+                    await confirmation.PopTask;
+                    return PopDecision.Allow();
+                }
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
             var first = host.Navigator.RequestPop(route, "first");
             yield return host.Settle();
 
-            Assert.AreSame(confirmation, host.Navigator.TopmostRoute, "D is covered by the dialog it pushed to decide");
+            Assert.AreSame(
+                confirmation,
+                host.Navigator.TopmostRoute,
+                "D is covered by the dialog it pushed to decide"
+            );
 
             var second = host.Navigator.RequestPop(route, "second");
 
-            Assert.AreSame(first, second, "the second requester joins the question in progress, covered or not");
+            Assert.AreSame(
+                first,
+                second,
+                "the second requester joins the question in progress, covered or not"
+            );
             Assert.IsFalse(second.IsCompleted, "and is not turned away with NotTopmost");
             Assert.AreEqual(1, route.TimesAsked);
 
@@ -258,25 +299,33 @@ namespace UniMob.UI.Tests
             var decision = new TaskCompletionSource<PopDecision>();
             Task<PopOutcome> inner = null;
             DecidingRoute route = null;
-            route = new DecidingRoute("D", RouteModalType.Popup, _ =>
-            {
-                // Only from the first question. Keyed on TimesAsked, which is counted before the hook
-                // runs, rather than on whether the inner request has been made: a regression asks again
-                // from inside that very call, before its result is assigned, and a guard on the result
-                // would let it nest until the stack ran out instead of failing the assertion below.
-                if (route.TimesAsked == 1)
+            route = new DecidingRoute(
+                "D",
+                RouteModalType.Popup,
+                _ =>
                 {
-                    inner = host.Navigator.RequestPop(route, "inner");
-                }
+                    // Only from the first question. Keyed on TimesAsked, which is counted before the hook
+                    // runs, rather than on whether the inner request has been made: a regression asks again
+                    // from inside that very call, before its result is assigned, and a guard on the result
+                    // would let it nest until the stack ran out instead of failing the assertion below.
+                    if (route.TimesAsked == 1)
+                    {
+                        inner = host.Navigator.RequestPop(route, "inner");
+                    }
 
-                return decision.Task;
-            });
+                    return decision.Task;
+                }
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
             var outer = host.Navigator.RequestPop(route, "outer");
 
-            Assert.AreEqual(1, route.TimesAsked, "the request from inside the hook joined the question in progress");
+            Assert.AreEqual(
+                1,
+                route.TimesAsked,
+                "the request from inside the hook joined the question in progress"
+            );
             Assert.AreSame(outer, inner, "one pending answer, shared");
             Assert.IsFalse(outer.IsCompleted);
 
@@ -312,7 +361,11 @@ namespace UniMob.UI.Tests
             decision.SetResult(PopDecision.Allow());
             yield return host.Settle();
 
-            Assert.AreEqual(PopOutcome.NotTopmost, outcome.Result, "the request finds its route already gone");
+            Assert.AreEqual(
+                PopOutcome.NotTopmost,
+                outcome.Result,
+                "the request finds its route already gone"
+            );
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
 
@@ -323,13 +376,17 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             DecidingRoute route = null;
-            route = new DecidingRoute("D", RouteModalType.Popup, _ =>
-            {
-                // A misbehaving decider that pops instead of answering. Nothing throws, and the answer it
-                // then gives is moot because the route has already gone.
-                route.Pop();
-                return Task.FromResult(PopDecision.Allow());
-            });
+            route = new DecidingRoute(
+                "D",
+                RouteModalType.Popup,
+                _ =>
+                {
+                    // A misbehaving decider that pops instead of answering. Nothing throws, and the answer it
+                    // then gives is moot because the route has already gone.
+                    route.Pop();
+                    return Task.FromResult(PopDecision.Allow());
+                }
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
@@ -384,7 +441,8 @@ namespace UniMob.UI.Tests
                 "  E OnCreate",
                 "  E OnResume",
                 "  E OnFocus",
-                "  stack: [E, A]");
+                "  stack: [E, A]"
+            );
         }
 
         [UnityTest]
@@ -404,8 +462,11 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(PopOutcome.Refused, outcome.Result);
             Assert.AreSame(outgoing, host.Navigator.TopmostRoute);
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
-            Assert.AreEqual(PopOutcome.NotTopmost, incoming.Pop().Result,
-                "a route that was never placed is on top of nothing, so it was never attached");
+            Assert.AreEqual(
+                PopOutcome.NotTopmost,
+                incoming.Pop().Result,
+                "a route that was never placed is on top of nothing, so it was never attached"
+            );
         }
 
         [UnityTest]
@@ -429,7 +490,11 @@ namespace UniMob.UI.Tests
             decision.SetResult(PopDecision.Allow());
             yield return host.Settle();
 
-            Assert.AreEqual(PopOutcome.NotTopmost, outcome.Result, "the swap it agreed to no longer exists");
+            Assert.AreEqual(
+                PopOutcome.NotTopmost,
+                outcome.Result,
+                "the swap it agreed to no longer exists"
+            );
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
@@ -445,20 +510,28 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Route confirmation = null;
-            var route = new DecidingRoute("D", RouteModalType.Popup, async _ =>
-            {
-                confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
-                host.Navigator.Push(confirmation);
-                await confirmation.PopTask;
-                return PopDecision.Allow();
-            });
+            var route = new DecidingRoute(
+                "D",
+                RouteModalType.Popup,
+                async _ =>
+                {
+                    confirmation = host.Create("Confirm", RouteModalType.Popup, RouteFlavour.Plain);
+                    host.Navigator.Push(confirmation);
+                    await confirmation.PopTask;
+                    return PopDecision.Allow();
+                }
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
             var first = host.Navigator.RequestPop(route, "first");
             yield return host.Settle();
 
-            Assert.AreSame(confirmation, host.Navigator.TopmostRoute, "D is covered by the dialog it pushed to decide");
+            Assert.AreSame(
+                confirmation,
+                host.Navigator.TopmostRoute,
+                "D is covered by the dialog it pushed to decide"
+            );
 
             var incoming = host.Create("E", RouteModalType.Popup, RouteFlavour.Plain);
             var replace = host.Navigator.RequestReplace(route, incoming, "switch");
@@ -470,8 +543,11 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Assert.AreEqual(PopOutcome.Popped, first.Result);
-            Assert.AreEqual(PopOutcome.NotTopmost, replace.Result,
-                "the route left through the first request; this replace did not happen");
+            Assert.AreEqual(
+                PopOutcome.NotTopmost,
+                replace.Result,
+                "the route left through the first request; this replace did not happen"
+            );
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
@@ -499,15 +575,26 @@ namespace UniMob.UI.Tests
             var outcome = host.Navigator.RequestReplace(outgoing, broken, "switch");
             yield return host.Settle();
 
-            Assert.IsTrue(outcome.IsCompleted, "the requester is answered rather than left waiting on a replace that will never finish");
+            Assert.IsTrue(
+                outcome.IsCompleted,
+                "the requester is answered rather than left waiting on a replace that will never finish"
+            );
             Assert.IsTrue(outcome.IsFaulted, "and answered with the failure");
-            Assert.AreSame(outgoing, host.Navigator.TopmostRoute, "the outgoing route was never touched: the incoming one failed before it");
+            Assert.AreSame(
+                outgoing,
+                host.Navigator.TopmostRoute,
+                "the outgoing route was never touched: the incoming one failed before it"
+            );
             CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, broken);
 
             var again = host.Navigator.RequestPop(outgoing, "again");
             yield return host.Settle();
 
-            Assert.AreEqual(2, outgoing.TimesAsked, "the failed request released the route, so it is asked afresh");
+            Assert.AreEqual(
+                2,
+                outgoing.TimesAsked,
+                "the failed request released the route, so it is asked afresh"
+            );
             Assert.IsTrue(again.IsCompleted, "and the new request is answered on its own terms");
             Assert.AreEqual(PopOutcome.Popped, again.Result);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
@@ -534,16 +621,26 @@ namespace UniMob.UI.Tests
             var outcome = host.Navigator.RequestReplace(outgoing, incoming, "switch");
             yield return host.Settle();
 
-            Assert.IsTrue(outcome.IsCompleted, "the requester is answered rather than left waiting");
+            Assert.IsTrue(
+                outcome.IsCompleted,
+                "the requester is answered rather than left waiting"
+            );
             Assert.IsTrue(outcome.IsFaulted, "and answered with the failure");
-            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, incoming,
-                "the swap was abandoned before the incoming route was placed");
+            CollectionAssert.DoesNotContain(
+                host.Navigator.NavigationStack,
+                incoming,
+                "the swap was abandoned before the incoming route was placed"
+            );
 
             var retry = host.Create("F", RouteModalType.Popup, RouteFlavour.Plain);
             var again = host.Navigator.RequestReplace(outgoing, retry, "again");
             yield return host.Settle();
 
-            Assert.AreNotSame(outcome, again, "the failed request no longer holds the route's slot");
+            Assert.AreNotSame(
+                outcome,
+                again,
+                "the failed request no longer holds the route's slot"
+            );
             Assert.IsTrue(again.IsCompleted, "a new request is answered on its own terms");
         }
 
@@ -607,7 +704,11 @@ namespace UniMob.UI.Tests
             host.Navigator.Replace(host.Create("E", RouteModalType.Popup, RouteFlavour.Plain));
             yield return host.Settle();
 
-            Assert.AreEqual(0, route.TimesAsked, "an un-asked replace does not consult the route, even one that would refuse");
+            Assert.AreEqual(
+                0,
+                route.TimesAsked,
+                "an un-asked replace does not consult the route, even one that would refuse"
+            );
             Assert.IsTrue(route.PopTask.IsCompleted);
             Assert.AreEqual(PopCause.Teardown, route.PopTask.Result.Cause);
             Assert.IsFalse(route.PopTask.Result.HasValue);
@@ -680,8 +781,11 @@ namespace UniMob.UI.Tests
             var outcome = route.Pop();
             yield return host.Settle();
 
-            Assert.AreEqual(PopOutcome.Popped, outcome.Result,
-                "only possible if the route was attached to its navigator when the push was issued");
+            Assert.AreEqual(
+                PopOutcome.Popped,
+                outcome.Result,
+                "only possible if the route was attached to its navigator when the push was issued"
+            );
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }
 
@@ -701,8 +805,11 @@ namespace UniMob.UI.Tests
             var again = route.Pop();
             yield return host.Settle();
 
-            Assert.AreEqual(PopOutcome.NotTopmost, again.Result,
-                "an owner tidying up after its route already left must be able to do so harmlessly");
+            Assert.AreEqual(
+                PopOutcome.NotTopmost,
+                again.Result,
+                "an owner tidying up after its route already left must be able to do so harmlessly"
+            );
         }
 
         /// <summary>
@@ -725,10 +832,18 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Assert.AreEqual(PopOutcome.Popped, outcome.Result);
-            Assert.AreEqual(1, route.TimesAsked, "asking on its own behalf still consults the route");
+            Assert.AreEqual(
+                1,
+                route.TimesAsked,
+                "asking on its own behalf still consults the route"
+            );
             Assert.AreSame(request, route.LastRequest);
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
-            Assert.AreSame(request, route.PopTask.Result.Request, "the result names the request, as for any asked pop");
+            Assert.AreSame(
+                request,
+                route.PopTask.Result.Request,
+                "the result names the request, as for any asked pop"
+            );
         }
 
         [UnityTest]
@@ -744,8 +859,11 @@ namespace UniMob.UI.Tests
             var outcome = route.AskToLeave("why");
             yield return host.Settle();
 
-            Assert.AreEqual(PopOutcome.Refused, outcome.Result,
-                "the route's own chrome gets no more authority than anyone else who asks");
+            Assert.AreEqual(
+                PopOutcome.Refused,
+                outcome.Result,
+                "the route's own chrome gets no more authority than anyone else who asks"
+            );
             Assert.AreSame(route, host.Navigator.TopmostRoute);
             Assert.IsFalse(route.PopTask.IsCompleted);
         }
@@ -756,7 +874,11 @@ namespace UniMob.UI.Tests
             var route = new DecidingRoute("Loose", RouteModalType.Popup, Allow);
 
             Assert.AreEqual(PopOutcome.NotTopmost, route.AskToLeave("why").Result);
-            Assert.AreEqual(0, route.TimesAsked, "on top of nothing, so there is nothing to decide");
+            Assert.AreEqual(
+                0,
+                route.TimesAsked,
+                "on top of nothing, so there is nothing to decide"
+            );
 
             // The null-request rule holds regardless of whether the route has a navigator to forward to.
             Assert.Throws<ArgumentNullException>(() => route.AskToLeave(null));
@@ -780,10 +902,16 @@ namespace UniMob.UI.Tests
             var incoming = host.Create("E", RouteModalType.Popup, RouteFlavour.Plain);
 
             Assert.Throws<ArgumentNullException>(() => host.Navigator.RequestPop(route, null));
-            Assert.Throws<ArgumentNullException>(() => host.Navigator.RequestReplace(route, incoming, null));
+            Assert.Throws<ArgumentNullException>(() =>
+                host.Navigator.RequestReplace(route, incoming, null)
+            );
             Assert.Throws<ArgumentNullException>(() => host.Navigator.RequestPopTo(null, null));
 
-            Assert.AreEqual(0, route.TimesAsked, "rejected at the call, before the route is consulted");
+            Assert.AreEqual(
+                0,
+                route.TimesAsked,
+                "rejected at the call, before the route is consulted"
+            );
             Assert.AreEqual(2, host.Navigator.NavigationStack.Count);
         }
 
@@ -798,25 +926,36 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             var timesAsked = 0;
-            var route = new DecidingRoute("D", RouteModalType.Popup, request =>
-            {
-                if (timesAsked++ == 0)
+            var route = new DecidingRoute(
+                "D",
+                RouteModalType.Popup,
+                request =>
                 {
-                    throw new InvalidOperationException("decision failed on " + request);
-                }
+                    if (timesAsked++ == 0)
+                    {
+                        throw new InvalidOperationException("decision failed on " + request);
+                    }
 
-                return Allow(request);
-            });
+                    return Allow(request);
+                }
+            );
             route.WithPopOnBack(host.Navigator, "back");
             host.Navigator.Push(route);
             yield return host.Settle();
 
             LogAssert.Expect(LogType.Exception, new Regex("decision failed on back"));
 
-            Assert.IsTrue(host.Navigator.HandleBack(), "back was handled, whatever the route then did with it");
+            Assert.IsTrue(
+                host.Navigator.HandleBack(),
+                "back was handled, whatever the route then did with it"
+            );
             yield return host.Settle();
 
-            Assert.AreSame(route, host.Navigator.TopmostRoute, "a decision that failed is not a decision to leave");
+            Assert.AreSame(
+                route,
+                host.Navigator.TopmostRoute,
+                "a decision that failed is not a decision to leave"
+            );
 
             // The failed question released the route: the next back press asks it again.
             Assert.IsTrue(host.Navigator.HandleBack());

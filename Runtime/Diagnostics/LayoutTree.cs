@@ -150,7 +150,9 @@ namespace UniMob.UI.Diagnostics
                 builder.Append("  ");
 
                 // Printed as an absence rather than as Tight(0,0), which is a plausible-looking box.
-                builder.Append(constraints.HasValue ? constraints.Value.ToString() : "<not laid out>");
+                builder.Append(
+                    constraints.HasValue ? constraints.Value.ToString() : "<not laid out>"
+                );
                 builder.Append("  ->  ").Append(renderObject.PeekSize());
             }
             catch (Exception ex)

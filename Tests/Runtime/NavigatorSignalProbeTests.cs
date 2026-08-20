@@ -48,24 +48,39 @@ namespace UniMob.UI.Tests
 
             try
             {
-                Atom.Reaction(lifetime.Lifetime, () => host.Navigator.NavigationStack, _ => stackRuns++);
-                Atom.Reaction(lifetime.Lifetime, () => host.Navigator.TopmostRoute,
-                    route => seenTopmost.Add(route == null ? "null" : route.Key));
+                Atom.Reaction(
+                    lifetime.Lifetime,
+                    () => host.Navigator.NavigationStack,
+                    _ => stackRuns++
+                );
+                Atom.Reaction(
+                    lifetime.Lifetime,
+                    () => host.Navigator.TopmostRoute,
+                    route => seenTopmost.Add(route == null ? "null" : route.Key)
+                );
 
-                host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                host.Navigator.Push(
+                    host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                );
                 yield return host.Settle();
 
                 // Pushed and popped within one frame. A whole route was created, focused, destroyed and
                 // disposed here.
-                host.Navigator.Push(host.Create("T", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                host.Navigator.Push(
+                    host.Create("T", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                );
                 host.Navigator.TopmostRoute.Pop();
                 yield return host.Settle();
 
-                host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                host.Navigator.Push(
+                    host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                );
                 yield return host.Settle();
 
                 // PopTo(null) + Replace as one batch: C and B are destroyed and A is replaced.
-                host.Navigator.NewRoot(host.Create("D", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                host.Navigator.NewRoot(
+                    host.Create("D", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                );
                 yield return host.Settle();
             }
             finally
@@ -73,18 +88,22 @@ namespace UniMob.UI.Tests
                 lifetime.Dispose();
             }
 
-            Assert.AreEqual(5, stackRuns,
-                "NavigationStack fired its initial run and once per frame in which the stack was mutated: " +
-                "B pushed, T pushed and popped, C pushed, and the NewRoot. The frame that only pushed and " +
-                "popped T counts, because the snapshot is new even though its contents came back the same; " +
-                "and the NewRoot's three removals and one replace collapse into a single run. Whether the " +
-                "contents actually changed is for a computation over them to decide");
+            Assert.AreEqual(
+                5,
+                stackRuns,
+                "NavigationStack fired its initial run and once per frame in which the stack was mutated: "
+                    + "B pushed, T pushed and popped, C pushed, and the NewRoot. The frame that only pushed and "
+                    + "popped T counts, because the snapshot is new even though its contents came back the same; "
+                    + "and the NewRoot's three removals and one replace collapse into a single run. Whether the "
+                    + "contents actually changed is for a computation over them to decide"
+            );
 
             CollectionAssert.AreEqual(
                 new[] { "A", "B", "C", "D" },
                 seenTopmost,
-                "T is absent entirely -- it lived and died inside one frame -- and the NewRoot reports " +
-                "C -> D, never revealing that B and C were destroyed and A was replaced on the way");
+                "T is absent entirely -- it lived and died inside one frame -- and the NewRoot reports "
+                    + "C -> D, never revealing that B and C were destroyed and A was replaced on the way"
+            );
 
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
         }

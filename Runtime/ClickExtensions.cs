@@ -9,22 +9,26 @@ namespace UniMob.UI
     {
         public static void Click([NotNull] this Button button, [NotNull] Func<Action> call)
         {
-            if (button == null) throw new ArgumentNullException(nameof(button));
+            if (button == null)
+                throw new ArgumentNullException(nameof(button));
 
             Bind(button.onClick, call);
         }
 
         public static void Click([NotNull] this Button button, [NotNull] Action call)
         {
-            if (button == null) throw new ArgumentNullException(nameof(button));
+            if (button == null)
+                throw new ArgumentNullException(nameof(button));
 
             Bind(button.onClick, call);
         }
 
         public static void Bind([NotNull] this UnityEvent unityEvent, [NotNull] Func<Action> call)
         {
-            if (unityEvent == null) throw new ArgumentNullException(nameof(unityEvent));
-            if (call == null) throw new ArgumentNullException(nameof(call));
+            if (unityEvent == null)
+                throw new ArgumentNullException(nameof(unityEvent));
+            if (call == null)
+                throw new ArgumentNullException(nameof(call));
 
             void Listener()
             {
@@ -40,8 +44,10 @@ namespace UniMob.UI
 
         public static void Bind([NotNull] this UnityEvent unityEvent, [NotNull] Action call)
         {
-            if (unityEvent == null) throw new ArgumentNullException(nameof(unityEvent));
-            if (call == null) throw new ArgumentNullException(nameof(call));
+            if (unityEvent == null)
+                throw new ArgumentNullException(nameof(unityEvent));
+            if (call == null)
+                throw new ArgumentNullException(nameof(call));
 
             void Listener()
             {
@@ -54,10 +60,15 @@ namespace UniMob.UI
             unityEvent.AddListener(Listener);
         }
 
-        public static void Bind<T>([NotNull] this UnityEvent<T> unityEvent, [NotNull] Func<Action<T>> call)
+        public static void Bind<T>(
+            [NotNull] this UnityEvent<T> unityEvent,
+            [NotNull] Func<Action<T>> call
+        )
         {
-            if (unityEvent == null) throw new ArgumentNullException(nameof(unityEvent));
-            if (call == null) throw new ArgumentNullException(nameof(call));
+            if (unityEvent == null)
+                throw new ArgumentNullException(nameof(unityEvent));
+            if (call == null)
+                throw new ArgumentNullException(nameof(call));
 
             void Listener(T value)
             {
@@ -71,10 +82,15 @@ namespace UniMob.UI
             unityEvent.AddListener(Listener);
         }
 
-        public static void Bind<T>([NotNull] this UnityEvent<T> unityEvent, [NotNull] Action<T> call)
+        public static void Bind<T>(
+            [NotNull] this UnityEvent<T> unityEvent,
+            [NotNull] Action<T> call
+        )
         {
-            if (unityEvent == null) throw new ArgumentNullException(nameof(unityEvent));
-            if (call == null) throw new ArgumentNullException(nameof(call));
+            if (unityEvent == null)
+                throw new ArgumentNullException(nameof(unityEvent));
+            if (call == null)
+                throw new ArgumentNullException(nameof(call));
 
             void Listener(T value)
             {

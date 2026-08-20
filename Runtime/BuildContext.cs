@@ -49,10 +49,11 @@ namespace UniMob.UI
             return root;
         }
 
-        internal T? FindAncestorStateImplementing<T>() where T : class
+        internal T? FindAncestorStateImplementing<T>()
+            where T : class
         {
             var ancestor = this;
-            
+
             while (ancestor != null)
             {
                 if (ancestor.State is T implementingState)
@@ -63,15 +64,13 @@ namespace UniMob.UI
             }
 
             return null;
-        } 
+        }
     }
 
     public class MutableBuildContext : BuildContext
     {
         public MutableBuildContext(IState state, BuildContext parent)
-            : base(state, parent)
-        {
-        }
+            : base(state, parent) { }
 
         public void SetParent(BuildContext parent)
         {

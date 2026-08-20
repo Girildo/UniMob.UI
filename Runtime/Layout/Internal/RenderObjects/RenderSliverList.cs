@@ -103,7 +103,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly List<IndexedLayoutData> _visibleChildrenIndexed = new();
         private Vector2 _viewportSize; // this is determined after the sizing pass, based on the constraints from the parent.
         private float _virtualizationCacheExtent; // this is determined after the sizing pass, based on the view port size OR the user-defined value.
-                                                  // (todo: probably not too much sense in having this an absolute value, maybe it should be a percentage)
+
+        // (todo: probably not too much sense in having this an absolute value, maybe it should be a percentage)
 
         // --- Lazy mode (ItemBuilder/ItemCount) -- see the "one model for where is item N" note up top. ---
         // Exact main-axis extent of every item ever measured, kept even after it leaves the build window (cheap,
@@ -132,7 +133,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <summary>A scrollable positions its children beyond the viewport; that is what scrolling is.</summary>
         protected override bool ChildrenMayOverhang => true;
 
-        public RenderSliverList(ISliverState state) : base(state)
+        public RenderSliverList(ISliverState state)
+            : base(state)
         {
             _state = state;
         }
@@ -149,7 +151,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // - 1 screen after the viewport
             return viewportSize;
         }
-
 
         /// <summary>
         ///     SIZING PASS: measures children to determine the total scrollable content size. In eager mode,
@@ -180,9 +181,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // constraints -- computed up front since the lazy path needs it (for its build-window estimate)
             // before any children are measured.
             this._viewportSize = constraints.Largest.ZeroOn(unboundedScrollAxis);
-            if (_state.VirtualizationCacheExtent.HasValue && _state.VirtualizationCacheExtent.Value < 0)
-                throw new InvalidOperationException("VirtualizationCacheExtent cannot be negative.");
-            this._virtualizationCacheExtent = _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
+            if (
+                _state.VirtualizationCacheExtent.HasValue
+                && _state.VirtualizationCacheExtent.Value < 0
+            )
+                throw new InvalidOperationException(
+                    "VirtualizationCacheExtent cannot be negative."
+                );
+            this._virtualizationCacheExtent =
+                _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
 
             if (_state.ItemCount.HasValue)
                 PerformLazySizing(constraints, isHorizontal, isVertical);
@@ -192,13 +199,21 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return this._viewportSize;
         }
 
-        private void PerformEagerSizing(LayoutConstraints constraints, bool isHorizontal, bool isVertical)
+        private void PerformEagerSizing(
+            LayoutConstraints constraints,
+            bool isHorizontal,
+            bool isVertical
+        )
         {
             _allChildrenSizes.Clear();
 
             // Give children unconstrained space along the main scrolling axis
             // but constrain them to the viewport's size on the cross axis. (stretching them horizontally)
-            var childConstraints = SliverLayoutMath.MakeChildConstraints(constraints, isHorizontal, mainAxisExtent: null);
+            var childConstraints = SliverLayoutMath.MakeChildConstraints(
+                constraints,
+                isHorizontal,
+                mainAxisExtent: null
+            );
 
             foreach (var child in _state.AllChildren)
             {
@@ -214,7 +229,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///     exactly that window. The guess is the one-settle-frame approximation described up top: it can
         ///     under-cover right after a big jump and self-corrects next pass as the average refines.
         /// </summary>
-        private void PerformLazySizing(LayoutConstraints constraints, bool isHorizontal, bool isVertical)
+        private void PerformLazySizing(
+            LayoutConstraints constraints,
+            bool isHorizontal,
+            bool isVertical
+        )
         {
             var itemCount = _state.ItemCount!.Value;
             _lazyWindowSizes.Clear();
@@ -234,11 +253,22 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var stride = (itemExtent ?? _averageExtent) + spacing;
             var scrollOffset = _state.ScrollPixelOffset;
 
-            var startIndex = Mathf.Clamp(Mathf.FloorToInt((scrollOffset - cacheExtent) / stride), 0, itemCount - 1);
-            var endIndex = Mathf.Clamp(Mathf.CeilToInt((scrollOffset + viewportMainAxisSize + cacheExtent) / stride),
-                startIndex + 1, itemCount);
+            var startIndex = Mathf.Clamp(
+                Mathf.FloorToInt((scrollOffset - cacheExtent) / stride),
+                0,
+                itemCount - 1
+            );
+            var endIndex = Mathf.Clamp(
+                Mathf.CeilToInt((scrollOffset + viewportMainAxisSize + cacheExtent) / stride),
+                startIndex + 1,
+                itemCount
+            );
 
-            var childConstraints = SliverLayoutMath.MakeChildConstraints(constraints, isHorizontal, mainAxisExtent: itemExtent);
+            var childConstraints = SliverLayoutMath.MakeChildConstraints(
+                constraints,
+                isHorizontal,
+                mainAxisExtent: itemExtent
+            );
             var builtStates = _state.RequestBuildWindow(startIndex, endIndex);
 
             var hadPriorMeasurement = _measuredExtents.Count > 0;
@@ -307,7 +337,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private float EstimateLazyContentMainAxisSize()
         {
             var itemCount = _state.ItemCount!.Value;
-            if (itemCount <= 0) return 0;
+            if (itemCount <= 0)
+                return 0;
 
             return EstimateLeadingEdgeOffset(itemCount) - _state.Spacing;
         }
@@ -329,12 +360,15 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var measuredCountBelow = 0;
             foreach (var pair in _measuredExtents)
             {
-                if (pair.Key >= index) continue;
+                if (pair.Key >= index)
+                    continue;
                 measuredSumBelow += pair.Value;
                 measuredCountBelow++;
             }
 
-            return measuredSumBelow + _averageExtent * (index - measuredCountBelow) + spacing * index;
+            return measuredSumBelow
+                + _averageExtent * (index - measuredCountBelow)
+                + spacing * index;
         }
 
         /// <summary>
@@ -354,8 +388,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 // Lazy: only the window PerformLazySizing built this pass, anchored at its measured leading edge
                 // and culled against the offset it was selected for (not the live one).
                 if (_lazyWindowSizes.Count > 0)
-                    CullVisibleRun(_lazyWindowStart, EstimateLeadingEdgeOffset(_lazyWindowStart),
-                        _lazyWindowSizes, _lazyWindowScrollOffset, visible);
+                    CullVisibleRun(
+                        _lazyWindowStart,
+                        EstimateLeadingEdgeOffset(_lazyWindowStart),
+                        _lazyWindowSizes,
+                        _lazyWindowScrollOffset,
+                        visible
+                    );
             }
             else
             {
@@ -363,7 +402,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
 
             ChildrenLayoutBuffer.Clear();
-            foreach (var child in visible) ChildrenLayoutBuffer.Add(child.Layout);
+            foreach (var child in visible)
+                ChildrenLayoutBuffer.Add(child.Layout);
 
             _state.SetVisibleChildren(visible);
         }
@@ -375,8 +415,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         ///     they supply (all children from offset 0, versus the built window from its measured anchor); the
         ///     culling and positioning are identical and live here so they can't drift apart.
         /// </summary>
-        private void CullVisibleRun(int firstIndex, float firstLeadingEdge, List<Vector2> sizes,
-            float scrollOffset, List<IndexedLayoutData> output)
+        private void CullVisibleRun(
+            int firstIndex,
+            float firstLeadingEdge,
+            List<Vector2> sizes,
+            float scrollOffset,
+            List<IndexedLayoutData> output
+        )
         {
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var spacing = _state.Spacing;
@@ -394,15 +439,19 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 // Visible if it intersects the viewport (plus buffer) along the scrolling axis.
                 if (mainAxisPos + childMainAxisSize > viewportStart && mainAxisPos < viewportEnd)
                 {
-                    output.Add(new IndexedLayoutData
-                    {
-                        ChildIndex = firstIndex + i,
-                        Layout = new LayoutInfo
+                    output.Add(
+                        new IndexedLayoutData
                         {
-                            Size = childSize,
-                            Position = isHorizontal ? new Vector2(mainAxisPos, 0) : new Vector2(0, mainAxisPos),
-                        },
-                    });
+                            ChildIndex = firstIndex + i,
+                            Layout = new LayoutInfo
+                            {
+                                Size = childSize,
+                                Position = isHorizontal
+                                    ? new Vector2(mainAxisPos, 0)
+                                    : new Vector2(0, mainAxisPos),
+                            },
+                        }
+                    );
                 }
 
                 mainAxisPos += childMainAxisSize + spacing;
@@ -413,15 +462,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         // intrinsic size on its cross axis (it stretches to the constraint), so that axis returns 0. In lazy mode
         // this returns the same estimate TotalContentSize() is based on rather than forcing a full measurement of
         // every item -- which would defeat laziness the moment any ancestor queries it.
-        protected override float ComputeIntrinsicHeight(float width)
-            => _state.Axis == Axis.Horizontal ? 0 : ComputeIntrinsicMainAxisSize(width);
+        protected override float ComputeIntrinsicHeight(float width) =>
+            _state.Axis == Axis.Horizontal ? 0 : ComputeIntrinsicMainAxisSize(width);
 
-        protected override float ComputeIntrinsicWidth(float height)
-            => _state.Axis == Axis.Vertical ? 0 : ComputeIntrinsicMainAxisSize(height);
+        protected override float ComputeIntrinsicWidth(float height) =>
+            _state.Axis == Axis.Vertical ? 0 : ComputeIntrinsicMainAxisSize(height);
 
         private float ComputeIntrinsicMainAxisSize(float crossAxisExtent)
         {
-            if (_state.ItemCount.HasValue) return EstimateLazyContentMainAxisSize();
+            if (_state.ItemCount.HasValue)
+                return EstimateLazyContentMainAxisSize();
 
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var children = _state.AllChildren;
@@ -463,11 +513,18 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var childOffset = 0f;
             for (var i = 0; i < index; i++)
-                childOffset += (isHorizontal ? _allChildrenSizes[i].x : _allChildrenSizes[i].y) + _state.Spacing;
+                childOffset +=
+                    (isHorizontal ? _allChildrenSizes[i].x : _allChildrenSizes[i].y)
+                    + _state.Spacing;
 
             var childSize = isHorizontal ? _allChildrenSizes[index].x : _allChildrenSizes[index].y;
 
-            childOffset = SliverLayoutMath.AlignToScrollPosition(childOffset, childSize, viewportSize, position);
+            childOffset = SliverLayoutMath.AlignToScrollPosition(
+                childOffset,
+                childSize,
+                viewportSize,
+                position
+            );
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
 
@@ -490,13 +547,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return 0;
 
             var childOffset = EstimateLeadingEdgeOffset(index);
-            var childSize = _state.ItemExtent.HasValue
-                ? _state.ItemExtent.Value
-                : _measuredExtents.TryGetValue(index, out var exact)
-                    ? exact
-                    : _averageExtent;
+            var childSize =
+                _state.ItemExtent.HasValue ? _state.ItemExtent.Value
+                : _measuredExtents.TryGetValue(index, out var exact) ? exact
+                : _averageExtent;
 
-            childOffset = SliverLayoutMath.AlignToScrollPosition(childOffset, childSize, viewportSize, position);
+            childOffset = SliverLayoutMath.AlignToScrollPosition(
+                childOffset,
+                childSize,
+                viewportSize,
+                position
+            );
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
         }
 

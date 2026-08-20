@@ -16,7 +16,8 @@ namespace UniMob.UI.Tests
                 bottomLeft: new Vector2(canvasRect.xMin, canvasRect.yMin),
                 topLeft: new Vector2(canvasRect.xMin, canvasRect.yMax),
                 topRight: new Vector2(canvasRect.xMax, canvasRect.yMax),
-                bottomRight: new Vector2(canvasRect.xMax, canvasRect.yMin));
+                bottomRight: new Vector2(canvasRect.xMax, canvasRect.yMin)
+            );
 
             return new WidgetGeometry(quad, quad);
         }
@@ -53,7 +54,12 @@ namespace UniMob.UI.Tests
         [Test]
         public void Quad_IndexerFollowsWorldCornerOrder()
         {
-            var quad = new Quad(new Vector2(1, 2), new Vector2(3, 4), new Vector2(5, 6), new Vector2(7, 8));
+            var quad = new Quad(
+                new Vector2(1, 2),
+                new Vector2(3, 4),
+                new Vector2(5, 6),
+                new Vector2(7, 8)
+            );
 
             Assert.AreEqual(new Vector2(1, 2), quad[0], "index 0 is bottom-left");
             Assert.AreEqual(new Vector2(3, 4), quad[1], "index 1 is top-left");

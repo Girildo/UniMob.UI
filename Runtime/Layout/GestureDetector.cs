@@ -37,6 +37,7 @@ namespace UniMob.UI.Layout
         public Vector2 LocalPosition { get; set; }
         public Vector2 GlobalPosition { get; set; }
     }
+
     public record PointerDetails : GestureDetails
     {
         public Vector2 LocalPosition { get; set; }
@@ -65,11 +66,13 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderProxy((GestureDetectorState) state);
+            return new RenderProxy((GestureDetectorState)state);
         }
     }
 
-    public class GestureDetectorState : SingleChildLayoutState<GestureDetector>, IGestureDetectorState
+    public class GestureDetectorState
+        : SingleChildLayoutState<GestureDetector>,
+            IGestureDetectorState
     {
         public Action<TapDetails>? OnTap => Widget.OnTap;
         public Action<PointerDetails>? OnPointerDown => Widget.OnPointerDown;
@@ -79,6 +82,7 @@ namespace UniMob.UI.Layout
 
         public Action<DragDetails>? OnDragUpdate => Widget.OnDragUpdate;
 
-        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.GestureDetector");
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("$$_Layout.GestureDetector");
     }
 }

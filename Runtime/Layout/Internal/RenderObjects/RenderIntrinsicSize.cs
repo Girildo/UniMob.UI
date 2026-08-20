@@ -7,17 +7,30 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly IIntrinsicSizeState _state;
 
-        public RenderIntrinsicSize(IIntrinsicSizeState state) : base(state)
+        public RenderIntrinsicSize(IIntrinsicSizeState state)
+            : base(state)
         {
             _state = state;
         }
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
-
-            var childConstraints = _state.Axis == Axis.Horizontal
-                ? constraints.Tighten(width: GetIntrinsicWidth(constraints.HasBoundedHeight ? constraints.MaxHeight : float.PositiveInfinity))
-                : constraints.Tighten(height: GetIntrinsicHeight(constraints.HasBoundedWidth ? constraints.MaxWidth : float.PositiveInfinity));
+            var childConstraints =
+                _state.Axis == Axis.Horizontal
+                    ? constraints.Tighten(
+                        width: GetIntrinsicWidth(
+                            constraints.HasBoundedHeight
+                                ? constraints.MaxHeight
+                                : float.PositiveInfinity
+                        )
+                    )
+                    : constraints.Tighten(
+                        height: GetIntrinsicHeight(
+                            constraints.HasBoundedWidth
+                                ? constraints.MaxWidth
+                                : float.PositiveInfinity
+                        )
+                    );
             ChildSize = LayoutChild(_state.Child, childConstraints);
             return constraints.Constrain(ChildSize);
         }

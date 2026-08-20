@@ -14,7 +14,11 @@ namespace UniMob.UI.Tests
     {
         private readonly Func<object, Task<PopDecision<T>>> _decide;
 
-        public DecidingRoute(string key, RouteModalType modalType, Func<object, Task<PopDecision<T>>> decide)
+        public DecidingRoute(
+            string key,
+            RouteModalType modalType,
+            Func<object, Task<PopDecision<T>>> decide
+        )
             : base(new RouteSettings(key, modalType))
         {
             _decide = decide;
@@ -32,7 +36,8 @@ namespace UniMob.UI.Tests
     /// </summary>
     public class RouteResultTypingTests
     {
-        private static Task<PopDecision<int>> AllowWith(int value) => Task.FromResult(PopDecision<int>.Allow(value));
+        private static Task<PopDecision<int>> AllowWith(int value) =>
+            Task.FromResult(PopDecision<int>.Allow(value));
 
         [UnityTest]
         public IEnumerator PopWithValue_CompletesTheTypedResult_AndTheUntypedOne()
@@ -56,7 +61,11 @@ namespace UniMob.UI.Tests
             Assert.IsNull(route.Result.Result.Request);
 
             Assert.IsTrue(route.PopTask.Result.HasValue);
-            Assert.AreEqual(42, route.PopTask.Result.Value, "the untyped task carries the same value, boxed");
+            Assert.AreEqual(
+                42,
+                route.PopTask.Result.Value,
+                "the untyped task carries the same value, boxed"
+            );
         }
 
         [UnityTest]
@@ -72,8 +81,10 @@ namespace UniMob.UI.Tests
             route.Pop();
             yield return host.Settle();
 
-            Assert.IsFalse(route.Result.Result.HasValue,
-                "HasValue rather than a null check, because default(int) is a legitimate value");
+            Assert.IsFalse(
+                route.Result.Result.HasValue,
+                "HasValue rather than a null check, because default(int) is a legitimate value"
+            );
             Assert.AreEqual(default(int), route.Result.Result.Value);
             Assert.IsNull(route.Result.Result.Request);
         }
@@ -96,8 +107,11 @@ namespace UniMob.UI.Tests
             Assert.IsTrue(route.Result.Result.HasValue);
             Assert.AreEqual(7, route.Result.Result.Value);
             Assert.AreEqual(PopCause.Requested, route.Result.Result.Cause);
-            Assert.AreSame(request, route.Result.Result.Request,
-                "who asked and what the route answered travel together");
+            Assert.AreSame(
+                request,
+                route.Result.Result.Request,
+                "who asked and what the route answered travel together"
+            );
         }
 
         [UnityTest]
@@ -106,8 +120,11 @@ namespace UniMob.UI.Tests
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
 
-            var route = new DecidingRoute<int>("D", RouteModalType.Popup,
-                _ => Task.FromResult(PopDecision<int>.Allow()));
+            var route = new DecidingRoute<int>(
+                "D",
+                RouteModalType.Popup,
+                _ => Task.FromResult(PopDecision<int>.Allow())
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
@@ -124,8 +141,11 @@ namespace UniMob.UI.Tests
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
 
-            var route = new DecidingRoute<int>("D", RouteModalType.Popup,
-                _ => Task.FromResult(PopDecision<int>.Refuse()));
+            var route = new DecidingRoute<int>(
+                "D",
+                RouteModalType.Popup,
+                _ => Task.FromResult(PopDecision<int>.Refuse())
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
@@ -152,7 +172,10 @@ namespace UniMob.UI.Tests
             Assert.IsTrue(route.Result.IsCompleted);
             Assert.IsFalse(route.Result.Result.HasValue);
             Assert.AreEqual(PopCause.Teardown, route.Result.Result.Cause);
-            Assert.IsNull(route.Result.Result.Request, "nobody asked, so there is nothing to have asked with");
+            Assert.IsNull(
+                route.Result.Result.Request,
+                "nobody asked, so there is nothing to have asked with"
+            );
         }
 
         [UnityTest]
@@ -161,15 +184,21 @@ namespace UniMob.UI.Tests
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
 
-            var route = new DecidingRoute<string>("D", RouteModalType.Popup,
-                _ => Task.FromResult(PopDecision<string>.Allow()));
+            var route = new DecidingRoute<string>(
+                "D",
+                RouteModalType.Popup,
+                _ => Task.FromResult(PopDecision<string>.Allow())
+            );
             host.Navigator.Push(route);
             yield return host.Settle();
 
             route.Pop(null);
             yield return host.Settle();
 
-            Assert.IsTrue(route.Result.Result.HasValue, "the route said it had a value; that the value is null is its business");
+            Assert.IsTrue(
+                route.Result.Result.HasValue,
+                "the route said it had a value; that the value is null is its business"
+            );
             Assert.IsNull(route.Result.Result.Value);
         }
 
@@ -216,10 +245,14 @@ namespace UniMob.UI.Tests
 
             Assert.IsTrue(untypedAwaiter.IsCompleted, "the PopTask awaiter resumed");
             Assert.IsTrue(typedAwaiter.IsCompleted, "the Result awaiter resumed");
-            Assert.IsTrue(typedWasCompleteWhenUntypedResumed,
-                "an awaiter of PopTask must not resume before Result is complete");
-            Assert.IsTrue(untypedWasCompleteWhenTypedResumed,
-                "an awaiter of Result must not resume before PopTask is complete");
+            Assert.IsTrue(
+                typedWasCompleteWhenUntypedResumed,
+                "an awaiter of PopTask must not resume before Result is complete"
+            );
+            Assert.IsTrue(
+                untypedWasCompleteWhenTypedResumed,
+                "an awaiter of Result must not resume before PopTask is complete"
+            );
         }
     }
 }

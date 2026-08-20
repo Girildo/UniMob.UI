@@ -8,6 +8,7 @@ namespace UniMob.UI
         private readonly Widget _child;
 
         protected ProxyWidget(Func<Widget> childBuilder) => _childBuilder = childBuilder;
+
         protected ProxyWidget(Widget child) => _child = child;
 
         public Widget Child => _childBuilder?.Invoke() ?? _child;

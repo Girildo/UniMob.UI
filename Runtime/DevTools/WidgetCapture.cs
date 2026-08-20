@@ -41,7 +41,11 @@ namespace UniMob.UI.DevTools
             cam.backgroundColor = background;
             cam.targetTexture = rt;
 
-            var canvasGo = new GameObject("WidgetCaptureCanvas", typeof(RectTransform), typeof(Canvas));
+            var canvasGo = new GameObject(
+                "WidgetCaptureCanvas",
+                typeof(RectTransform),
+                typeof(Canvas)
+            );
             var canvas = canvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = cam;

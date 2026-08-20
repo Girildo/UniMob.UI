@@ -35,7 +35,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderTabs((ITabsLayoutState) state);
+            return new RenderTabs((ITabsLayoutState)state);
         }
 
         // Which page is showing, which the tree cannot say: every tab is laid out, and the ones either

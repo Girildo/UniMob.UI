@@ -6,16 +6,19 @@ using UniMob.UI.Layout.Internal.Views;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.Text",
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.Text",
     typeof(LayoutTextView),
-    typeof(UniMobTextMeshProBehaviour))]
+    typeof(UniMobTextMeshProBehaviour)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
     [RequireComponent(typeof(UniMobTextMeshProBehaviour))]
     public class LayoutTextView : View<ITextState>
     {
-        [SerializeField] private UniMobTextMeshProBehaviour text;
+        [SerializeField]
+        private UniMobTextMeshProBehaviour text;
 
         private void Awake()
         {
@@ -68,7 +71,8 @@ namespace UniMob.UI.Layout.Internal.Views
 
         protected override void Render()
         {
-            if (text == null) return;
+            if (text == null)
+                return;
 
             text.text = State.Value;
             // Sampled here rather than in Build: AnimationController.Value is an atom and Render is a
@@ -81,7 +85,6 @@ namespace UniMob.UI.Layout.Internal.Views
             text.overflowMode = State.OverflowMode;
             text.maxVisibleLines = State.MaxLines;
 
-
             text.horizontalAlignment = State.HorizontalTextAlign switch
             {
                 HorizontalTextAlignment.Left => HorizontalAlignmentOptions.Left,
@@ -90,7 +93,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 HorizontalTextAlignment.Justified => HorizontalAlignmentOptions.Justified,
                 HorizontalTextAlignment.Flush => HorizontalAlignmentOptions.Flush,
                 HorizontalTextAlignment.Geometry => HorizontalAlignmentOptions.Geometry,
-                _ => HorizontalAlignmentOptions.Left
+                _ => HorizontalAlignmentOptions.Left,
             };
 
             text.verticalAlignment = VerticalAlignmentOptions.Middle;

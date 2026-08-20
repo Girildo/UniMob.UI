@@ -5,7 +5,7 @@ namespace UniMob.UI.Layout
     public enum FlexFit
     {
         Loose,
-        Tight
+        Tight,
     }
 
     internal interface IFlexible : ISingleChildLayoutWidget
@@ -19,10 +19,12 @@ namespace UniMob.UI.Layout
         public int Flex { get; set; } = 1;
 
         public FlexFit Fit => FlexFit.Tight;
+
         public override State CreateState() => new FlexibleState();
+
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderProxy((FlexibleState) state);
+            return new RenderProxy((FlexibleState)state);
         }
     }
 
@@ -35,7 +37,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderProxy((FlexibleState) state);
+            return new RenderProxy((FlexibleState)state);
         }
     }
 

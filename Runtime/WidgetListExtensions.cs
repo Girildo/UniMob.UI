@@ -18,7 +18,10 @@ namespace UniMob.UI
             }
         }
 
-        public static void Add(this List<Widget> list, (bool when, Func<IEnumerable<Widget>> add) value)
+        public static void Add(
+            this List<Widget> list,
+            (bool when, Func<IEnumerable<Widget>> add) value
+        )
         {
             if (value.when)
             {

@@ -46,12 +46,18 @@ namespace UniMob.UI.Tests
 
             try
             {
-                Atom.Reaction(lifetime.Lifetime, () => watched.ScreenState, state => seen.Add(state));
+                Atom.Reaction(
+                    lifetime.Lifetime,
+                    () => watched.ScreenState,
+                    state => seen.Add(state)
+                );
 
                 host.Navigator.Push(watched);
                 yield return host.Settle();
 
-                host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                host.Navigator.Push(
+                    host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                );
                 yield return host.Settle();
 
                 host.Navigator.TopmostRoute.Pop();
@@ -75,7 +81,8 @@ namespace UniMob.UI.Tests
                     ScreenState.Destroyed,
                 },
                 seen,
-                "pushed, covered by C, uncovered when C popped, then popped itself");
+                "pushed, covered by C, uncovered when C popped, then popped itself"
+            );
         }
 
         /// <summary>
@@ -96,7 +103,8 @@ namespace UniMob.UI.Tests
             var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
             var applied = new List<string>();
 
-            route.ScreenEventApplied += screenEvent => applied.Add(screenEvent + " -> " + route.ScreenState);
+            route.ScreenEventApplied += screenEvent =>
+                applied.Add(screenEvent + " -> " + route.ScreenState);
 
             route.ApplyScreenEvent(ScreenEvent.Create);
             route.ApplyScreenEvent(ScreenEvent.Focus);
@@ -106,12 +114,14 @@ namespace UniMob.UI.Tests
             CollectionAssert.AreEqual(
                 new[] { "Create -> Created", "Focus -> Resumed", "Focus -> Focused" },
                 applied,
-                "one firing per transition, in the order the machine took them");
+                "one firing per transition, in the order the machine took them"
+            );
 
             Assert.AreEqual(
                 "  R OnCreate\n  R OnResume\n  R OnFocus",
                 trace.ToString(),
-                "and the handlers those transitions run are unchanged");
+                "and the handlers those transitions run are unchanged"
+            );
         }
 
         /// <summary>
@@ -141,16 +151,21 @@ namespace UniMob.UI.Tests
             yield return null;
 
             Assert.AreEqual(ScreenState.Destroyed, removed.ScreenState);
-            Assert.AreEqual(ScreenState.Destroyed, tornDown.ScreenState,
-                "the state cannot tell the two endings apart");
+            Assert.AreEqual(
+                ScreenState.Destroyed,
+                tornDown.ScreenState,
+                "the state cannot tell the two endings apart"
+            );
 
             CollectionAssert.AreEqual(
                 new[] { ScreenEvent.Create, ScreenEvent.Destroy },
-                removedEvents);
+                removedEvents
+            );
             CollectionAssert.AreEqual(
                 new[] { ScreenEvent.Create, ScreenEvent.Teardown },
                 tornDownEvents,
-                "the event channel can");
+                "the event channel can"
+            );
         }
 
         /// <summary>
@@ -184,7 +199,8 @@ namespace UniMob.UI.Tests
             CollectionAssert.AreEqual(
                 new[] { "B Teardown", "A Teardown" },
                 endings,
-                "topmost first, in the order the navigator tears its stack down");
+                "topmost first, in the order the navigator tears its stack down"
+            );
         }
 
         /// <summary>
@@ -205,7 +221,8 @@ namespace UniMob.UI.Tests
             var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
             var heard = new List<ScreenEvent>();
 
-            route.ScreenEventApplied += _ => throw new InvalidOperationException("subscriber failed");
+            route.ScreenEventApplied += _ =>
+                throw new InvalidOperationException("subscriber failed");
             route.ScreenEventApplied += heard.Add;
 
             route.ApplyScreenEvent(ScreenEvent.Create);
@@ -213,13 +230,18 @@ namespace UniMob.UI.Tests
 
             yield return null;
 
-            Assert.AreEqual(ScreenState.Destroyed, route.ScreenState, "the transitions still happened");
+            Assert.AreEqual(
+                ScreenState.Destroyed,
+                route.ScreenState,
+                "the transitions still happened"
+            );
             Assert.IsTrue(route.PopTask.IsCompleted, "and the destroy still ended the route");
 
             CollectionAssert.AreEqual(
                 new[] { ScreenEvent.Create, ScreenEvent.Destroy },
                 heard,
-                "the subscriber after the failing one still heard both");
+                "the subscriber after the failing one still heard both"
+            );
         }
 
         /// <summary>
@@ -251,7 +273,10 @@ namespace UniMob.UI.Tests
 
             // Reads the state the notification was published alongside, which is what a real subscriber
             // wanting to act on where the route now is would do.
-            route.ScreenEventApplied += screenEvent => { _ = route.ScreenState; };
+            route.ScreenEventApplied += screenEvent =>
+            {
+                _ = route.ScreenState;
+            };
 
             var runs = 0;
             var unrelated = Atom.Value(0);
@@ -259,29 +284,39 @@ namespace UniMob.UI.Tests
 
             try
             {
-                Atom.Reaction(lifetime.Lifetime, () =>
-                {
-                    runs++;
-                    _ = unrelated.Value;
-
-                    if (runs == 1)
+                Atom.Reaction(
+                    lifetime.Lifetime,
+                    () =>
                     {
-                        route.ApplyScreenEvent(ScreenEvent.Create);
+                        runs++;
+                        _ = unrelated.Value;
+
+                        if (runs == 1)
+                        {
+                            route.ApplyScreenEvent(ScreenEvent.Create);
+                        }
                     }
-                });
+                );
 
                 yield return null;
                 yield return null;
 
-                Assert.AreEqual(1, runs, "the reaction has run once, and drove a transition from inside it");
+                Assert.AreEqual(
+                    1,
+                    runs,
+                    "the reaction has run once, and drove a transition from inside it"
+                );
 
                 route.ApplyScreenEvent(ScreenEvent.Destroy);
 
                 yield return null;
                 yield return null;
 
-                Assert.AreEqual(1, runs,
-                    "a later transition the reaction had nothing to do with must not re-run it");
+                Assert.AreEqual(
+                    1,
+                    runs,
+                    "a later transition the reaction had nothing to do with must not re-run it"
+                );
             }
             finally
             {

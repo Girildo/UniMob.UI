@@ -100,6 +100,5 @@ namespace UniMob.UI.Tests
                     + "report subscribed its layout to that ancestor"
             );
         }
-
     }
 }

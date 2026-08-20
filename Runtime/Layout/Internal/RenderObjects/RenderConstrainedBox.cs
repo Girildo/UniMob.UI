@@ -7,11 +7,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         LayoutConstraints BoxConstraints { get; }
     }
+
     public class RenderConstrainedBox : RenderProxy
     {
         private readonly IConstrainedBoxState _state;
 
-        public RenderConstrainedBox(IConstrainedBoxState state) : base(state)
+        public RenderConstrainedBox(IConstrainedBoxState state)
+            : base(state)
         {
             this._state = state;
         }
@@ -43,12 +45,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // If the box was asked to expand (Infinity), but the parent ALSO gave infinite space,
             // we must collapse back to the parent's safest minimum bound (usually 0) to avoid crashing Unity.
-            if (float.IsPositiveInfinity(width)) width = constraints.MinWidth;
-            if (float.IsPositiveInfinity(height)) height = constraints.MinHeight;
+            if (float.IsPositiveInfinity(width))
+                width = constraints.MinWidth;
+            if (float.IsPositiveInfinity(height))
+                height = constraints.MinHeight;
 
             return new Vector2(width, height);
         }
-
 
         // Intrinsic sizing is also delegated directly to the child, but constrained
         // by the BoxConstraints.
@@ -71,7 +74,5 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var childIntrinsicHeight = base.ComputeIntrinsicHeight(width);
             return selfConstraints.ConstrainHeight(childIntrinsicHeight);
         }
-
-
     }
 }

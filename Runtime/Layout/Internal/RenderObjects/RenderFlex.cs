@@ -12,7 +12,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         MainAxisAlignment MainAxisAlignment { get; }
         AxisSize MainAxisSize { get; }
         float Spacing { get; }
-
     }
 
     public class RenderFlex : MultiChildRenderObject
@@ -23,8 +22,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private readonly List<int> _nonFlexChildrenIndices = new();
         private readonly List<(int index, int flex, FlexFit fit)> _flexChildrenData = new();
 
-
-        public RenderFlex(IFlexContainerState state, Axis axis) : base(state)
+        public RenderFlex(IFlexContainerState state, Axis axis)
+            : base(state)
         {
             _state = state;
             _axis = axis;
@@ -47,7 +46,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var isHorizontal = _axis == Axis.Horizontal;
             var maxMainAxis = isHorizontal ? constraints.MaxWidth : constraints.MaxHeight;
-            var maxCrossAxis = isHorizontal ? constraints.MaxHeight : constraints.MaxWidth;            
+            var maxCrossAxis = isHorizontal ? constraints.MaxHeight : constraints.MaxWidth;
 
             // --- First Pass: Identify flex vs. non-flex children ---
             var childCount = _state.Children.Length;
@@ -57,7 +56,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 ChildrenLayoutBuffer.Add(new LayoutInfo()); // Add a placeholder
 
-                var isFlexible = TryGetFlex(childState, isHorizontal, out var flexFactor, out var fit);
+                var isFlexible = TryGetFlex(
+                    childState,
+                    isHorizontal,
+                    out var flexFactor,
+                    out var fit
+                );
 
                 if (isFlexible)
                 {
@@ -118,7 +122,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 }
 
                 mainAxisTotalSize += isHorizontal ? childSize.x : childSize.y;
-                crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
+                crossAxisMaxSize = Mathf.Max(
+                    crossAxisMaxSize,
+                    isHorizontal ? childSize.y : childSize.x
+                );
             }
 
             // --- Calculate total fixed spacing ---
@@ -147,7 +154,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 foreach (var (i, flex, fit) in _flexChildrenData)
                 {
-                    var flexSpace = freeSpace * (flex / (float) totalFlexFactor);
+                    var flexSpace = freeSpace * (flex / (float)totalFlexFactor);
 
                     // Fit decides the MAIN axis only: tight pins the child to its share, loose lets it
                     // take less. The cross axis is the flex's own box either way, so it is passed on
@@ -158,20 +165,45 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     LayoutConstraints flexConstraints;
                     if (isHorizontal)
                     {
-                        flexConstraints = fit == FlexFit.Tight
-                                    ? new LayoutConstraints(minWidth: flexSpace, minHeight: 0, maxWidth: flexSpace, maxHeight: maxCrossAxis)
-                                    : new LayoutConstraints(minWidth: 0, minHeight: 0, maxWidth: flexSpace, maxHeight: maxCrossAxis);
+                        flexConstraints =
+                            fit == FlexFit.Tight
+                                ? new LayoutConstraints(
+                                    minWidth: flexSpace,
+                                    minHeight: 0,
+                                    maxWidth: flexSpace,
+                                    maxHeight: maxCrossAxis
+                                )
+                                : new LayoutConstraints(
+                                    minWidth: 0,
+                                    minHeight: 0,
+                                    maxWidth: flexSpace,
+                                    maxHeight: maxCrossAxis
+                                );
 
-                        flexConstraints = flexConstraints.Tighten(height: shouldStretchCrossAxis ? maxCrossAxis : null);
+                        flexConstraints = flexConstraints.Tighten(
+                            height: shouldStretchCrossAxis ? maxCrossAxis : null
+                        );
                     }
                     else // isVertical
                     {
-                        flexConstraints = fit == FlexFit.Tight
-                                    ? new LayoutConstraints(minWidth: 0, minHeight: flexSpace, maxWidth: maxCrossAxis, maxHeight: flexSpace)
-                                    : new LayoutConstraints(minWidth: 0, minHeight: 0, maxWidth: maxCrossAxis, maxHeight: flexSpace);
+                        flexConstraints =
+                            fit == FlexFit.Tight
+                                ? new LayoutConstraints(
+                                    minWidth: 0,
+                                    minHeight: flexSpace,
+                                    maxWidth: maxCrossAxis,
+                                    maxHeight: flexSpace
+                                )
+                                : new LayoutConstraints(
+                                    minWidth: 0,
+                                    minHeight: 0,
+                                    maxWidth: maxCrossAxis,
+                                    maxHeight: flexSpace
+                                );
 
-
-                        flexConstraints = flexConstraints.Tighten(width: shouldStretchCrossAxis ? maxCrossAxis : null);
+                        flexConstraints = flexConstraints.Tighten(
+                            width: shouldStretchCrossAxis ? maxCrossAxis : null
+                        );
                     }
 
                     var childSize = LayoutChild(_state.Children[i], flexConstraints);
@@ -191,7 +223,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                         ReportNonFiniteChildSize(i, MainAxis, WrapInFlexible);
                     }
 
-                    crossAxisMaxSize = Mathf.Max(crossAxisMaxSize, isHorizontal ? childSize.y : childSize.x);
+                    crossAxisMaxSize = Mathf.Max(
+                        crossAxisMaxSize,
+                        isHorizontal ? childSize.y : childSize.x
+                    );
                 }
             }
 
@@ -203,15 +238,14 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             }
             _unconstrainedMainAxisSize = totalUsedMainAxisSize + totalSpacing;
 
-            var finalMainAxisSize = _state.MainAxisSize == AxisSize.Max ? maxMainAxis : _unconstrainedMainAxisSize;
+            var finalMainAxisSize =
+                _state.MainAxisSize == AxisSize.Max ? maxMainAxis : _unconstrainedMainAxisSize;
 
             var finalSize = isHorizontal
                 ? new Vector2(finalMainAxisSize, crossAxisMaxSize)
                 : new Vector2(crossAxisMaxSize, finalMainAxisSize);
 
             return constraints.Constrain(finalSize);
-
-
         }
 
         protected override void PerformPositioning(Vector2 size)
@@ -260,7 +294,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 var crossAxisSize = isHorizontal ? size.y : size.x;
                 var childCrossAxisSize = isHorizontal ? layout.Size.y : layout.Size.x;
 
-
                 var crossAxisPos = _state.CrossAxisAlignment switch
                 {
                     CrossAxisAlignment.Center => (crossAxisSize - childCrossAxisSize) / 2f,
@@ -299,7 +332,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return totalHeight;
             }
             else // Max of heights (for a Row): mirror PerformSizing's flex distribution so each
-                 // child is measured at the width it will actually receive, not at infinity.
+            // child is measured at the width it will actually receive, not at infinity.
             {
                 var totalFlex = 0;
                 var inflexibleWidth = 0f;
@@ -331,10 +364,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                     foreach (var child in _state.Children)
                     {
-                        if (!TryGetFlex(child, isHorizontal: true, out var flex, out _)) continue;
+                        if (!TryGetFlex(child, isHorizontal: true, out var flex, out _))
+                            continue;
 
-                        var childWidth = float.IsInfinity(spacePerFlex) ? float.PositiveInfinity : spacePerFlex * flex;
-                        maxHeight = Mathf.Max(maxHeight, GetChildIntrinsicHeight(child, childWidth));
+                        var childWidth = float.IsInfinity(spacePerFlex)
+                            ? float.PositiveInfinity
+                            : spacePerFlex * flex;
+                        maxHeight = Mathf.Max(
+                            maxHeight,
+                            GetChildIntrinsicHeight(child, childWidth)
+                        );
                     }
                 }
 
@@ -352,7 +391,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                     totalWidth += GetChildIntrinsicWidth(child, height);
                 }
 
-
                 if (_state.Children.Length > 0)
                 {
                     totalWidth += Mathf.Max(0, _state.Children.Length - 1) * _state.Spacing;
@@ -361,7 +399,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return totalWidth;
             }
             else // Max of widths (for a Column): mirror PerformSizing's flex distribution so each
-                 // child is measured at the height it will actually receive, not at infinity.
+            // child is measured at the height it will actually receive, not at infinity.
             {
                 var totalFlex = 0;
                 var inflexibleHeight = 0f;
@@ -393,9 +431,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                     foreach (var child in _state.Children)
                     {
-                        if (!TryGetFlex(child, isHorizontal: false, out var flex, out _)) continue;
+                        if (!TryGetFlex(child, isHorizontal: false, out var flex, out _))
+                            continue;
 
-                        var childHeight = float.IsInfinity(spacePerFlex) ? float.PositiveInfinity : spacePerFlex * flex;
+                        var childHeight = float.IsInfinity(spacePerFlex)
+                            ? float.PositiveInfinity
+                            : spacePerFlex * flex;
                         maxWidth = Mathf.Max(maxWidth, GetChildIntrinsicWidth(child, childHeight));
                     }
                 }
@@ -450,7 +491,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         // Shared with PerformSizing() so the intrinsic-size estimate can never silently diverge
         // from what the real flex layout pass actually does.
-        private static bool TryGetFlex(IState child, bool isHorizontal, out int flex, out FlexFit fit)
+        private static bool TryGetFlex(
+            IState child,
+            bool isHorizontal,
+            out int flex,
+            out FlexFit fit
+        )
         {
             // -- remark: we use InnerViewState because Expanded might be composed inside other Hoc widgets
             if (child.InnerViewState is FlexibleState flexible)

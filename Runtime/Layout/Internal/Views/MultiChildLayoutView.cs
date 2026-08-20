@@ -7,18 +7,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
+using UniMob.UI.Layout.Internal.RenderObjects;
+using UniMob.UI.Layout.Internal.Views;
+using UnityEngine;
 #if UNIMOB_UI_DIAGNOSTICS
 // LayoutWarningOverlay is the only type in this namespace and it compiles out with the diagnostics,
 // taking the namespace with it -- so an unguarded using of it is a compile error in a build without.
 using UniMob.UI.Layout.Internal.Diagnostics;
 #endif
-using UniMob.UI.Layout.Internal.RenderObjects;
-using UniMob.UI.Layout.Internal.Views;
-using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.MultiChildLayoutView",
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.MultiChildLayoutView",
     typeof(RectTransform),
-    typeof(MultiChildLayoutView))]
+    typeof(MultiChildLayoutView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -64,7 +66,6 @@ namespace UniMob.UI.Layout.Internal.Views
             {
                 var child = State.Children[i];
 
-
                 if (child is null)
                 {
                     // Structural, so it stays a throw: there is no layout to continue with and no
@@ -94,10 +95,7 @@ namespace UniMob.UI.Layout.Internal.Views
                 rt.anchorMin = new Vector2(0, 1);
                 rt.anchorMax = new Vector2(0, 1);
 
-                var pivotOffset = new Vector2(
-                    size.x * rt.pivot.x,
-                    -size.y * (1.0f - rt.pivot.y)
-                );
+                var pivotOffset = new Vector2(size.x * rt.pivot.x, -size.y * (1.0f - rt.pivot.y));
 
                 rt.sizeDelta = size;
                 rt.anchoredPosition =

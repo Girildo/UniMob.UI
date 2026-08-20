@@ -7,7 +7,8 @@ namespace UniMob.UI.Internal.ViewLoaders
 {
     internal class InternalViewLoader : IViewLoader
     {
-        private readonly Dictionary<string, Func<GameObject>> _builders = new Dictionary<string, Func<GameObject>>();
+        private readonly Dictionary<string, Func<GameObject>> _builders =
+            new Dictionary<string, Func<GameObject>>();
         private readonly Dictionary<string, IView> _cache = new Dictionary<string, IView>();
 
         private GameObject templatesRootObject;
@@ -16,7 +17,10 @@ namespace UniMob.UI.Internal.ViewLoaders
         {
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                var attributes = assembly.GetCustomAttributes(typeof(RegisterViewFactoryAttribute), false);
+                var attributes = assembly.GetCustomAttributes(
+                    typeof(RegisterViewFactoryAttribute),
+                    false
+                );
                 foreach (RegisterViewFactoryAttribute attribute in attributes)
                 {
                     var factory = attribute.CreateFactory();
@@ -39,8 +43,10 @@ namespace UniMob.UI.Internal.ViewLoaders
 
         public IView LoadViewPrefab(WidgetViewReference viewReference)
         {
-            if (viewReference.Type != WidgetViewReferenceType.Resource ||
-                !viewReference.Path.StartsWith("$$_"))
+            if (
+                viewReference.Type != WidgetViewReferenceType.Resource
+                || !viewReference.Path.StartsWith("$$_")
+            )
             {
                 return null;
             }

@@ -9,7 +9,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     public class RenderWrap : MultiChildRenderObject
     {
         private readonly IWrapState _state;
-        
+
         // Immutable properties pulled directly from state
         private Axis Direction => _state.Direction;
         private float Spacing => _state.Spacing;
@@ -17,20 +17,20 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private MainAxisAlignment Alignment => _state.Alignment;
         private CrossAxisAlignment CrossAxisAlignment => _state.CrossAxisAlignment;
         private MainAxisAlignment RunAlignment => _state.RunAlignment;
-        
-
 
         private class RunMetrics
         {
             public int StartIndex;
             public int Count;
-            public float MainSize;         // Includes the standard 'Spacing' between items
+            public float MainSize; // Includes the standard 'Spacing' between items
             public float ChildrenMainSize; // Raw size of children without spacing
             public float CrossSize;
         }
+
         private readonly List<RunMetrics> _runs = new();
 
-        public RenderWrap(IWrapState state) : base(state)
+        public RenderWrap(IWrapState state)
+            : base(state)
         {
             _state = state;
         }
@@ -40,7 +40,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             ChildrenLayoutBuffer.Clear();
             _runs.Clear();
 
-            var childConstraints = constraints.Loosen(); 
+            var childConstraints = constraints.Loosen();
 
             var currentMain = 0f;
             var childrenMainSum = 0f;
@@ -55,7 +55,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 var child = _state.Children[i];
                 var childSize = LayoutChild(child, childConstraints);
-                
+
                 ChildrenLayoutBuffer.Add(new LayoutInfo { Size = childSize });
 
                 var childMain = Direction == Axis.Horizontal ? childSize.x : childSize.y;
@@ -116,8 +116,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // 1. Calculate Run Alignment (Cross Axis Distribution of the lines)
             var totalRunsCrossSize = 0f;
-            foreach (var r in _runs) totalRunsCrossSize += r.CrossSize;
-            
+            foreach (var r in _runs)
+                totalRunsCrossSize += r.CrossSize;
+
             var freeRunSpace = Mathf.Max(0, wrapCrossSize - totalRunsCrossSize);
             var currentCross = 0f;
             var runStep = RunSpacing;
@@ -126,12 +127,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             {
                 switch (RunAlignment)
                 {
-                    case MainAxisAlignment.Start: break;
-                    case MainAxisAlignment.End: 
-                        currentCross = freeRunSpace - (_runs.Count - 1) * RunSpacing; 
+                    case MainAxisAlignment.Start:
                         break;
-                    case MainAxisAlignment.Center: 
-                        currentCross = (freeRunSpace - (_runs.Count - 1) * RunSpacing) / 2f; 
+                    case MainAxisAlignment.End:
+                        currentCross = freeRunSpace - (_runs.Count - 1) * RunSpacing;
+                        break;
+                    case MainAxisAlignment.Center:
+                        currentCross = (freeRunSpace - (_runs.Count - 1) * RunSpacing) / 2f;
                         break;
                     case MainAxisAlignment.SpaceBetween:
                         runStep = _runs.Count > 1 ? freeRunSpace / (_runs.Count - 1) : 0;
@@ -161,13 +163,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 {
                     switch (Alignment)
                     {
-                        case MainAxisAlignment.Start: 
+                        case MainAxisAlignment.Start:
                             break;
-                        case MainAxisAlignment.End: 
-                            currentMain = freeMainSpace - (run.Count - 1) * Spacing; 
+                        case MainAxisAlignment.End:
+                            currentMain = freeMainSpace - (run.Count - 1) * Spacing;
                             break;
-                        case MainAxisAlignment.Center: 
-                            currentMain = (freeMainSpace - (run.Count - 1) * Spacing) / 2f; 
+                        case MainAxisAlignment.Center:
+                            currentMain = (freeMainSpace - (run.Count - 1) * Spacing) / 2f;
                             break;
                         case MainAxisAlignment.SpaceBetween:
                             mainStep = run.Count > 1 ? freeMainSpace / (run.Count - 1) : 0;
@@ -187,9 +189,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 {
                     var childIndex = run.StartIndex + i;
                     var layoutData = ChildrenLayoutBuffer[childIndex];
-                    
-                    var childMain = Direction == Axis.Horizontal ? layoutData.Size.x : layoutData.Size.y;
-                    var childCross = Direction == Axis.Horizontal ? layoutData.Size.y : layoutData.Size.x;
+
+                    var childMain =
+                        Direction == Axis.Horizontal ? layoutData.Size.x : layoutData.Size.y;
+                    var childCross =
+                        Direction == Axis.Horizontal ? layoutData.Size.y : layoutData.Size.x;
 
                     // Calculate CrossAxisAlignment (Vertical alignment within the line's max height)
                     var childCrossOffset = 0f;
@@ -197,18 +201,25 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                     switch (CrossAxisAlignment)
                     {
-                        case CrossAxisAlignment.Start: break;
-                        case CrossAxisAlignment.End: childCrossOffset = freeChildCross; break;
-                        case CrossAxisAlignment.Center: childCrossOffset = freeChildCross / 2f; break;
-                        case CrossAxisAlignment.Stretch: 
+                        case CrossAxisAlignment.Start:
+                            break;
+                        case CrossAxisAlignment.End:
+                            childCrossOffset = freeChildCross;
+                            break;
+                        case CrossAxisAlignment.Center:
+                            childCrossOffset = freeChildCross / 2f;
+                            break;
+                        case CrossAxisAlignment.Stretch:
                             childCross = run.CrossSize;
-                            if (Direction == Axis.Horizontal) layoutData.Size.y = childCross;
-                            else layoutData.Size.x = childCross;
+                            if (Direction == Axis.Horizontal)
+                                layoutData.Size.y = childCross;
+                            else
+                                layoutData.Size.x = childCross;
                             break;
                     }
 
                     var finalCross = currentCross + childCrossOffset;
-                    
+
                     var xPos = Direction == Axis.Horizontal ? currentMain : finalCross;
                     var yPos = Direction == Axis.Horizontal ? finalCross : currentMain;
 

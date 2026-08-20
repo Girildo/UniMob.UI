@@ -29,24 +29,26 @@ namespace UniMob.UI.Layout
         public static Quad Empty => default;
 
         /// <summary>Indexer following the <c>GetWorldCorners</c> order: 0=BL, 1=TL, 2=TR, 3=BR.</summary>
-        public Vector2 this[int index] => index switch
-        {
-            0 => BottomLeft,
-            1 => TopLeft,
-            2 => TopRight,
-            3 => BottomRight,
-            _ => throw new IndexOutOfRangeException(),
-        };
+        public Vector2 this[int index] =>
+            index switch
+            {
+                0 => BottomLeft,
+                1 => TopLeft,
+                2 => TopRight,
+                3 => BottomRight,
+                _ => throw new IndexOutOfRangeException(),
+            };
 
         public bool Equals(Quad other) =>
-            BottomLeft == other.BottomLeft &&
-            TopLeft == other.TopLeft &&
-            TopRight == other.TopRight &&
-            BottomRight == other.BottomRight;
+            BottomLeft == other.BottomLeft
+            && TopLeft == other.TopLeft
+            && TopRight == other.TopRight
+            && BottomRight == other.BottomRight;
 
         public override bool Equals(object obj) => obj is Quad other && Equals(other);
 
-        public override int GetHashCode() => HashCode.Combine(BottomLeft, TopLeft, TopRight, BottomRight);
+        public override int GetHashCode() =>
+            HashCode.Combine(BottomLeft, TopLeft, TopRight, BottomRight);
 
         public static bool operator ==(Quad left, Quad right) => left.Equals(right);
 

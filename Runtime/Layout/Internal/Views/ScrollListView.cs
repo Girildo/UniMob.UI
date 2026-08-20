@@ -10,9 +10,14 @@ namespace UniMob.UI.Layout.Internal.Views
     [RequireComponent(typeof(RectTransform), typeof(ScrollRect), typeof(RectMask2D))]
     internal class ScrollListView : View<IScrollingListState>
     {
-        [SerializeField] private ScrollRect scrollRect;
-        [SerializeField] private RectTransform contentRoot;
-        [SerializeField] private RectMask2D rectMask;
+        [SerializeField]
+        private ScrollRect scrollRect;
+
+        [SerializeField]
+        private RectTransform contentRoot;
+
+        [SerializeField]
+        private RectMask2D rectMask;
         private bool _isUpdatingFromController;
 
         private ViewMapperBase _mapper;
@@ -22,22 +27,27 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             base.Awake();
             _mapper = new PooledViewMapper(contentRoot);
-            _rectTransform = (RectTransform) transform;
+            _rectTransform = (RectTransform)transform;
 
-            if (scrollRect == null) TryGetComponent(out scrollRect);
-            if (contentRoot == null) contentRoot = scrollRect.content;
-            if (rectMask == null) TryGetComponent(out rectMask);
+            if (scrollRect == null)
+                TryGetComponent(out scrollRect);
+            if (contentRoot == null)
+                contentRoot = scrollRect.content;
+            if (rectMask == null)
+                TryGetComponent(out rectMask);
 
             if (scrollRect.horizontal && scrollRect.vertical)
                 throw new InvalidOperationException(
-                    "ScrollRect cannot be both horizontal and vertical at the same time." +
-                    " Please set either horizontal or vertical to true, but not both.");
+                    "ScrollRect cannot be both horizontal and vertical at the same time."
+                        + " Please set either horizontal or vertical to true, but not both."
+                );
 
-            EnsurePivotAndAnchorsAreConsistentWithDirection(scrollRect.horizontal && !scrollRect.vertical);
+            EnsurePivotAndAnchorsAreConsistentWithDirection(
+                scrollRect.horizontal && !scrollRect.vertical
+            );
 
             scrollRect.onValueChanged.AddListener(OnScrollPositionChanged);
         }
-
 
         protected override void Activate()
         {
@@ -47,18 +57,21 @@ namespace UniMob.UI.Layout.Internal.Views
             var isHorizontal = State.Axis == Axis.Horizontal;
             ApplyPixelOffsetToScrollRect(State.ScrollController.PixelOffset, isHorizontal);
 
-            Atom.Reaction(StateLifetime, () =>
-            {
-                var controllerValue = State.ScrollController.PixelOffset;
-                var currentValue = ReadPixelOffsetFromScrollRect(isHorizontal);
-
-                if (Mathf.Abs(currentValue - controllerValue) > 0.5f)
+            Atom.Reaction(
+                StateLifetime,
+                () =>
                 {
-                    _isUpdatingFromController = true;
-                    ApplyPixelOffsetToScrollRect(controllerValue, isHorizontal);
-                    Zone.Current.NextFrame(() => _isUpdatingFromController = false);
+                    var controllerValue = State.ScrollController.PixelOffset;
+                    var currentValue = ReadPixelOffsetFromScrollRect(isHorizontal);
+
+                    if (Mathf.Abs(currentValue - controllerValue) > 0.5f)
+                    {
+                        _isUpdatingFromController = true;
+                        ApplyPixelOffsetToScrollRect(controllerValue, isHorizontal);
+                        Zone.Current.NextFrame(() => _isUpdatingFromController = false);
+                    }
                 }
-            });
+            );
         }
 
         // Total distance, in pixels, the content can scroll along the given axis. The ScrollRect's own
@@ -73,7 +86,9 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             var contentSize = contentRoot.rect.size;
             var viewportSize = _rectTransform.rect.size;
-            var dist = isHorizontal ? contentSize.x - viewportSize.x : contentSize.y - viewportSize.y;
+            var dist = isHorizontal
+                ? contentSize.x - viewportSize.x
+                : contentSize.y - viewportSize.y;
             return Mathf.Max(0, dist);
         }
 
@@ -94,7 +109,8 @@ namespace UniMob.UI.Layout.Internal.Views
         private void ApplyPixelOffsetToScrollRect(float pixelOffset, bool isHorizontal)
         {
             var totalScrollableDistance = GetTotalScrollableDistance(isHorizontal);
-            var normalized = totalScrollableDistance > 0 ? pixelOffset / totalScrollableDistance : 0f;
+            var normalized =
+                totalScrollableDistance > 0 ? pixelOffset / totalScrollableDistance : 0f;
 
             if (isHorizontal)
                 scrollRect.horizontalNormalizedPosition = normalized;
@@ -109,12 +125,15 @@ namespace UniMob.UI.Layout.Internal.Views
                 // For vertical, set pivot to the top.
                 : new Vector2(contentRoot.pivot.x, 1);
 
-
             var targetAnchorMin = isHorizontal ? new Vector2(0, 0) : new Vector2(0, 1);
             var targetAnchorMax = isHorizontal ? new Vector2(0, 1) : new Vector2(1, 1);
 
-            if (contentRoot.pivot == targetPivot && contentRoot.anchorMin == targetAnchorMin &&
-                contentRoot.anchorMax == targetAnchorMax) return;
+            if (
+                contentRoot.pivot == targetPivot
+                && contentRoot.anchorMin == targetAnchorMin
+                && contentRoot.anchorMax == targetAnchorMax
+            )
+                return;
 
             // To prevent the content from visually jumping when the pivot changes,
             // we calculate the positional offset caused by the pivot shift
@@ -128,22 +147,23 @@ namespace UniMob.UI.Layout.Internal.Views
             contentRoot.pivot = targetPivot;
 
             var pivotChange = contentRoot.pivot - originalPivot;
-            var positionChange = new Vector2(pivotChange.x * originalSize.x, pivotChange.y * originalSize.y);
+            var positionChange = new Vector2(
+                pivotChange.x * originalSize.x,
+                pivotChange.y * originalSize.y
+            );
             contentRoot.anchoredPosition -= positionChange;
         }
 
-
-
-
         protected override void Render()
         {
-            if (State.RenderObject is not IScrollableRenderObject renderObject) return;
+            if (State.RenderObject is not IScrollableRenderObject renderObject)
+                return;
 
-            if (rectMask != null) rectMask.enabled = State.UseMask;
+            if (rectMask != null)
+                rectMask.enabled = State.UseMask;
 
-            if ((int) scrollRect.movementType != (int) State.MovementType)
-                scrollRect.movementType = (ScrollRect.MovementType) (State.MovementType);
-
+            if ((int)scrollRect.movementType != (int)State.MovementType)
+                scrollRect.movementType = (ScrollRect.MovementType)(State.MovementType);
 
             var isHorizontal = State.Axis == Axis.Horizontal;
             var axisChanged = scrollRect.horizontal != isHorizontal;
@@ -153,8 +173,9 @@ namespace UniMob.UI.Layout.Internal.Views
 
             if (axisChanged)
             {
-                scrollRect.normalizedPosition = isHorizontal ? new Vector2(0, 0) : new Vector2(0, 1);
-
+                scrollRect.normalizedPosition = isHorizontal
+                    ? new Vector2(0, 0)
+                    : new Vector2(0, 1);
 
                 var targetPivot = isHorizontal ? new Vector2(0, 0.5f) : new Vector2(0.5f, 1);
                 var targetAnchorMin = isHorizontal ? new Vector2(0, 0) : new Vector2(0, 1);
@@ -163,8 +184,6 @@ namespace UniMob.UI.Layout.Internal.Views
                 contentRoot.anchorMin = targetAnchorMin;
                 contentRoot.anchorMax = targetAnchorMax;
                 contentRoot.pivot = targetPivot;
-
-
 
                 contentRoot.anchoredPosition = Vector2.zero;
                 contentRoot.offsetMax = Vector2.zero;
@@ -181,7 +200,6 @@ namespace UniMob.UI.Layout.Internal.Views
                     ? new Vector2(totalContentSize, contentRoot.sizeDelta.y)
                     : new Vector2(contentRoot.sizeDelta.x, totalContentSize);
 
-
             using (var render = _mapper.CreateRender())
             {
                 var children = State.Children;
@@ -196,21 +214,23 @@ namespace UniMob.UI.Layout.Internal.Views
                     rt.anchorMin = new Vector2(0, 1);
                     rt.anchorMax = new Vector2(0, 1);
 
-                    var pivotOffset = new Vector2(layoutData.Size.x * rt.pivot.x,
-                        -layoutData.Size.y * (1.0f - rt.pivot.y));
+                    var pivotOffset = new Vector2(
+                        layoutData.Size.x * rt.pivot.x,
+                        -layoutData.Size.y * (1.0f - rt.pivot.y)
+                    );
 
                     rt.sizeDelta = layoutData.Size;
 
                     rt.anchoredPosition =
-                        new Vector2(layoutData.Position.x, -layoutData.Position.y) +
-                        pivotOffset;
+                        new Vector2(layoutData.Position.x, -layoutData.Position.y) + pivotOffset;
                 }
             }
         }
 
         private void OnScrollPositionChanged(Vector2 normalizedPosition)
         {
-            if (_isUpdatingFromController || !HasState || State.StateLifetime.IsDisposed) return;
+            if (_isUpdatingFromController || !HasState || State.StateLifetime.IsDisposed)
+                return;
 
             var isHorizontal = State.Axis == Axis.Horizontal;
             var normalizedValue = isHorizontal ? normalizedPosition.x : 1 - normalizedPosition.y;
@@ -219,14 +239,24 @@ namespace UniMob.UI.Layout.Internal.Views
             // (drag/inertia/elastic-bounce/clamp) -- not re-derived on every layout pass. That's what keeps
             // PixelOffset stable against RenderSliverList's estimated TotalContentSize() drifting between
             // scroll events: as long as the user hasn't actually moved, nothing re-runs this conversion.
-            State.ScrollController.PixelOffset = normalizedValue * GetTotalScrollableDistance(isHorizontal);
+            State.ScrollController.PixelOffset =
+                normalizedValue * GetTotalScrollableDistance(isHorizontal);
         }
 
-        public bool ScrollTo(int index, float duration, ScrollToPosition scrollToPosition, Easing easing) // this should be moved to the controller
+        public bool ScrollTo(
+            int index,
+            float duration,
+            ScrollToPosition scrollToPosition,
+            Easing easing
+        ) // this should be moved to the controller
         {
-            if (State?.RenderObject is not IScrollableRenderObject renderSliver) return false;
+            if (State?.RenderObject is not IScrollableRenderObject renderSliver)
+                return false;
 
-            var targetPixelOffset = renderSliver.CalculateScrollPixelOffset(index, scrollToPosition);
+            var targetPixelOffset = renderSliver.CalculateScrollPixelOffset(
+                index,
+                scrollToPosition
+            );
 
             // Stop any existing scroll animations before starting a new one.
             StopAllCoroutines();
@@ -283,7 +313,6 @@ namespace UniMob.UI.Layout.Internal.Views
         }
     }
 
-
     internal interface IScrollingListState : IMultiChildLayoutState
     {
         ScrollController ScrollController { get; }
@@ -291,6 +320,5 @@ namespace UniMob.UI.Layout.Internal.Views
 
         public bool UseMask { get; }
         public MovementType MovementType { get; }
-
     }
 }

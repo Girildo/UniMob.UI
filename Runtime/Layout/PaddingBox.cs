@@ -1,7 +1,6 @@
 using System;
 using UniMob.UI.Layout.Internal.RenderObjects;
 
-
 namespace UniMob.UI.Layout
 {
     /// <summary>
@@ -11,11 +10,11 @@ namespace UniMob.UI.Layout
     {
         public RectPadding Padding { get; set; }
 
-        public PaddingBox()
-        {
-        }
+        public PaddingBox() { }
 
-        [Obsolete("Use the object-initializer form: new PaddingBox { Padding = ..., Child = ... }.")]
+        [Obsolete(
+            "Use the object-initializer form: new PaddingBox { Padding = ..., Child = ... }."
+        )]
         public PaddingBox(RectPadding padding)
         {
             this.Padding = padding;
@@ -25,10 +24,9 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderPadding((IPaddingState) state);
+            return new RenderPadding((IPaddingState)state);
         }
     }
-
 
     public interface IPaddingState : ISingleChildLayoutState
     {

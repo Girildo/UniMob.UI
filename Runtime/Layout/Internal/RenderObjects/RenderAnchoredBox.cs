@@ -278,6 +278,5 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private const string GiveItAFrame =
             "An AnchoredBox has no frame to place its child within, and keep-inside cannot hold "
             + "without one. Wrap it in Positioned.Fill, or pin the axis on the enclosing Positioned.";
-
     }
 }

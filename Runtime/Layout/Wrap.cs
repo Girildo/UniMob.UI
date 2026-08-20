@@ -14,16 +14,19 @@ namespace UniMob.UI.Layout
     public class Wrap : StatefulWidget, IMultiChildLayoutWidget
     {
         public List<Widget> Children { get; set; } = new List<Widget>();
+
         /// <summary>
-        /// Direction of a run. 
+        /// Direction of a run.
         /// If horizontal, children will be placed in a row and wrap to the next line when they exceed the available width.
         /// If vertical, children will be placed in a column and wrap to the next column when they exceed the available height.
         /// </summary>
         public Axis Direction { get; set; } = Axis.Horizontal;
+
         /// <summary>
         /// The spacing between children in the main axis.
         /// </summary>
         public float Spacing { get; set; } = 8f;
+
         /// <summary>
         /// The spacing between runs in the cross axis.
         /// </summary>
@@ -33,32 +36,37 @@ namespace UniMob.UI.Layout
         /// How the children within a run should be placed in the main axis.
         /// </summary>
         public MainAxisAlignment Alignment { get; set; } = MainAxisAlignment.Start;
+
         /// <summary>
-        /// How the children within a run should be aligned relative to each other in the cross axis. 
+        /// How the children within a run should be aligned relative to each other in the cross axis.
         /// </summary>
         public CrossAxisAlignment CrossAxisAlignment { get; set; } = CrossAxisAlignment.Start;
 
         /// <summary>
-        ///  How the runs themselves should be placed in the cross axis. 
+        ///  How the runs themselves should be placed in the cross axis.
         /// </summary>
         public MainAxisAlignment RunAlignment { get; set; } = MainAxisAlignment.Start;
 
         public override State CreateState() => new WrapState();
+
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderWrap((WrapState) state);
-
+            return new RenderWrap((WrapState)state);
         }
     }
+
     internal class WrapState : ViewState<Wrap>, IWrapState
     {
         public IState[] Children => _children.Value;
         private readonly StateCollectionHolder _children;
+
         public WrapState()
         {
             _children = CreateChildren(context => Widget.Children);
         }
-        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
 
         public Axis Direction => this.Widget.Direction;
         public float Spacing => this.Widget.Spacing;

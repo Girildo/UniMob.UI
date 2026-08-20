@@ -35,7 +35,10 @@ namespace UniMob.UI
 
         public async Task LoadAsync()
         {
-            var loadLocationsOperation = Addressables.LoadResourceLocationsAsync(_key, typeof(GameObject));
+            var loadLocationsOperation = Addressables.LoadResourceLocationsAsync(
+                _key,
+                typeof(GameObject)
+            );
             Lifetime.Register(() => Addressables.Release(loadLocationsOperation));
 
             var locations = await loadLocationsOperation.Task;

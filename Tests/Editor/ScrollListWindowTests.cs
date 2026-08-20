@@ -15,8 +15,11 @@ namespace UniMob.UI.Tests
     // ScrollListState.
     public class ScrollListWindowTests
     {
-        private static (ScrollList widget, ISliverState state, List<int> builtIndices) MountCountingList(
-            int itemCount, MutableAtom<bool> externalFlag = null)
+        private static (
+            ScrollList widget,
+            ISliverState state,
+            List<int> builtIndices
+        ) MountCountingList(int itemCount, MutableAtom<bool> externalFlag = null)
         {
             var builtIndices = new List<int>();
 
@@ -35,7 +38,7 @@ namespace UniMob.UI.Tests
                 },
             };
 
-            var state = (ISliverState) TestHarness.Mount(widget);
+            var state = (ISliverState)TestHarness.Mount(widget);
             return (widget, state, builtIndices);
         }
 
@@ -47,8 +50,11 @@ namespace UniMob.UI.Tests
             state.RequestBuildWindow(0, 5);
             state.RequestBuildWindow(0, 5);
 
-            Assert.AreEqual(5, builtIndices.Count,
-                "the second identical request should be served from cache, not re-invoke ItemBuilder");
+            Assert.AreEqual(
+                5,
+                builtIndices.Count,
+                "the second identical request should be served from cache, not re-invoke ItemBuilder"
+            );
         }
 
         [Test]
@@ -71,15 +77,20 @@ namespace UniMob.UI.Tests
 
             var firstWindow = state.RequestBuildWindow(0, 5); // States for indices 0..4.
             Assert.AreEqual(5, firstWindow.Length);
-            Assert.IsFalse(firstWindow.Any(s => s.StateLifetime.IsDisposed), "just-built states must be alive");
+            Assert.IsFalse(
+                firstWindow.Any(s => s.StateLifetime.IsDisposed),
+                "just-built states must be alive"
+            );
 
             // Move the window entirely past the first range: 0..4 fall outside [10,15) and must be evicted.
             // This is the manually-managed _builtStates cache's job -- if eviction ever stops disposing, the
             // States (and their reactive subscriptions) leak for the life of the list.
             state.RequestBuildWindow(10, 15);
 
-            Assert.IsTrue(firstWindow.All(s => s.StateLifetime.IsDisposed),
-                "states that left the build window must be deactivated (disposed), not leaked");
+            Assert.IsTrue(
+                firstWindow.All(s => s.StateLifetime.IsDisposed),
+                "states that left the build window must be deactivated (disposed), not leaked"
+            );
         }
 
         [Test]
@@ -93,8 +104,11 @@ namespace UniMob.UI.Tests
 
             // Same window as before -- should be a pure cache hit.
             state.RequestBuildWindow(0, 5);
-            Assert.AreEqual(0, builtIndices.Count,
-                "an unchanged window must not re-invoke ItemBuilder");
+            Assert.AreEqual(
+                0,
+                builtIndices.Count,
+                "an unchanged window must not re-invoke ItemBuilder"
+            );
 
             // This is the exact scenario that regressed during development: an external [Atom]
             // read inside ItemBuilder (e.g. a selection flag) changes, but the visible window
@@ -102,8 +116,11 @@ namespace UniMob.UI.Tests
             flag.Value = true;
             state.RequestBuildWindow(0, 5);
 
-            Assert.AreEqual(5, builtIndices.Count,
-                "an external atom change read inside ItemBuilder must force a rebuild even when the window doesn't move");
+            Assert.AreEqual(
+                5,
+                builtIndices.Count,
+                "an external atom change read inside ItemBuilder must force a rebuild even when the window doesn't move"
+            );
         }
 
         [Test]
@@ -124,14 +141,17 @@ namespace UniMob.UI.Tests
                 },
             };
 
-            TestHarness.Update((State) state, newWidget);
+            TestHarness.Update((State)state, newWidget);
 
             // Same range as before: with the old ItemBuilder this would've been served from cache.
             state.RequestBuildWindow(0, 5);
 
-            Assert.AreEqual(5, newBuiltIndices.Count,
-                "the new ItemBuilder must run for the current window even though the range didn't change, " +
-                "since the ScrollList widget itself is a tracked dependency of the built window");
+            Assert.AreEqual(
+                5,
+                newBuiltIndices.Count,
+                "the new ItemBuilder must run for the current window even though the range didn't change, "
+                    + "since the ScrollList widget itself is a tracked dependency of the built window"
+            );
             Assert.AreEqual(0, builtIndices.Count, "the old ItemBuilder must not run again");
         }
     }

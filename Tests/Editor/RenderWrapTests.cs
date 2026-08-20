@@ -63,7 +63,11 @@ namespace UniMob.UI.Tests
         [Test]
         public void Spacing_IsAddedBetweenItems_ButNotTrailing()
         {
-            var state = new FakeWrapState { Children = new[] { Box(30, 10), Box(30, 10) }, Spacing = 5 };
+            var state = new FakeWrapState
+            {
+                Children = new[] { Box(30, 10), Box(30, 10) },
+                Spacing = 5,
+            };
 
             var wrap = new RenderWrap(state);
             wrap.Layout(new LayoutConstraints(0, 0, 1000, 1000));

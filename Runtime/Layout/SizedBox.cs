@@ -11,9 +11,7 @@ namespace UniMob.UI.Layout
         public float? Width { get; set; }
         public float? Height { get; set; }
 
-        public SizedBox()
-        {
-        }
+        public SizedBox() { }
 
         public SizedBox([CanBeNull] Widget child, float? width = null, float? height = null)
         {
@@ -30,7 +28,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderConstrainedBox((IConstrainedBoxState) state);
+            return new RenderConstrainedBox((IConstrainedBoxState)state);
         }
 
         public static SizedBox FromWidth(float width, [CanBeNull] Widget child = null)
@@ -61,6 +59,7 @@ namespace UniMob.UI.Layout
 
     public class SizedBoxState : SingleChildLayoutState<SizedBox>, IConstrainedBoxState
     {
-        public LayoutConstraints BoxConstraints => LayoutConstraints.TightFor(Widget.Width, Widget.Height);
+        public LayoutConstraints BoxConstraints =>
+            LayoutConstraints.TightFor(Widget.Width, Widget.Height);
     }
 }

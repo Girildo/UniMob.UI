@@ -7,10 +7,17 @@ namespace UniMob.UI
         private float _prevValue;
         private float _elapsed;
 
-        [Atom] public float Value { get; private set; }
-        [Atom] public int Index { get; private set; }
-        [Atom] public int PreviousIndex { get; private set; }
-        [Atom] public bool IndexIsChanging { get; private set; }
+        [Atom]
+        public float Value { get; private set; }
+
+        [Atom]
+        public int Index { get; private set; }
+
+        [Atom]
+        public int PreviousIndex { get; private set; }
+
+        [Atom]
+        public bool IndexIsChanging { get; private set; }
 
         public Lifetime Lifetime { get; }
 

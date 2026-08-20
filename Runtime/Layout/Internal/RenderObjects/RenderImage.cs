@@ -11,7 +11,8 @@ namespace UniMob.UI.Layout.Internal
         private Texture? Texture => _state.Texture;
         private ImageFit Fit => _state.Fit;
 
-        public RenderImage(IImageState state) : base(state)
+        public RenderImage(IImageState state)
+            : base(state)
         {
             _state = state;
         }
@@ -87,26 +88,31 @@ namespace UniMob.UI.Layout.Internal
             float widthRatio = constraints.MaxWidth / src.x;
             float heightRatio = constraints.MaxHeight / src.y;
             float minRatio = Mathf.Min(widthRatio, heightRatio);
-            
+
             // If parent gives infinite space, just use the native size
-            if (float.IsPositiveInfinity(minRatio)) return src;
+            if (float.IsPositiveInfinity(minRatio))
+                return src;
 
             return src * minRatio;
         }
 
         protected override float ComputeIntrinsicWidth(float height)
         {
-            if (Texture == null) return 0;
-            if (float.IsPositiveInfinity(height) || Fit == ImageFit.None) return Texture.width;
-            
+            if (Texture == null)
+                return 0;
+            if (float.IsPositiveInfinity(height) || Fit == ImageFit.None)
+                return Texture.width;
+
             return height * ((float)Texture.width / Texture.height);
         }
 
         protected override float ComputeIntrinsicHeight(float width)
         {
-            if (Texture == null) return 0;
-            if (float.IsPositiveInfinity(width) || Fit == ImageFit.None) return Texture.height;
-            
+            if (Texture == null)
+                return 0;
+            if (float.IsPositiveInfinity(width) || Fit == ImageFit.None)
+                return Texture.height;
+
             return width * ((float)Texture.height / Texture.width);
         }
     }

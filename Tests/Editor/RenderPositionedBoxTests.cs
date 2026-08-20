@@ -56,7 +56,11 @@ namespace UniMob.UI.Tests
         public void Alignment_PositionsChild_WithinTheFinalSize()
         {
             var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(20, 20) });
-            var state = new FakePositionedBoxState { Child = child, Alignment = Alignment.BottomRight };
+            var state = new FakePositionedBoxState
+            {
+                Child = child,
+                Alignment = Alignment.BottomRight,
+            };
 
             var box = new RenderPositionedBox(state);
             box.Layout(LayoutConstraints.Tight(100, 100));
@@ -88,7 +92,10 @@ namespace UniMob.UI.Tests
         public void Align_AsTightFlexChild_FillsTheFlexCrossAxis()
         {
             var flexChild = TestHarness.Mount(
-                new Expanded { Child = new Align { Child = new FixedSizeBox { Size = new Vector2(120, 44) } } }
+                new Expanded
+                {
+                    Child = new Align { Child = new FixedSizeBox { Size = new Vector2(120, 44) } },
+                }
             );
 
             var flex = new RenderFlex(

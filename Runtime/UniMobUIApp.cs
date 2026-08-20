@@ -5,7 +5,8 @@ namespace UniMob.UI
 {
     public abstract class UniMobUIApp : LifetimeMonoBehaviour
     {
-        [SerializeField] private ViewPanel root = default;
+        [SerializeField]
+        private ViewPanel root = default;
 
         public StateProvider StateProvider { get; } = new StateProvider();
 
@@ -16,9 +17,7 @@ namespace UniMob.UI
             UniMobUI.RunApp(Lifetime, StateProvider, root, Build, name);
         }
 
-        protected virtual void Initialize()
-        {
-        }
+        protected virtual void Initialize() { }
 
         protected abstract Widget Build(BuildContext context);
     }

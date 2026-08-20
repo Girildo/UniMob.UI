@@ -6,12 +6,13 @@ namespace UniMob.UI
     [Serializable]
     public class FloatTween : IAnimatable<float>
     {
-        [SerializeField] private float begin;
-        [SerializeField] private float end;
+        [SerializeField]
+        private float begin;
 
-        private FloatTween()
-        {
-        }
+        [SerializeField]
+        private float end;
+
+        private FloatTween() { }
 
         public FloatTween(float begin, float end)
         {
@@ -25,12 +26,13 @@ namespace UniMob.UI
     [Serializable]
     public class Vector2Tween : IAnimatable<Vector2>
     {
-        [SerializeField] private Vector2 begin;
-        [SerializeField] private Vector2 end;
+        [SerializeField]
+        private Vector2 begin;
 
-        private Vector2Tween()
-        {
-        }
+        [SerializeField]
+        private Vector2 end;
+
+        private Vector2Tween() { }
 
         public Vector2Tween(Vector2 begin, Vector2 end)
         {
@@ -38,21 +40,20 @@ namespace UniMob.UI
             this.end = end;
         }
 
-        public Vector2 Transform(float t) => new Vector2(
-            begin.x + (end.x - begin.x) * t,
-            begin.y + (end.y - begin.y) * t
-        );
+        public Vector2 Transform(float t) =>
+            new Vector2(begin.x + (end.x - begin.x) * t, begin.y + (end.y - begin.y) * t);
     }
 
     [Serializable]
     public class Vector3Tween : IAnimatable<Vector3>
     {
-        [SerializeField] private Vector3 begin;
-        [SerializeField] private Vector3 end;
+        [SerializeField]
+        private Vector3 begin;
 
-        private Vector3Tween()
-        {
-        }
+        [SerializeField]
+        private Vector3 end;
+
+        private Vector3Tween() { }
 
         public Vector3Tween(Vector3 begin, Vector3 end)
         {
@@ -60,22 +61,24 @@ namespace UniMob.UI
             this.end = end;
         }
 
-        public Vector3 Transform(float t) => new Vector3(
-            begin.x + (end.x - begin.x) * t,
-            begin.y + (end.y - begin.y) * t,
-            begin.z + (end.z - begin.z) * t
-        );
+        public Vector3 Transform(float t) =>
+            new Vector3(
+                begin.x + (end.x - begin.x) * t,
+                begin.y + (end.y - begin.y) * t,
+                begin.z + (end.z - begin.z) * t
+            );
     }
 
     [Serializable]
     public class QuaternionTween : IAnimatable<Quaternion>
     {
-        [SerializeField] private Quaternion begin;
-        [SerializeField] private Quaternion end;
+        [SerializeField]
+        private Quaternion begin;
 
-        private QuaternionTween()
-        {
-        }
+        [SerializeField]
+        private Quaternion end;
+
+        private QuaternionTween() { }
 
         public QuaternionTween(Quaternion begin, Quaternion end)
         {

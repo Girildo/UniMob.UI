@@ -16,7 +16,7 @@ namespace UniMob.UI
         /// Place the children as close to the middle of the main axis as possible.
         /// </summary>
         Center = 2,
-        
+
         /// <summary>
         /// Place the free space evenly between the children.
         /// </summary>

@@ -6,10 +6,17 @@ namespace UniMob.UI
     [Serializable]
     public struct RectPadding
     {
-        [SerializeField] private float left;
-        [SerializeField] private float right;
-        [SerializeField] private float top;
-        [SerializeField] private float bottom;
+        [SerializeField]
+        private float left;
+
+        [SerializeField]
+        private float right;
+
+        [SerializeField]
+        private float top;
+
+        [SerializeField]
+        private float bottom;
 
         public RectPadding(float left, float right, float top, float bottom)
         {
@@ -30,12 +37,23 @@ namespace UniMob.UI
         public Vector2 Center => new Vector2(Left - Right, Top - Bottom);
 
         internal float GetLeft(int axis) => axis == 0 ? Left : Top;
+
         internal float GetRight(int axis) => axis == 0 ? Right : Bottom;
+
         internal float GetTop(int axis) => axis == 0 ? Top : Left;
+
         internal float GetBottom(int axis) => axis == 0 ? Bottom : Right;
 
-        public static RectPadding Symmetric(float horizontal, float vertical) => new (horizontal, horizontal, vertical, vertical);
+        public static RectPadding Symmetric(float horizontal, float vertical) =>
+            new(horizontal, horizontal, vertical, vertical);
+
         public static RectPadding All(float padding) => Symmetric(padding, padding);
-        public static RectPadding Only(float left = 0, float right = 0, float top = 0, float bottom = 0) => new (left, right, top, bottom);
+
+        public static RectPadding Only(
+            float left = 0,
+            float right = 0,
+            float top = 0,
+            float bottom = 0
+        ) => new(left, right, top, bottom);
     }
 }

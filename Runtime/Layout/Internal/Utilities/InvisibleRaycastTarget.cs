@@ -10,8 +10,9 @@ namespace UniMob.UI.Layout.Internal.Utilities
     public class InvisibleRaycastTarget : Graphic
     {
         public override void SetMaterialDirty() { }
+
         public override void SetVerticesDirty() { }
-        
+
         // Tells the GPU to draw zero vertices for this object.
         protected override void OnPopulateMesh(VertexHelper vh)
         {

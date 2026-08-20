@@ -67,17 +67,17 @@ namespace UniMob.UI.Internal
         {
             var go = new GameObject(NiceName);
             go.SetActive(false);
-            
+
             foreach (var component in Components)
             {
                 var added = go.AddComponent(component);
 
                 if (component == typeof(RectTransform))
                 {
-                    ((RectTransform) added).sizeDelta = Vector2.zero;
+                    ((RectTransform)added).sizeDelta = Vector2.zero;
                 }
             }
-            
+
             return go;
         }
     }

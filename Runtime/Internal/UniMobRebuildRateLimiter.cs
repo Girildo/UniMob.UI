@@ -43,9 +43,12 @@ namespace UniMob.UI.Internal
 
                 var ownerCtx = _buildContext;
 
-                while (ownerCtx?.Parent != null &&
-                       ownerCtx?.State?.GetType().Namespace is var ns &&
-                       ns != null && ns.StartsWith("UniMob"))
+                while (
+                    ownerCtx?.Parent != null
+                    && ownerCtx?.State?.GetType().Namespace is var ns
+                    && ns != null
+                    && ns.StartsWith("UniMob")
+                )
                 {
                     ownerCtx = ownerCtx.Parent;
                 }
@@ -57,13 +60,15 @@ namespace UniMob.UI.Internal
                     var widgetTypeName = widget?.GetType().Name ?? "Unknown";
 
                     Debug.LogError(
-                        $"{widgetTypeName} at {ownerType} was rebuilt {MaxContinuousRebuildCount} frames in a row");
+                        $"{widgetTypeName} at {ownerType} was rebuilt {MaxContinuousRebuildCount} frames in a row"
+                    );
                 }
             }
         }
 
         [PublicAPI]
-        public static void Ignore<T>() where T : IState
+        public static void Ignore<T>()
+            where T : IState
         {
             IgnoredOwnerTypes.Add(typeof(T));
         }

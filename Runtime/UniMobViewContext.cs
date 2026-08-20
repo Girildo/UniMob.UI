@@ -19,7 +19,8 @@ namespace UniMob.UI
                 new InternalViewLoader(),
                 new PrefabViewLoader(),
                 new BuiltinResourcesViewLoader(),
-                new AddressableViewLoader());
+                new AddressableViewLoader()
+            );
         }
     }
 }

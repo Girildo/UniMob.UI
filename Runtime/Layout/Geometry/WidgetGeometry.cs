@@ -31,9 +31,13 @@ namespace UniMob.UI.Layout
         public static readonly WidgetGeometry Empty = default;
 
         /// <summary>The axis-aligned bounding box in canvas space.</summary>
-        public Rect Aabb => Rect.MinMaxRect(
-            CanvasSpace.BottomLeft.x, CanvasSpace.BottomLeft.y,
-            CanvasSpace.TopRight.x, CanvasSpace.TopRight.y);
+        public Rect Aabb =>
+            Rect.MinMaxRect(
+                CanvasSpace.BottomLeft.x,
+                CanvasSpace.BottomLeft.y,
+                CanvasSpace.TopRight.x,
+                CanvasSpace.TopRight.y
+            );
 
         /// <summary>The size of the axis-aligned bounding box in canvas space.</summary>
         public Vector2 Size => Aabb.size;
@@ -43,7 +47,8 @@ namespace UniMob.UI.Layout
         /// <see cref="Alignment.BottomCenter"/> is the middle of the bottom edge). Useful for anchoring
         /// a follower to a specific edge/corner of the tracked widget.
         /// </summary>
-        public Vector2 GetPoint(Alignment alignment) => CanvasSpace.BottomLeft + Aabb.size * alignment.ToAnchor();
+        public Vector2 GetPoint(Alignment alignment) =>
+            CanvasSpace.BottomLeft + Aabb.size * alignment.ToAnchor();
 
         // Equality is by canvas-space corners: world space is derived from the same transform, and
         // canvas space is what consumers position against, so comparing it is sufficient for change
@@ -55,8 +60,10 @@ namespace UniMob.UI.Layout
 
         public override int GetHashCode() => CanvasSpace.GetHashCode();
 
-        public static bool operator ==(WidgetGeometry left, WidgetGeometry right) => left.Equals(right);
+        public static bool operator ==(WidgetGeometry left, WidgetGeometry right) =>
+            left.Equals(right);
 
-        public static bool operator !=(WidgetGeometry left, WidgetGeometry right) => !left.Equals(right);
+        public static bool operator !=(WidgetGeometry left, WidgetGeometry right) =>
+            !left.Equals(right);
     }
 }

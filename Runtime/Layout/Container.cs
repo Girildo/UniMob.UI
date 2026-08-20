@@ -9,7 +9,6 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class Container : StatefulWidget
     {
-        
         public Widget Child { get; set; } = SizedBox.Shrink();
         public Color? BackgroundColor { get; set; } = Color.clear;
         public Sprite? BackgroundImage { get; set; } = null;

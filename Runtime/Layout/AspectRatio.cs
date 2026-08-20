@@ -18,7 +18,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderAspectRatio((AspectRatioState) state);
+            return new RenderAspectRatio((AspectRatioState)state);
         }
     }
 

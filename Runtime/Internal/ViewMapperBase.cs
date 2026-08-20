@@ -33,9 +33,7 @@ namespace UniMob.UI.Internal
         protected abstract IView ResolveView(WidgetViewReference state);
         protected abstract void RecycleView(IView view);
 
-        void IViewTreeElement.AddChild(IViewTreeElement view)
-        {
-        }
+        void IViewTreeElement.AddChild(IViewTreeElement view) { }
 
         void IViewTreeElement.Unmount()
         {
@@ -67,7 +65,9 @@ namespace UniMob.UI.Internal
         {
             if (_activeRender == null)
             {
-                throw new InvalidOperationException("Must not call EndRender() without BeginRender()");
+                throw new InvalidOperationException(
+                    "Must not call EndRender() without BeginRender()"
+                );
             }
 
             RecycleItemsAndClear(_items);
@@ -83,7 +83,7 @@ namespace UniMob.UI.Internal
 
             _activeRender?.Dispose();
             _activeRender = null;
-            
+
             foreach (var item in _items)
             {
                 item.View.SetSource(item.State.InnerViewState, _link);
@@ -130,7 +130,7 @@ namespace UniMob.UI.Internal
             }
             else
             {
-                item = new Item {State = state};
+                item = new Item { State = state };
             }
 
             if (item.View == null)

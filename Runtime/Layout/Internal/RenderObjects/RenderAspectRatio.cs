@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-
     /// <summary>
     /// A generic render object that acts as a proxy for another render object, forwarding layout and rendering
     /// to its child. This is useful for creating wrapper widgets that modify the behavior of their child
@@ -13,7 +12,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private float _aspectRatio;
 
-        public RenderAspectRatio(IAspectRatioState state) : base(state)
+        public RenderAspectRatio(IAspectRatioState state)
+            : base(state)
         {
             // Intentionally left blank.
             this._aspectRatio = state.AspectRatio;

@@ -25,10 +25,11 @@ namespace UniMob.UI
         private RectInt _lastSafeArea;
         private CanvasScaler _canvasScaler;
 
+        [Atom]
+        public RectPadding SafeArea { get; private set; }
 
-        [Atom] public RectPadding SafeArea { get; private set; }
-
-        [Atom] public float Scale { get; private set; }
+        [Atom]
+        public float Scale { get; private set; }
 
         public StateProvider StateProvider => Widget.StateProvider;
 
@@ -39,12 +40,10 @@ namespace UniMob.UI
             return Widget.Child;
         }
 
-
-
         public override void InitState()
         {
             base.InitState();
-            
+
             Scale = GetScale();
             RefreshSafeArea();
 
@@ -69,6 +68,7 @@ namespace UniMob.UI
                 RefreshSafeArea();
             }
         }
+
         /// <summary>
         /// Converts a screen point to a widget-relative point.
         /// Origin of both coordinates is at the bottom left corner of the screen/canvas.
@@ -80,7 +80,10 @@ namespace UniMob.UI
         public Vector2 ScreenPointToWidgetPoint(Vector2 screenPoint)
         {
             var safeArea = GetSafeArea();
-            var adjustedForSafeArea = new Vector2(screenPoint.x - safeArea.xMin, screenPoint.y - safeArea.yMin);
+            var adjustedForSafeArea = new Vector2(
+                screenPoint.x - safeArea.xMin,
+                screenPoint.y - safeArea.yMin
+            );
             return adjustedForSafeArea / Scale;
         }
 
@@ -118,11 +121,18 @@ namespace UniMob.UI
 
             var scale = _canvasScaler.screenMatchMode switch
             {
-                CanvasScaler.ScreenMatchMode.MatchWidthOrHeight => Mathf.Pow(2f, Mathf.Lerp(
-                                        Mathf.Log(screen.x / reference.x, 2f),
-                                        Mathf.Log(screen.y / reference.y, 2f), _canvasScaler.matchWidthOrHeight)),
-                CanvasScaler.ScreenMatchMode.Expand => dpiScale * Mathf.Min(screen.x / reference.x, screen.y / reference.y),
-                CanvasScaler.ScreenMatchMode.Shrink => dpiScale * Mathf.Max(screen.x / reference.x, screen.y / reference.y),
+                CanvasScaler.ScreenMatchMode.MatchWidthOrHeight => Mathf.Pow(
+                    2f,
+                    Mathf.Lerp(
+                        Mathf.Log(screen.x / reference.x, 2f),
+                        Mathf.Log(screen.y / reference.y, 2f),
+                        _canvasScaler.matchWidthOrHeight
+                    )
+                ),
+                CanvasScaler.ScreenMatchMode.Expand => dpiScale
+                    * Mathf.Min(screen.x / reference.x, screen.y / reference.y),
+                CanvasScaler.ScreenMatchMode.Shrink => dpiScale
+                    * Mathf.Max(screen.x / reference.x, screen.y / reference.y),
                 _ => dpiScale * 1f,
             };
             return scale;
@@ -136,7 +146,7 @@ namespace UniMob.UI
         private static RectInt GetSafeArea()
         {
             var area = Screen.safeArea;
-            return new RectInt((int) area.x, (int) area.y, (int) area.width, (int) area.height);
+            return new RectInt((int)area.x, (int)area.y, (int)area.width, (int)area.height);
         }
 
         public static UniMobDeviceState Of(BuildContext context)

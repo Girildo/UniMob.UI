@@ -11,15 +11,20 @@ namespace UniMob.UI.Widgets
     {
         private readonly RouteSettings _settings;
         private readonly TriggerStateMachine<ScreenState, ScreenEvent, Task> _machine;
+
         // Continuations run asynchronously so that the typed and untyped result complete as one: see
         // CompletePop.
         private readonly TaskCompletionSource<PopResult> _popCompleter =
             new TaskCompletionSource<PopResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private readonly TaskCompletionSource<object> _pushCompleter = new TaskCompletionSource<object>();
-        private readonly TaskCompletionSource<object> _disposeCompleter = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object> _pushCompleter =
+            new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object> _disposeCompleter =
+            new TaskCompletionSource<object>();
 
-        private readonly MutableAtom<ScreenState> _screenState = Atom.Value(ScreenState.Initializing);
+        private readonly MutableAtom<ScreenState> _screenState = Atom.Value(
+            ScreenState.Initializing
+        );
 
         private Func<bool> _backAction;
 
@@ -116,7 +121,8 @@ namespace UniMob.UI.Widgets
         /// </returns>
         protected Task<PopOutcome> RequestPop(object request)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
             return Navigator == null
                 ? Task.FromResult(PopOutcome.NotTopmost)
@@ -150,9 +156,7 @@ namespace UniMob.UI.Widgets
         ///     Told once, with the result PopTask is about to complete with. <see cref="Route{T}"/> completes
         ///     its typed task from here.
         /// </summary>
-        protected virtual void OnPopCompleted(PopResult result)
-        {
-        }
+        protected virtual void OnPopCompleted(PopResult result) { }
 
         private TriggerStateMachine<ScreenState, ScreenEvent, Task> BuildStateMachine()
         {
@@ -161,7 +165,9 @@ namespace UniMob.UI.Widgets
             //                Resumed
             //                  ↓ ↑
             //                Focused
-            var fsm = new TriggerStateMachine<ScreenState, ScreenEvent, Task>(ScreenState.Initializing);
+            var fsm = new TriggerStateMachine<ScreenState, ScreenEvent, Task>(
+                ScreenState.Initializing
+            );
 
             fsm.Transitioned += PublishTransition;
 
@@ -170,11 +176,19 @@ namespace UniMob.UI.Widgets
                 .Allow(ScreenState.Created, ScreenState.Created);
 
             fsm.On(ScreenEvent.Resume)
-                .Allow(ScreenState.Created, ScreenState.Resumed, ExecTransition(OnResume, ScreenEvent.Resume))
+                .Allow(
+                    ScreenState.Created,
+                    ScreenState.Resumed,
+                    ExecTransition(OnResume, ScreenEvent.Resume)
+                )
                 .Allow(ScreenState.Resumed, ScreenState.Resumed);
 
             fsm.On(ScreenEvent.Focus)
-                .Allow(ScreenState.Created, ScreenState.Resumed, ExecTransition(OnResume, ScreenEvent.Focus))
+                .Allow(
+                    ScreenState.Created,
+                    ScreenState.Resumed,
+                    ExecTransition(OnResume, ScreenEvent.Focus)
+                )
                 .Allow(ScreenState.Resumed, ScreenState.Focused, ExecTransition(OnFocus))
                 .Allow(ScreenState.Focused, ScreenState.Focused);
 
@@ -183,13 +197,25 @@ namespace UniMob.UI.Widgets
                 .Allow(ScreenState.Resumed, ScreenState.Resumed);
 
             fsm.On(ScreenEvent.Pause)
-                .Allow(ScreenState.Focused, ScreenState.Resumed, ExecTransition(OnFocusLost, ScreenEvent.Pause))
+                .Allow(
+                    ScreenState.Focused,
+                    ScreenState.Resumed,
+                    ExecTransition(OnFocusLost, ScreenEvent.Pause)
+                )
                 .Allow(ScreenState.Resumed, ScreenState.Created, ExecTransition(OnPause))
                 .Allow(ScreenState.Created, ScreenState.Created);
 
             fsm.On(ScreenEvent.Destroy)
-                .Allow(ScreenState.Focused, ScreenState.Resumed, ExecTransition(OnFocusLost, ScreenEvent.Destroy))
-                .Allow(ScreenState.Resumed, ScreenState.Created, ExecTransition(OnPause, ScreenEvent.Destroy))
+                .Allow(
+                    ScreenState.Focused,
+                    ScreenState.Resumed,
+                    ExecTransition(OnFocusLost, ScreenEvent.Destroy)
+                )
+                .Allow(
+                    ScreenState.Resumed,
+                    ScreenState.Created,
+                    ExecTransition(OnPause, ScreenEvent.Destroy)
+                )
                 .Allow(ScreenState.Created, ScreenState.Destroyed, ExecTransition(OnDestroy))
                 .Allow(ScreenState.Destroyed, ScreenState.Destroyed);
 
@@ -238,7 +264,7 @@ namespace UniMob.UI.Widgets
                 {
                     try
                     {
-                        ((Action<ScreenEvent>) subscriber).Invoke(screenEvent);
+                        ((Action<ScreenEvent>)subscriber).Invoke(screenEvent);
                     }
                     catch (Exception e)
                     {
@@ -248,8 +274,10 @@ namespace UniMob.UI.Widgets
             }
         }
 
-        private Func<Task, Task> ExecTransition(Func<Task> handler, ScreenEvent? screenEvent = null) =>
-            previous => ExecuteTransitionInternal(previous, handler, screenEvent);
+        private Func<Task, Task> ExecTransition(
+            Func<Task> handler,
+            ScreenEvent? screenEvent = null
+        ) => previous => ExecuteTransitionInternal(previous, handler, screenEvent);
 
         /// <remarks>
         ///     Every task is awaited unconditionally, even one that is already complete. <c>IsCompleted</c>
@@ -258,7 +286,11 @@ namespace UniMob.UI.Widgets
         ///     route, and <see cref="PopTask"/> never completes. Awaiting a completed task does not yield,
         ///     so the guard would buy nothing.
         /// </remarks>
-        private async Task ExecuteTransitionInternal(Task previous, Func<Task> handler, ScreenEvent? screenEvent)
+        private async Task ExecuteTransitionInternal(
+            Task previous,
+            Func<Task> handler,
+            ScreenEvent? screenEvent
+        )
         {
             if (previous != null)
             {
@@ -291,7 +323,12 @@ namespace UniMob.UI.Widgets
             }
 
             // Read off the machine, not the atom: a diagnostic must not add a dependency to a running computation.
-            Debug.LogErrorFormat("Cannot {0} scene {1} in {2} state", screenEvent, GetType().Name, _machine.State);
+            Debug.LogErrorFormat(
+                "Cannot {0} scene {1} in {2} state",
+                screenEvent,
+                GetType().Name,
+                _machine.State
+            );
             return Task.CompletedTask;
         }
 
@@ -426,7 +463,8 @@ namespace UniMob.UI.Widgets
     {
         private readonly Func<BuildContext, Widget> _pageBuilder;
 
-        public RouteBuilder(RouteSettings settings, Func<BuildContext, Widget> pageBuilder) : base(settings)
+        public RouteBuilder(RouteSettings settings, Func<BuildContext, Widget> pageBuilder)
+            : base(settings)
         {
             _pageBuilder = pageBuilder;
         }

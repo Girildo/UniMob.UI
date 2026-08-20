@@ -30,8 +30,13 @@ namespace UniMob.UI.Layout
     /// </summary>
     public readonly struct SliverGridLayout
     {
-        public SliverGridLayout(int crossAxisCount, float cellCrossAxisExtent, float crossAxisSpacing,
-            float mainAxisSpacing, float? cellMainAxisExtent)
+        public SliverGridLayout(
+            int crossAxisCount,
+            float cellCrossAxisExtent,
+            float crossAxisSpacing,
+            float mainAxisSpacing,
+            float? cellMainAxisExtent
+        )
         {
             CrossAxisCount = crossAxisCount;
             CellCrossAxisExtent = cellCrossAxisExtent;
@@ -90,11 +95,16 @@ namespace UniMob.UI.Layout
 
         // childAspectRatio is defined (as in Flutter) as crossAxisExtent / mainAxisExtent, so a ratio > 1
         // is wider-than-tall and < 1 is taller-than-wide. MainAxisExtent, when given, wins outright.
-        private protected static float? ResolveCellMainExtent(float? mainAxisExtent, float? childAspectRatio,
-            float cellCrossExtent)
+        private protected static float? ResolveCellMainExtent(
+            float? mainAxisExtent,
+            float? childAspectRatio,
+            float cellCrossExtent
+        )
         {
-            if (mainAxisExtent.HasValue) return mainAxisExtent.Value;
-            if (childAspectRatio.HasValue) return cellCrossExtent / childAspectRatio.Value;
+            if (mainAxisExtent.HasValue)
+                return mainAxisExtent.Value;
+            if (childAspectRatio.HasValue)
+                return cellCrossExtent / childAspectRatio.Value;
             return null;
         }
     }
@@ -107,11 +117,19 @@ namespace UniMob.UI.Layout
     /// </summary>
     public sealed class SliverGridDelegateWithFixedCrossAxisCount : SliverGridDelegate
     {
-        public SliverGridDelegateWithFixedCrossAxisCount(int crossAxisCount, float mainAxisSpacing = 0f,
-            float crossAxisSpacing = 0f, float? childAspectRatio = null, float? mainAxisExtent = null)
+        public SliverGridDelegateWithFixedCrossAxisCount(
+            int crossAxisCount,
+            float mainAxisSpacing = 0f,
+            float crossAxisSpacing = 0f,
+            float? childAspectRatio = null,
+            float? mainAxisExtent = null
+        )
         {
             if (crossAxisCount < 1)
-                throw new ArgumentOutOfRangeException(nameof(crossAxisCount), "CrossAxisCount must be >= 1.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(crossAxisCount),
+                    "CrossAxisCount must be >= 1."
+                );
 
             CrossAxisCount = crossAxisCount;
             MainAxisSpacing = mainAxisSpacing;
@@ -128,10 +146,19 @@ namespace UniMob.UI.Layout
 
         public override SliverGridLayout GetLayout(float availableCrossAxisExtent)
         {
-            var usable = Mathf.Max(0f, availableCrossAxisExtent - CrossAxisSpacing * (CrossAxisCount - 1));
+            var usable = Mathf.Max(
+                0f,
+                availableCrossAxisExtent - CrossAxisSpacing * (CrossAxisCount - 1)
+            );
             var cellCross = usable / CrossAxisCount;
             var cellMain = ResolveCellMainExtent(MainAxisExtent, ChildAspectRatio, cellCross);
-            return new SliverGridLayout(CrossAxisCount, cellCross, CrossAxisSpacing, MainAxisSpacing, cellMain);
+            return new SliverGridLayout(
+                CrossAxisCount,
+                cellCross,
+                CrossAxisSpacing,
+                MainAxisSpacing,
+                cellMain
+            );
         }
     }
 
@@ -143,11 +170,19 @@ namespace UniMob.UI.Layout
     /// </summary>
     public sealed class SliverGridDelegateWithMaxCrossAxisExtent : SliverGridDelegate
     {
-        public SliverGridDelegateWithMaxCrossAxisExtent(float maxCrossAxisExtent, float mainAxisSpacing = 0f,
-            float crossAxisSpacing = 0f, float? childAspectRatio = null, float? mainAxisExtent = null)
+        public SliverGridDelegateWithMaxCrossAxisExtent(
+            float maxCrossAxisExtent,
+            float mainAxisSpacing = 0f,
+            float crossAxisSpacing = 0f,
+            float? childAspectRatio = null,
+            float? mainAxisExtent = null
+        )
         {
             if (maxCrossAxisExtent <= 0f)
-                throw new ArgumentOutOfRangeException(nameof(maxCrossAxisExtent), "MaxCrossAxisExtent must be > 0.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxCrossAxisExtent),
+                    "MaxCrossAxisExtent must be > 0."
+                );
 
             MaxCrossAxisExtent = maxCrossAxisExtent;
             MainAxisSpacing = mainAxisSpacing;
@@ -166,12 +201,23 @@ namespace UniMob.UI.Layout
         {
             // As in Flutter: pick the fewest columns such that each cell (plus one inter-cell gap) fits
             // under the max. Clamp to at least one column so a viewport narrower than the max still works.
-            var crossAxisCount = Mathf.Max(1,
-                Mathf.CeilToInt(availableCrossAxisExtent / (MaxCrossAxisExtent + CrossAxisSpacing)));
-            var usable = Mathf.Max(0f, availableCrossAxisExtent - CrossAxisSpacing * (crossAxisCount - 1));
+            var crossAxisCount = Mathf.Max(
+                1,
+                Mathf.CeilToInt(availableCrossAxisExtent / (MaxCrossAxisExtent + CrossAxisSpacing))
+            );
+            var usable = Mathf.Max(
+                0f,
+                availableCrossAxisExtent - CrossAxisSpacing * (crossAxisCount - 1)
+            );
             var cellCross = usable / crossAxisCount;
             var cellMain = ResolveCellMainExtent(MainAxisExtent, ChildAspectRatio, cellCross);
-            return new SliverGridLayout(crossAxisCount, cellCross, CrossAxisSpacing, MainAxisSpacing, cellMain);
+            return new SliverGridLayout(
+                crossAxisCount,
+                cellCross,
+                CrossAxisSpacing,
+                MainAxisSpacing,
+                cellMain
+            );
         }
     }
 }

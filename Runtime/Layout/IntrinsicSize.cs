@@ -27,7 +27,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderIntrinsicSize((IntrinsicSizeState) state);
+            return new RenderIntrinsicSize((IntrinsicSizeState)state);
         }
     }
 

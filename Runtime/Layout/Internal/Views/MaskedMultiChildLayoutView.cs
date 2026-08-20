@@ -11,7 +11,9 @@ using UnityEngine.UI;
 // a fixed component set, and MultiChildLayoutView is shared with Column/Row/ZStack -- putting a mask
 // there would hang one off every column in the app. A widget asks for whichever of the two it needs.
 // Tabs is currently the only one that needs this one, and needs it unconditionally.
-[assembly: RegisterComponentViewFactory("$$_Layout.MaskedMultiChildLayoutView",
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.MaskedMultiChildLayoutView",
     typeof(RectTransform),
     typeof(RectMask2D),
-    typeof(MultiChildLayoutView))]
+    typeof(MultiChildLayoutView)
+)]

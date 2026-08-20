@@ -2,10 +2,10 @@ using UniMob.UI;
 using UniMob.UI.Internal;
 using UnityEngine;
 
-
-
-[assembly: RegisterComponentViewFactory("$$_Layout.SingleChildLayoutView",
-    typeof(UniMob.UI.Layout.Internal.Views.SingleChildLayoutView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.SingleChildLayoutView",
+    typeof(UniMob.UI.Layout.Internal.Views.SingleChildLayoutView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -16,8 +16,5 @@ namespace UniMob.UI.Layout.Internal.Views
     /// a <see cref="CanvasRenderer"/> component. It provides a base implementation for managing the layout of a single
     /// child element, typically used in custom UI components.</remarks>
     [RequireComponent(typeof(RectTransform), typeof(CanvasRenderer))]
-    public class SingleChildLayoutView : SingleChildLayoutView<ISingleChildLayoutState>
-    {
-
-    }
+    public class SingleChildLayoutView : SingleChildLayoutView<ISingleChildLayoutState> { }
 }

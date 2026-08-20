@@ -84,7 +84,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderSliverGrid((ISliverGridState) state);
+            return new RenderSliverGrid((ISliverGridState)state);
         }
 
         // See ScrollList.GetDiagnosticInfo: the logical count off the widget, never the built window.
@@ -99,13 +99,18 @@ namespace UniMob.UI.Layout
     // (ISliverGridState) while exposing only the visible States to the View (IMultiChildLayoutState, via
     // IScrollingListState so the ScrollList prefab's view binds to it). The eager/lazy child window bridge is
     // delegated to the shared VirtualizedChildren; only the eager CreateChildren wiring stays here.
-    public class ScrollGridState : ViewState<ScrollGrid>, ISliverGridState, IScrollingListState, IScrollControllerExecutor
+    public class ScrollGridState
+        : ViewState<ScrollGrid>,
+            ISliverGridState,
+            IScrollingListState,
+            IScrollControllerExecutor
     {
         private readonly StateCollectionHolder _allChildren;
         private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
         private readonly VirtualizedChildren _virtualized;
 
-        [CanBeNull] private ScrollListView _view;
+        [CanBeNull]
+        private ScrollListView _view;
 
         public ScrollGridState()
         {
@@ -116,7 +121,8 @@ namespace UniMob.UI.Layout
                 for (var i = 0; i < children.Count; i++)
                 {
                     var key = children[i]?.Key;
-                    if (key != null) _childKeyToIndexMap.Add(key, i);
+                    if (key != null)
+                        _childKeyToIndexMap.Add(key, i);
                 }
 
                 return children;
@@ -126,7 +132,8 @@ namespace UniMob.UI.Layout
                 StateLifetime,
                 new BuildContext(this, Context),
                 () => Widget.ItemBuilder,
-                ResolveEagerIndex);
+                ResolveEagerIndex
+            );
         }
 
         // Eager-mode resolver injected into the shared bridge: maps a visible index to its built child State.
@@ -141,29 +148,39 @@ namespace UniMob.UI.Layout
         [Atom]
         IState[] IMultiChildLayoutState.Children => _virtualized.VisibleChildren;
 
-        [Atom] public bool UseMask => Widget.UseMask;
+        [Atom]
+        public bool UseMask => Widget.UseMask;
 
-        [Atom] public MovementType MovementType => Widget.MovementType;
+        [Atom]
+        public MovementType MovementType => Widget.MovementType;
 
-        [Atom] public ScrollController ScrollController { get; private set; }
+        [Atom]
+        public ScrollController ScrollController { get; private set; }
 
         // Pixel offset, not NormalizedValue -- see ScrollController.PixelOffset for why the estimation-based
         // lazy windowing needs an absolute value that doesn't drift with the estimated content size.
-        [Atom] public float ScrollPixelOffset => ScrollController.PixelOffset;
+        [Atom]
+        public float ScrollPixelOffset => ScrollController.PixelOffset;
 
-        [Atom] public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
+        [Atom]
+        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
 
-        [Atom] public int? ItemCount => Widget.ItemCount;
+        [Atom]
+        public int? ItemCount => Widget.ItemCount;
 
-        [Atom] public Axis Axis => Widget.Axis;
+        [Atom]
+        public Axis Axis => Widget.Axis;
 
-        [Atom] public float? VirtualizationCacheExtent => Widget.VirtualizationCacheExtent;
+        [Atom]
+        public float? VirtualizationCacheExtent => Widget.VirtualizationCacheExtent;
 
-        [Atom] public RectPadding Padding => Widget.Padding;
+        [Atom]
+        public RectPadding Padding => Widget.Padding;
 
         // The grid delegate is rebuilt from the widget's column/cell knobs; [Atom] so it recomputes only when
         // those inputs change, not every layout pass.
-        [Atom] public SliverGridDelegate GridDelegate => BuildGridDelegate();
+        [Atom]
+        public SliverGridDelegate GridDelegate => BuildGridDelegate();
 
         private SliverGridDelegate BuildGridDelegate()
         {
@@ -174,7 +191,8 @@ namespace UniMob.UI.Layout
                     Widget.MainAxisSpacing,
                     Widget.CrossAxisSpacing,
                     Widget.ChildAspectRatio,
-                    Widget.MainAxisExtent);
+                    Widget.MainAxisExtent
+                );
             }
 
             return new SliverGridDelegateWithMaxCrossAxisExtent(
@@ -182,7 +200,8 @@ namespace UniMob.UI.Layout
                 Widget.MainAxisSpacing,
                 Widget.CrossAxisSpacing,
                 Widget.ChildAspectRatio,
-                Widget.MainAxisExtent);
+                Widget.MainAxisExtent
+            );
         }
 
         public override void DidViewMount(IView view)
@@ -197,13 +216,16 @@ namespace UniMob.UI.Layout
             _view = null;
         }
 
-        public override WidgetViewReference View => WidgetViewReference.Resource("Layout/UniMob.ScrollList");
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("Layout/UniMob.ScrollList");
 
-        void ISliverGridState.SetVisibleChildren(List<IndexedLayoutData> visibleChildren)
-            => _virtualized.SetVisibleChildren(visibleChildren);
+        void ISliverGridState.SetVisibleChildren(List<IndexedLayoutData> visibleChildren) =>
+            _virtualized.SetVisibleChildren(visibleChildren);
 
-        IState[] ISliverGridState.RequestBuildWindow(int startIndexInclusive, int endIndexExclusive)
-            => _virtualized.RequestBuildWindow(startIndexInclusive, endIndexExclusive);
+        IState[] ISliverGridState.RequestBuildWindow(
+            int startIndexInclusive,
+            int endIndexExclusive
+        ) => _virtualized.RequestBuildWindow(startIndexInclusive, endIndexExclusive);
 
         public override void InitState()
         {
@@ -238,31 +260,48 @@ namespace UniMob.UI.Layout
 
             if (hasBuilder && hasChildren)
                 throw new InvalidOperationException(
-                    "ScrollGrid cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount " +
-                    "for lazy building, or Children for eager building, not both.");
+                    "ScrollGrid cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount "
+                        + "for lazy building, or Children for eager building, not both."
+                );
 
             if (hasBuilder && Widget.ItemCount == null)
-                throw new InvalidOperationException("ScrollGrid.ItemCount must be set when ItemBuilder is provided.");
+                throw new InvalidOperationException(
+                    "ScrollGrid.ItemCount must be set when ItemBuilder is provided."
+                );
 
             if (!hasBuilder && Widget.ItemCount != null)
-                throw new InvalidOperationException("ScrollGrid.ItemCount has no effect without ItemBuilder.");
+                throw new InvalidOperationException(
+                    "ScrollGrid.ItemCount has no effect without ItemBuilder."
+                );
 
             if (Widget.CrossAxisCount.HasValue == Widget.MaxCrossAxisExtent.HasValue)
                 throw new InvalidOperationException(
-                    "ScrollGrid requires exactly one of CrossAxisCount or MaxCrossAxisExtent.");
+                    "ScrollGrid requires exactly one of CrossAxisCount or MaxCrossAxisExtent."
+                );
 
             if (Widget.ChildAspectRatio.HasValue && Widget.MainAxisExtent.HasValue)
                 throw new InvalidOperationException(
-                    "ScrollGrid cannot have both ChildAspectRatio and MainAxisExtent set -- pick one way to " +
-                    "size cells along the scroll axis (or neither, to measure rows).");
+                    "ScrollGrid cannot have both ChildAspectRatio and MainAxisExtent set -- pick one way to "
+                        + "size cells along the scroll axis (or neither, to measure rows)."
+                );
         }
 
-        bool IScrollControllerExecutor.ScrollTo(int index, float duration, ScrollToPosition position, Easing easing)
+        bool IScrollControllerExecutor.ScrollTo(
+            int index,
+            float duration,
+            ScrollToPosition position,
+            Easing easing
+        )
         {
             return _view?.ScrollTo(index, duration, position, easing) ?? false;
         }
 
-        bool IScrollControllerExecutor.ScrollTo(Key key, float duration, ScrollToPosition position, Easing easing)
+        bool IScrollControllerExecutor.ScrollTo(
+            Key key,
+            float duration,
+            ScrollToPosition position,
+            Easing easing
+        )
         {
             int index;
 
@@ -271,7 +310,8 @@ namespace UniMob.UI.Layout
                 if (Widget.KeyToIndexResolver != null)
                 {
                     var resolved = Widget.KeyToIndexResolver(key);
-                    if (resolved == null) return false;
+                    if (resolved == null)
+                        return false;
                     index = resolved.Value;
                 }
                 else if (!_virtualized.TryResolveSeenKey(key, out index))
@@ -284,7 +324,7 @@ namespace UniMob.UI.Layout
                 return false;
             }
 
-            return ((IScrollControllerExecutor) this).ScrollTo(index, duration, position, easing);
+            return ((IScrollControllerExecutor)this).ScrollTo(index, duration, position, easing);
         }
     }
 }

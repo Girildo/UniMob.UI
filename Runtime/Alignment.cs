@@ -16,10 +16,11 @@ namespace UniMob.UI
         public Alignment WithTop() => new Alignment(X, TopCenter.Y);
 
         public Alignment WithCenterY() => new Alignment(X, Center.Y);
-        
+
         public Alignment WithLeft() => new Alignment(CenterLeft.X, Y);
+
         public Alignment WithRight() => new Alignment(CenterRight.X, Y);
-        
+
         public Alignment WithCenterX() => new Alignment(Center.X, Y);
 
         /// <summary>
@@ -41,10 +42,11 @@ namespace UniMob.UI
         /// Works in LAYOUT space: y runs DOWN from the parent's top-left, so Top is 0 (contrast
         /// <see cref="ToAnchor"/>, which is the y-up canvas convention).
         /// </summary>
-        public Vector2 ResolveOffset(Vector2 availableSize, Vector2 childSize) => new Vector2(
-            (availableSize.x - childSize.x) * (X * 0.5f + 0.5f),
-            (availableSize.y - childSize.y) * (Y * 0.5f + 0.5f)
-        );
+        public Vector2 ResolveOffset(Vector2 availableSize, Vector2 childSize) =>
+            new Vector2(
+                (availableSize.x - childSize.x) * (X * 0.5f + 0.5f),
+                (availableSize.y - childSize.y) * (Y * 0.5f + 0.5f)
+            );
 
         /// <summary>
         /// The center point along the bottom edge.

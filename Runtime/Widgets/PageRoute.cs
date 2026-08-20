@@ -17,12 +17,18 @@ namespace UniMob.UI.Widgets
             RouteSettings routeSettings,
             float transitionDuration,
             float reverseTransitionDuration
-        ) : base(routeSettings)
+        )
+            : base(routeSettings)
         {
             _lifetimeController = new LifetimeController();
             var lt = _lifetimeController.Lifetime;
             _animation = new AnimationController(lt, transitionDuration, reverseTransitionDuration);
-            _secondaryAnimation = new AnimationController(lt, transitionDuration, reverseTransitionDuration, true);
+            _secondaryAnimation = new AnimationController(
+                lt,
+                transitionDuration,
+                reverseTransitionDuration,
+                true
+            );
         }
 
         public override void Dispose()
@@ -38,11 +44,18 @@ namespace UniMob.UI.Widgets
             return BuildTransitions(context, _animation, _secondaryAnimation, child);
         }
 
-        protected abstract Widget BuildPage(BuildContext context, AnimationController animation,
-            AnimationController secondaryAnimation);
+        protected abstract Widget BuildPage(
+            BuildContext context,
+            AnimationController animation,
+            AnimationController secondaryAnimation
+        );
 
-        protected abstract Widget BuildTransitions(BuildContext context, AnimationController animation,
-            AnimationController secondaryAnimation, Widget child);
+        protected abstract Widget BuildTransitions(
+            BuildContext context,
+            AnimationController animation,
+            AnimationController secondaryAnimation,
+            Widget child
+        );
 
         public override Task ApplyScreenEvent(ScreenEvent screenEvent)
         {
@@ -94,11 +107,18 @@ namespace UniMob.UI.Widgets
         }
     }
 
-    public delegate Widget PageBuilder(BuildContext context, AnimationController animation,
-        AnimationController secondaryAnimation);
+    public delegate Widget PageBuilder(
+        BuildContext context,
+        AnimationController animation,
+        AnimationController secondaryAnimation
+    );
 
-    public delegate Widget PageTransitionsBuilder(BuildContext context, AnimationController animation,
-        AnimationController secondaryAnimation, Widget child);
+    public delegate Widget PageTransitionsBuilder(
+        BuildContext context,
+        AnimationController animation,
+        AnimationController secondaryAnimation,
+        Widget child
+    );
 
     public class PageRouteBuilder : PageRoute
     {
@@ -111,23 +131,35 @@ namespace UniMob.UI.Widgets
             PageTransitionsBuilder transitionsBuilder = null,
             float transitionDuration = 0f,
             float reverseTransitionDuration = 0f
-        ) : base(settings, transitionDuration, reverseTransitionDuration)
+        )
+            : base(settings, transitionDuration, reverseTransitionDuration)
         {
             _pageBuilder = pageBuilder;
             _transitionsBuilder = transitionsBuilder ?? DefaultTransitionsBuilder;
         }
 
-        private static readonly PageTransitionsBuilder DefaultTransitionsBuilder =
-            (context, animation, secondaryAnimation, child) => child;
+        private static readonly PageTransitionsBuilder DefaultTransitionsBuilder = (
+            context,
+            animation,
+            secondaryAnimation,
+            child
+        ) => child;
 
-        protected override Widget BuildPage(BuildContext context, AnimationController animation,
-            AnimationController secondaryAnimation)
+        protected override Widget BuildPage(
+            BuildContext context,
+            AnimationController animation,
+            AnimationController secondaryAnimation
+        )
         {
             return _pageBuilder(context, animation, secondaryAnimation);
         }
 
-        protected override Widget BuildTransitions(BuildContext context, AnimationController animation,
-            AnimationController secondaryAnimation, Widget child)
+        protected override Widget BuildTransitions(
+            BuildContext context,
+            AnimationController animation,
+            AnimationController secondaryAnimation,
+            Widget child
+        )
         {
             return _transitionsBuilder(context, animation, secondaryAnimation, child);
         }

@@ -53,7 +53,8 @@ namespace UniMob.UI
         /// </example>
         [PublicAPI]
         public static TBackActionOwner Create<TBackActionOwner>(
-            [NotNull] Func<BackButtonController, TBackActionOwner> func)
+            [NotNull] Func<BackButtonController, TBackActionOwner> func
+        )
             where TBackActionOwner : IBackActionOwner
         {
             if (func == null)

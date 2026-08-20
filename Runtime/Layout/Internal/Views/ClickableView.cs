@@ -2,8 +2,10 @@ using UniMob.UI.Internal;
 using UnityEngine;
 using UnityEngine.UI;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.ClickableView",
-    typeof(UniMob.UI.Layout.Internal.Views.ClickableView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.ClickableView",
+    typeof(UniMob.UI.Layout.Internal.Views.ClickableView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -11,6 +13,7 @@ namespace UniMob.UI.Layout.Internal.Views
     internal class ClickableView : SingleChildLayoutView<IClickableState>
     {
         private Button _button;
+
         protected override void Awake()
         {
             base.Awake();
@@ -28,7 +31,8 @@ namespace UniMob.UI.Layout.Internal.Views
 
         private void HandleClick()
         {
-            if (!HasState) return;
+            if (!HasState)
+                return;
 
             State.OnClick();
         }

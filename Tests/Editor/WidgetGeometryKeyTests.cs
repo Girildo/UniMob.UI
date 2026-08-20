@@ -65,11 +65,9 @@ namespace UniMob.UI.Tests
             var boxSize = Atom.Value(new Vector2(30, 40));
             var observed = new List<Vector2?>();
 
-            var root = TestHarness.Mount(new Builder(_ => new CountingBox
-            {
-                BoxSize = boxSize.Value,
-                Key = key,
-            }));
+            var root = TestHarness.Mount(
+                new Builder(_ => new CountingBox { BoxSize = boxSize.Value, Key = key })
+            );
             TestHarness.DriveLayout(root, LayoutConstraints.Loose(100, 100));
 
             Atom.Reaction(lifetime.Lifetime, () => key.LocalSize, size => observed.Add(size));

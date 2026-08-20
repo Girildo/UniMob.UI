@@ -35,7 +35,10 @@ namespace UniMob.UI.Tests
             yield return host.PumpFrames(3);
 
             Assert.IsTrue(root.PopTask.IsCompleted, "unmount must answer the root's awaiters");
-            Assert.IsTrue(pushed.PopTask.IsCompleted, "unmount must answer the pushed route's awaiters");
+            Assert.IsTrue(
+                pushed.PopTask.IsCompleted,
+                "unmount must answer the pushed route's awaiters"
+            );
         }
 
         /// <summary>
@@ -65,15 +68,23 @@ namespace UniMob.UI.Tests
             // Runs synchronously as far as the animation gate inside OnDestroy, and parks there.
             host.Navigator.TopmostRoute.Pop();
 
-            Assert.AreEqual(ScreenState.Destroyed, animated.ScreenState,
-                "the machine commits to Destroyed before waiting on the exit animation");
-            Assert.IsFalse(animated.PopTask.IsCompleted, "the pop is still waiting on the animation");
+            Assert.AreEqual(
+                ScreenState.Destroyed,
+                animated.ScreenState,
+                "the machine commits to Destroyed before waiting on the exit animation"
+            );
+            Assert.IsFalse(
+                animated.PopTask.IsCompleted,
+                "the pop is still waiting on the animation"
+            );
 
             host.Unmount();
             yield return host.PumpFrames(3);
 
-            Assert.IsTrue(animated.PopTask.IsCompleted,
-                "teardown must close out a route abandoned part-way through an ordinary destroy");
+            Assert.IsTrue(
+                animated.PopTask.IsCompleted,
+                "teardown must close out a route abandoned part-way through an ordinary destroy"
+            );
         }
 
         /// <summary>
@@ -88,7 +99,9 @@ namespace UniMob.UI.Tests
             host.End();
 
             host.Begin("push B animated");
-            host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage));
+            host.Navigator.Push(
+                host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage)
+            );
             yield return host.Settle();
             host.End();
 
@@ -122,7 +135,8 @@ namespace UniMob.UI.Tests
                 "  B OnTeardown",
                 "  A OnTeardown",
                 "  A Dispose",
-                "  B Dispose");
+                "  B Dispose"
+            );
         }
 
         /// <summary>
@@ -156,7 +170,8 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(
                 "  R OnCreate\n  R OnDestroy\n  R OnTeardown",
                 trace.ToString(),
-                "teardown still runs its handler; it is the completion that is idempotent");
+                "teardown still runs its handler; it is the completion that is idempotent"
+            );
         }
     }
 }

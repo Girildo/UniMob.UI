@@ -7,37 +7,67 @@ namespace UniMob.UI
     {
         private float _prevDeltaTime;
 
-        [Atom] public float Duration { get; set; }
-        [Atom] public float ReverseDuration { get; set; }
-        [Atom] public float Value { get; private set; }
-        [Atom] public AnimationDirection Direction { get; private set; }
+        [Atom]
+        public float Duration { get; set; }
 
-        public AnimationStatus Status => Direction == AnimationDirection.Reverse
-            ? (Mathf.Approximately(Value, 0f) ? AnimationStatus.Dismissed : AnimationStatus.Reverse)
-            : (Mathf.Approximately(Value, 1f) ? AnimationStatus.Completed : AnimationStatus.Forward);
+        [Atom]
+        public float ReverseDuration { get; set; }
 
-        public bool IsCompleted => Direction == AnimationDirection.Forward && Mathf.Approximately(Value, 1f);
-        public bool IsDismissed => Direction == AnimationDirection.Reverse && Mathf.Approximately(Value, 0f);
+        [Atom]
+        public float Value { get; private set; }
+
+        [Atom]
+        public AnimationDirection Direction { get; private set; }
+
+        public AnimationStatus Status =>
+            Direction == AnimationDirection.Reverse
+                ? (
+                    Mathf.Approximately(Value, 0f)
+                        ? AnimationStatus.Dismissed
+                        : AnimationStatus.Reverse
+                )
+                : (
+                    Mathf.Approximately(Value, 1f)
+                        ? AnimationStatus.Completed
+                        : AnimationStatus.Forward
+                );
+
+        public bool IsCompleted =>
+            Direction == AnimationDirection.Forward && Mathf.Approximately(Value, 1f);
+        public bool IsDismissed =>
+            Direction == AnimationDirection.Reverse && Mathf.Approximately(Value, 0f);
 
         public bool IsAnimating =>
-            Direction == AnimationDirection.Forward && !Mathf.Approximately(Value, 1f) ||
-            Direction == AnimationDirection.Reverse && !Mathf.Approximately(Value, 0f);
+            Direction == AnimationDirection.Forward && !Mathf.Approximately(Value, 1f)
+            || Direction == AnimationDirection.Reverse && !Mathf.Approximately(Value, 0f);
 
         public IAnimation<float> View => this;
 
         public Lifetime Lifetime { get; }
 
-        public AnimationController(Lifetime lifetime, float duration, float? reverseDuration = null, bool completed = false)
+        public AnimationController(
+            Lifetime lifetime,
+            float duration,
+            float? reverseDuration = null,
+            bool completed = false
+        )
         {
             if (duration < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(duration), duration, "Must be positive or zero");
+                throw new ArgumentOutOfRangeException(
+                    nameof(duration),
+                    duration,
+                    "Must be positive or zero"
+                );
             }
 
             if (reverseDuration.HasValue && reverseDuration < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(reverseDuration), reverseDuration,
-                    "Must positive or zero");
+                throw new ArgumentOutOfRangeException(
+                    nameof(reverseDuration),
+                    reverseDuration,
+                    "Must positive or zero"
+                );
             }
 
             Lifetime = lifetime;
@@ -109,7 +139,7 @@ namespace UniMob.UI
                 RemoveAnimationTicker();
                 return;
             }
-        
+
             var nextDeltaTime = Time.unscaledDeltaTime;
             var dt = Mathf.Min(nextDeltaTime * 0.8f + _prevDeltaTime * 0.2f, 1 / 5f);
             _prevDeltaTime = nextDeltaTime;
@@ -136,7 +166,6 @@ namespace UniMob.UI
                     break;
             }
 
-
             RemoveAnimationTicker();
         }
     }
@@ -161,14 +190,18 @@ namespace UniMob.UI
 
     public static class AnimatableExtensions
     {
-        public static IAnimation<T> Drive<T>(this IAnimation<float> controller,
-            IAnimatable<T> tween)
+        public static IAnimation<T> Drive<T>(
+            this IAnimation<float> controller,
+            IAnimatable<T> tween
+        )
         {
             return tween.Animate(controller);
         }
 
-        public static IAnimation<T> Animate<T>(this IAnimatable<T> parent,
-            IAnimation<float> controller)
+        public static IAnimation<T> Animate<T>(
+            this IAnimatable<T> parent,
+            IAnimation<float> controller
+        )
         {
             return new DrivenAnimation<T>(controller, parent);
         }
@@ -180,8 +213,11 @@ namespace UniMob.UI
         private readonly Func<float, float> _curve;
         private readonly Func<float, float> _reverseCurve;
 
-        public CurvedAnimation(IAnimation<float> controller,
-            Func<float, float> curve, Func<float, float> reverseCurve = null)
+        public CurvedAnimation(
+            IAnimation<float> controller,
+            Func<float, float> curve,
+            Func<float, float> reverseCurve = null
+        )
         {
             _controller = controller;
             _curve = curve ?? (t => t);

@@ -6,8 +6,12 @@ namespace UniMob.UI
 {
     public struct WidgetViewReference : IEquatable<WidgetViewReference>
     {
-        private WidgetViewReference(WidgetViewReferenceType type, string path, AssetReferenceGameObject reference,
-            GameObject prefab)
+        private WidgetViewReference(
+            WidgetViewReferenceType type,
+            string path,
+            AssetReferenceGameObject reference,
+            GameObject prefab
+        )
         {
             Type = type;
             Path = path;
@@ -22,7 +26,10 @@ namespace UniMob.UI
 
         public bool Equals(WidgetViewReference other)
         {
-            return Type == other.Type && Path == other.Path && Reference == other.Reference && Prefab == other.Prefab;
+            return Type == other.Type
+                && Path == other.Path
+                && Reference == other.Reference
+                && Prefab == other.Prefab;
         }
 
         public override bool Equals(object obj)
@@ -32,7 +39,7 @@ namespace UniMob.UI
 
         public override int GetHashCode()
         {
-            return unchecked((int) Type * 397) ^ (Path != null ? Path.GetHashCode() : 0);
+            return unchecked((int)Type * 397) ^ (Path != null ? Path.GetHashCode() : 0);
         }
 
         public override string ToString()
@@ -47,7 +54,12 @@ namespace UniMob.UI
 
         public static WidgetViewReference Addressable(AssetReferenceGameObject reference)
         {
-            return new WidgetViewReference(WidgetViewReferenceType.Addressable, null, reference, null);
+            return new WidgetViewReference(
+                WidgetViewReferenceType.Addressable,
+                null,
+                reference,
+                null
+            );
         }
 
         public static WidgetViewReference Resource(string path)

@@ -3,6 +3,6 @@
     public enum Axis
     {
         Horizontal,
-        Vertical
+        Vertical,
     }
 }

@@ -29,16 +29,13 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         public Vector2 ChildSize { get; protected set; }
         public Vector2 ChildPosition { get; protected set; }
 
-        public LayoutInfo ChildLayout => new LayoutInfo
-        {
-            Size = ChildSize,
-            Position = ChildPosition
-        };
-
+        public LayoutInfo ChildLayout =>
+            new LayoutInfo { Size = ChildSize, Position = ChildPosition };
 
         protected IState? Child => _state.Child;
 
-        protected SingleChildRenderObject(ISingleChildLayoutState state) : base(state)
+        protected SingleChildRenderObject(ISingleChildLayoutState state)
+            : base(state)
         {
             _state = state;
         }

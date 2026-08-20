@@ -15,6 +15,6 @@
         /// <summary>
         ///     Aligns the trailing edge of the item with the trailing edge of the viewport.
         /// </summary>
-        End
+        End,
     }
 }

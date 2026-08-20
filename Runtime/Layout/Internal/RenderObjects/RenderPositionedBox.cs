@@ -19,7 +19,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly IPositionedBoxState _state;
 
-        public RenderPositionedBox(IPositionedBoxState state) : base(state)
+        public RenderPositionedBox(IPositionedBoxState state)
+            : base(state)
         {
             _state = state;
         }
@@ -32,13 +33,16 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             else
                 ChildSize = Vector2.zero;
 
-
             // Determine if we should HUG our content or expand to fill the available space.
             var shrinkWrapWidth = _state.WidthFactor.HasValue || !constraints.HasBoundedWidth;
             var shrinkWrapHeight = _state.HeightFactor.HasValue || !constraints.HasBoundedHeight;
 
-            var selfWidth = shrinkWrapWidth ? ChildSize.x * (_state.WidthFactor ?? 1f) : float.PositiveInfinity;
-            var selfHeight = shrinkWrapHeight ? ChildSize.y * (_state.HeightFactor ?? 1f) : float.PositiveInfinity;
+            var selfWidth = shrinkWrapWidth
+                ? ChildSize.x * (_state.WidthFactor ?? 1f)
+                : float.PositiveInfinity;
+            var selfHeight = shrinkWrapHeight
+                ? ChildSize.y * (_state.HeightFactor ?? 1f)
+                : float.PositiveInfinity;
 
             var desired = new Vector2(selfWidth, selfHeight);
 
@@ -54,7 +58,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         private const string LowerTheSizeFactor =
             "The size factor asks for more room than this box allows. Lower WidthFactor/HeightFactor, "
             + "or give the box more room.";
-
 
         protected override void PerformPositioning(Vector2 size)
         {

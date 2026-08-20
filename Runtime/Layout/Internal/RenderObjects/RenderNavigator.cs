@@ -13,8 +13,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly INavigatorState _state;
 
-
-        public RenderNavigator(INavigatorState state) : base(state)
+        public RenderNavigator(INavigatorState state)
+            : base(state)
         {
             _state = state;
         }
@@ -51,7 +51,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             foreach (var screen in screens)
             {
                 var screenSize = LayoutChild(screen, screenConstraints);
-                ChildrenLayoutBuffer.Add(new LayoutInfo { Size = screenSize, Position = Vector2.zero });
+                ChildrenLayoutBuffer.Add(
+                    new LayoutInfo { Size = screenSize, Position = Vector2.zero }
+                );
             }
 
             return size;

@@ -105,11 +105,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// <summary>A scrollable positions its children beyond the viewport; that is what scrolling is.</summary>
         protected override bool ChildrenMayOverhang => true;
 
-        public RenderSliverGrid(ISliverGridState state) : base(state)
+        public RenderSliverGrid(ISliverGridState state)
+            : base(state)
         {
             _state = state;
         }
-
 
         private float ComputeVirtualizationCacheExtent()
         {
@@ -118,10 +118,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         }
 
         // --- Axis-aware padding: the grid works in (main, cross) space; map to the widget's x/y padding. ---
-        private float MainStartPadding(bool isHorizontal) => isHorizontal ? _state.Padding.Left : _state.Padding.Top;
-        private float MainEndPadding(bool isHorizontal) => isHorizontal ? _state.Padding.Right : _state.Padding.Bottom;
-        private float CrossStartPadding(bool isHorizontal) => isHorizontal ? _state.Padding.Top : _state.Padding.Left;
-        private float CrossEndPadding(bool isHorizontal) => isHorizontal ? _state.Padding.Bottom : _state.Padding.Right;
+        private float MainStartPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Left : _state.Padding.Top;
+
+        private float MainEndPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Right : _state.Padding.Bottom;
+
+        private float CrossStartPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Top : _state.Padding.Left;
+
+        private float CrossEndPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Bottom : _state.Padding.Right;
 
         /// <summary>
         ///     SIZING PASS: resolves the cross-axis geometry from the delegate, then (eager) measures every
@@ -152,9 +159,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var crossAxis = isHorizontal ? Axis.Vertical : Axis.Horizontal;
             if (!float.IsFinite(constraints.MaxAlongAxis(crossAxis)))
             {
-                unbounded |= crossAxis == Axis.Horizontal
-                    ? LayoutAxes.Horizontal
-                    : LayoutAxes.Vertical;
+                unbounded |=
+                    crossAxis == Axis.Horizontal ? LayoutAxes.Horizontal : LayoutAxes.Vertical;
             }
 
             if (unbounded != LayoutAxes.None)
@@ -164,13 +170,21 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             _viewportSize = constraints.Largest.ZeroOn(unbounded);
 
-            if (_state.VirtualizationCacheExtent.HasValue && _state.VirtualizationCacheExtent.Value < 0)
-                throw new InvalidOperationException("VirtualizationCacheExtent cannot be negative.");
-            _virtualizationCacheExtent = _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
+            if (
+                _state.VirtualizationCacheExtent.HasValue
+                && _state.VirtualizationCacheExtent.Value < 0
+            )
+                throw new InvalidOperationException(
+                    "VirtualizationCacheExtent cannot be negative."
+                );
+            _virtualizationCacheExtent =
+                _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
 
             var viewportCross = isHorizontal ? _viewportSize.y : _viewportSize.x;
-            var availableCross = Mathf.Max(0f,
-                viewportCross - CrossStartPadding(isHorizontal) - CrossEndPadding(isHorizontal));
+            var availableCross = Mathf.Max(
+                0f,
+                viewportCross - CrossStartPadding(isHorizontal) - CrossEndPadding(isHorizontal)
+            );
 
             _layout = _state.GridDelegate.GetLayout(availableCross);
 
@@ -223,10 +237,17 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             // Offsets are measured from the content origin, which starts after the leading main padding.
             var startRow = Mathf.Clamp(
-                Mathf.FloorToInt((scrollOffset - cacheExtent - mainStartPad) / rowStride), 0, rowCount - 1);
+                Mathf.FloorToInt((scrollOffset - cacheExtent - mainStartPad) / rowStride),
+                0,
+                rowCount - 1
+            );
             var endRow = Mathf.Clamp(
-                Mathf.CeilToInt((scrollOffset + viewportMain + cacheExtent - mainStartPad) / rowStride),
-                startRow + 1, rowCount);
+                Mathf.CeilToInt(
+                    (scrollOffset + viewportMain + cacheExtent - mainStartPad) / rowStride
+                ),
+                startRow + 1,
+                rowCount
+            );
 
             var startIndex = startRow * n;
             var endIndex = Mathf.Min(endRow * n, itemCount);
@@ -239,7 +260,12 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         // Measures a contiguous run of built children (all children in eager mode; the window in lazy mode),
         // recording each cell's main extent and -- in measured-rows mode -- each row's height and the EMA.
-        private void MeasureWindow(IState[] builtStates, int startIndex, bool isHorizontal, bool isVertical)
+        private void MeasureWindow(
+            IState[] builtStates,
+            int startIndex,
+            bool isHorizontal,
+            bool isVertical
+        )
         {
             var cellCross = _layout.CellCrossAxisExtent;
             var cellMain = _layout.CellMainAxisExtent;
@@ -290,7 +316,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         // Cell constraints: tight on the cross axis (cells fill their column exactly) and, on the main axis,
         // tight to the fixed extent or loose (measured). Distinct from SliverLayoutMath.MakeChildConstraints,
         // whose cross axis stretches to the whole viewport (a list has one column, a grid has N).
-        private static LayoutConstraints MakeCellConstraints(bool isHorizontal, float cellCross, float? cellMain)
+        private static LayoutConstraints MakeCellConstraints(
+            bool isHorizontal,
+            float cellCross,
+            float? cellMain
+        )
         {
             var mainMax = cellMain ?? float.PositiveInfinity;
             var mainMin = cellMain ?? 0f;
@@ -319,20 +349,25 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var measuredCountBelow = 0;
             foreach (var pair in _measuredRowExtents)
             {
-                if (pair.Key >= row) continue;
+                if (pair.Key >= row)
+                    continue;
                 measuredSumBelow += pair.Value;
                 measuredCountBelow++;
             }
 
-            return mainStartPad + measuredSumBelow + _averageRowExtent * (row - measuredCountBelow) +
-                   mainSpacing * row;
+            return mainStartPad
+                + measuredSumBelow
+                + _averageRowExtent * (row - measuredCountBelow)
+                + mainSpacing * row;
         }
 
         private float RowMainExtent(int row)
         {
             if (_layout.IsFixedMainAxis)
                 return _layout.CellMainAxisExtent!.Value;
-            return _measuredRowExtents.TryGetValue(row, out var height) ? height : _averageRowExtent;
+            return _measuredRowExtents.TryGetValue(row, out var height)
+                ? height
+                : _averageRowExtent;
         }
 
         /// <summary>
@@ -351,7 +386,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             var viewportMainAxisSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
 
             var viewportStart = _windowScrollOffset - _virtualizationCacheExtent;
-            var viewportEnd = _windowScrollOffset + viewportMainAxisSize + _virtualizationCacheExtent;
+            var viewportEnd =
+                _windowScrollOffset + viewportMainAxisSize + _virtualizationCacheExtent;
 
             for (var w = 0; w < _windowCells.Count; w++)
             {
@@ -368,19 +404,26 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
                 var crossPos = crossStartPad + _layout.CrossAxisOffsetForColumn(column);
 
-                visible.Add(new IndexedLayoutData
-                {
-                    ChildIndex = cell.Index,
-                    Layout = new LayoutInfo
+                visible.Add(
+                    new IndexedLayoutData
                     {
-                        Size = isHorizontal ? new Vector2(mainSize, cellCross) : new Vector2(cellCross, mainSize),
-                        Position = isHorizontal ? new Vector2(mainPos, crossPos) : new Vector2(crossPos, mainPos),
-                    },
-                });
+                        ChildIndex = cell.Index,
+                        Layout = new LayoutInfo
+                        {
+                            Size = isHorizontal
+                                ? new Vector2(mainSize, cellCross)
+                                : new Vector2(cellCross, mainSize),
+                            Position = isHorizontal
+                                ? new Vector2(mainPos, crossPos)
+                                : new Vector2(crossPos, mainPos),
+                        },
+                    }
+                );
             }
 
             ChildrenLayoutBuffer.Clear();
-            foreach (var child in visible) ChildrenLayoutBuffer.Add(child.Layout);
+            foreach (var child in visible)
+                ChildrenLayoutBuffer.Add(child.Layout);
 
             _state.SetVisibleChildren(visible);
         }
@@ -399,7 +442,9 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return 0;
 
             var isHorizontal = _state.Axis == Axis.Horizontal;
-            return EstimateRowLeadingEdgeOffset(rowCount) - _layout.MainAxisSpacing + MainEndPadding(isHorizontal);
+            return EstimateRowLeadingEdgeOffset(rowCount)
+                - _layout.MainAxisSpacing
+                + MainEndPadding(isHorizontal);
         }
 
         /// <summary>
@@ -425,22 +470,26 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             var row = _layout.RowOf(index);
             var leadingEdge = EstimateRowLeadingEdgeOffset(row);
-            var offset = SliverLayoutMath.AlignToScrollPosition(leadingEdge, RowMainExtent(row), viewportSize, position);
+            var offset = SliverLayoutMath.AlignToScrollPosition(
+                leadingEdge,
+                RowMainExtent(row),
+                viewportSize,
+                position
+            );
             return Mathf.Clamp(offset, 0, totalScrollableDist);
         }
 
         // Intrinsic sizing reports the total main-axis size; the cross axis stretches to its constraint, so
         // that axis returns 0. Uses the current estimate rather than forcing a full measurement (which would
         // defeat laziness). Returns 0 before the first layout pass has resolved a grid geometry.
-        protected override float ComputeIntrinsicHeight(float width)
-            => _state.Axis == Axis.Horizontal ? 0 : TotalContentSize();
+        protected override float ComputeIntrinsicHeight(float width) =>
+            _state.Axis == Axis.Horizontal ? 0 : TotalContentSize();
 
-        protected override float ComputeIntrinsicWidth(float height)
-            => _state.Axis == Axis.Vertical ? 0 : TotalContentSize();
+        protected override float ComputeIntrinsicWidth(float height) =>
+            _state.Axis == Axis.Vertical ? 0 : TotalContentSize();
 
         private const string BoundBothAxes =
             "A ScrollGrid needs a bounded viewport on its scroll axis and a bounded cross axis to "
             + "divide into columns. Wrap it in Expanded or give an ancestor a fixed size on that axis.";
-
     }
 }

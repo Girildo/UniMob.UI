@@ -20,7 +20,8 @@ namespace UniMob.UI.Internal.Pooling
 
         public static Pool GetPool([NotNull] GameObject prefab)
         {
-            if (prefab == null) throw new ArgumentNullException(nameof(prefab));
+            if (prefab == null)
+                throw new ArgumentNullException(nameof(prefab));
 
             var prefabID = prefab.GetInstanceID();
 
@@ -40,10 +41,14 @@ namespace UniMob.UI.Internal.Pooling
             return pool;
         }
 
-        public static GameObject Instantiate([NotNull] GameObject prefab, Transform parent = null,
-            bool worldPositionStays = true)
+        public static GameObject Instantiate(
+            [NotNull] GameObject prefab,
+            Transform parent = null,
+            bool worldPositionStays = true
+        )
         {
-            if (prefab == null) throw new ArgumentNullException(nameof(prefab));
+            if (prefab == null)
+                throw new ArgumentNullException(nameof(prefab));
 
             var prefabID = prefab.GetInstanceID();
             var pool = GetPool(prefab);
@@ -55,8 +60,12 @@ namespace UniMob.UI.Internal.Pooling
             return obj;
         }
 
-        public static void Recycle(GameObject obj, bool deactivate = true, bool worldPositionStays = false,
-            bool resetParent = true)
+        public static void Recycle(
+            GameObject obj,
+            bool deactivate = true,
+            bool worldPositionStays = false,
+            bool resetParent = true
+        )
         {
             if (obj == null)
             {
@@ -100,7 +109,8 @@ namespace UniMob.UI.Internal.Pooling
 
             public void Init([NotNull] GameObject prefab)
             {
-                if (prefab == null) throw new ArgumentNullException(nameof(prefab));
+                if (prefab == null)
+                    throw new ArgumentNullException(nameof(prefab));
 
                 _prefab = prefab;
                 _prefabName = prefab.name;
@@ -136,8 +146,12 @@ namespace UniMob.UI.Internal.Pooling
                 return obj;
             }
 
-            public void Return(GameObject instance, bool deactivate, bool worldPositionStays = false,
-                bool resetParent = true)
+            public void Return(
+                GameObject instance,
+                bool deactivate,
+                bool worldPositionStays = false,
+                bool resetParent = true
+            )
             {
                 if (_poolDestroyed)
                     return;

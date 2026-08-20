@@ -2,8 +2,12 @@ using UniMob.UI.Internal;
 using UniMob.UI.Layout.Internal.Views;
 using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.IgnorePointer",
-    typeof(RectTransform), typeof(CanvasGroup), typeof(IgnorePointerView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.IgnorePointer",
+    typeof(RectTransform),
+    typeof(CanvasGroup),
+    typeof(IgnorePointerView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {

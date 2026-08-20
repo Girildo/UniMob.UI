@@ -78,7 +78,10 @@ namespace UniMob.UI.Widgets
 
                 // An infinite axis means "fill the panel", which a RectTransform expresses by spanning
                 // its anchors rather than by a size -- and a sizeDelta of infinity would be a NaN rect.
-                var sizeDelta = new Vector2(stretchX ? 0f : finalSize.x, stretchY ? 0f : finalSize.y);
+                var sizeDelta = new Vector2(
+                    stretchX ? 0f : finalSize.x,
+                    stretchY ? 0f : finalSize.y
+                );
 
                 rt.anchorMin = new Vector2(0f, stretchY ? 0f : 1f);
                 rt.anchorMax = new Vector2(stretchX ? 1f : 0f, 1f);
@@ -94,12 +97,15 @@ namespace UniMob.UI.Widgets
         {
             // In the Unity UI we cannot calculate the size immediately (it will be broken sometimes),
             // therefore we use an atom for delayed computation and invalidate it when necessary.
-            return Atom.Computed(ViewLifetime, () =>
-            {
-                var panelSize = rectTransform.rect.size;
-                var panelConstraints = LayoutConstraints.Tight(panelSize.x, panelSize.y);
-                return panelConstraints;
-            });
+            return Atom.Computed(
+                ViewLifetime,
+                () =>
+                {
+                    var panelSize = rectTransform.rect.size;
+                    var panelConstraints = LayoutConstraints.Tight(panelSize.x, panelSize.y);
+                    return panelConstraints;
+                }
+            );
         }
 
         private void InvalidateLayoutConstraints()

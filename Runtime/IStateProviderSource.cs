@@ -1,4 +1,3 @@
-
 namespace UniMob.UI
 {
     public interface IStateProviderSource

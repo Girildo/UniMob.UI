@@ -55,7 +55,8 @@ namespace UniMob.UI.Widgets
         ///     A result without a value: the route's own close, or an asked one when <paramref name="request"/>
         ///     is given.
         /// </summary>
-        public static PopResult None(object request = null) => new PopResult(CauseOf(request), request, false, null);
+        public static PopResult None(object request = null) =>
+            new PopResult(CauseOf(request), request, false, null);
 
         /// <summary>A result carrying an untyped value. Typed routes go through <see cref="Of{T}"/>.</summary>
         public static PopResult OfValue(object value, object request = null) =>
@@ -70,15 +71,24 @@ namespace UniMob.UI.Widgets
         /// <summary>The result of a route the navigator removed without asking it.</summary>
         public static PopResult Teardown() => new PopResult(PopCause.Teardown, null, false, null);
 
-        public static PopResult<T> Teardown<T>() => new PopResult<T>(PopCause.Teardown, null, false, default);
+        public static PopResult<T> Teardown<T>() =>
+            new PopResult<T>(PopCause.Teardown, null, false, default);
 
-        private static PopCause CauseOf(object request) => request == null ? PopCause.Self : PopCause.Requested;
+        private static PopCause CauseOf(object request) =>
+            request == null ? PopCause.Self : PopCause.Requested;
 
         public override string ToString() => Describe(HasValue, Value, Cause, Request);
 
-        internal static string Describe(bool hasValue, object value, PopCause cause, object request) =>
-            (hasValue ? "PopResult(" + value + ")" : "PopResult(none)") + ", " + cause +
-            (request == null ? "" : " by " + request);
+        internal static string Describe(
+            bool hasValue,
+            object value,
+            PopCause cause,
+            object request
+        ) =>
+            (hasValue ? "PopResult(" + value + ")" : "PopResult(none)")
+            + ", "
+            + cause
+            + (request == null ? "" : " by " + request);
     }
 
     /// <summary>

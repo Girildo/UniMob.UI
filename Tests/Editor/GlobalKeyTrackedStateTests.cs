@@ -171,7 +171,10 @@ namespace UniMob.UI.Tests
                 runs,
                 "binding must wake the observer even though the projected value did not change"
             );
-            Assert.IsNull(seen, "a state of the wrong type reads as default, matching CurrentState");
+            Assert.IsNull(
+                seen,
+                "a state of the wrong type reads as default, matching CurrentState"
+            );
 
             StateUtilities.DeactivateChild(root);
             lifetime.Dispose();

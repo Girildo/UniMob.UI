@@ -29,14 +29,20 @@ namespace UniMob.UI.Tests
         {
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(A, null)", "DidPush(A, null)" },
                 observer.Calls,
-                "an observer supplied at construction hears the initial route, since the widget is in " +
-                "place before InitState pushes it");
+                "an observer supplied at construction hears the initial route, since the widget is in "
+                    + "place before InitState pushes it"
+            );
         }
 
         [UnityTest]
@@ -44,16 +50,19 @@ namespace UniMob.UI.Tests
         {
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
             observer.Calls.Clear();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
             yield return host.Settle();
 
-            CollectionAssert.AreEqual(
-                new[] { "WillPush(B, A)", "DidPush(B, A)" },
-                observer.Calls);
+            CollectionAssert.AreEqual(new[] { "WillPush(B, A)", "DidPush(B, A)" }, observer.Calls);
         }
 
         [UnityTest]
@@ -61,7 +70,12 @@ namespace UniMob.UI.Tests
         {
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
@@ -71,9 +85,7 @@ namespace UniMob.UI.Tests
             host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
-            CollectionAssert.AreEqual(
-                new[] { "WillPop(B, A)", "DidPop(B, A)" },
-                observer.Calls);
+            CollectionAssert.AreEqual(new[] { "WillPop(B, A)", "DidPop(B, A)" }, observer.Calls);
         }
 
         /// <summary>
@@ -85,7 +97,12 @@ namespace UniMob.UI.Tests
         {
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
 
             var root = host.Navigator.TopmostRoute;
@@ -102,7 +119,8 @@ namespace UniMob.UI.Tests
 
             CollectionAssert.AreEqual(
                 new[] { "WillPop(C, B)", "DidPop(C, B)", "WillPop(B, A)", "DidPop(B, A)" },
-                observer.Calls);
+                observer.Calls
+            );
         }
 
         [UnityTest]
@@ -110,7 +128,12 @@ namespace UniMob.UI.Tests
         {
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
             observer.Calls.Clear();
 
@@ -119,7 +142,8 @@ namespace UniMob.UI.Tests
 
             CollectionAssert.AreEqual(
                 new[] { "WillReplace(B, A)", "DidReplace(B, A)" },
-                observer.Calls);
+                observer.Calls
+            );
         }
 
         /// <summary>
@@ -138,13 +162,22 @@ namespace UniMob.UI.Tests
         {
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
 
             _ = host.Navigator.ApplyScreenEvent(ScreenEvent.Destroy);
             yield return host.Settle();
 
-            Assert.AreEqual(0, host.Navigator.NavigationStack.Count, "the stack must be empty for this to mean anything");
+            Assert.AreEqual(
+                0,
+                host.Navigator.NavigationStack.Count,
+                "the stack must be empty for this to mean anything"
+            );
             observer.Calls.Clear();
 
             host.Navigator.Replace(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
@@ -152,7 +185,8 @@ namespace UniMob.UI.Tests
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, null)", "DidPush(B, null)" },
-                observer.Calls);
+                observer.Calls
+            );
         }
 
         /// <summary>
@@ -166,10 +200,17 @@ namespace UniMob.UI.Tests
 
             var observer = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, observer);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                observer
+            );
             yield return host.Settle();
 
-            host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy));
+            host.Navigator.Push(
+                host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy)
+            );
             yield return host.Settle();
             observer.Calls.Clear();
 
@@ -179,7 +220,8 @@ namespace UniMob.UI.Tests
             CollectionAssert.AreEqual(
                 new[] { "WillPop(B, A)", "DidPop(B, A)" },
                 observer.Calls,
-                "the removal commits against a failed transition, so the notification does too");
+                "the removal commits against a failed transition, so the notification does too"
+            );
         }
 
         /// <summary>
@@ -194,7 +236,13 @@ namespace UniMob.UI.Tests
             var throwing = new ThrowingObserver();
             var listening = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, throwing, listening);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                throwing,
+                listening
+            );
             yield return host.Settle();
             listening.Calls.Clear();
 
@@ -204,13 +252,18 @@ namespace UniMob.UI.Tests
             host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
-            Assert.AreEqual(1, host.Navigator.NavigationStack.Count, "navigation ran to completion");
+            Assert.AreEqual(
+                1,
+                host.Navigator.NavigationStack.Count,
+                "navigation ran to completion"
+            );
             Assert.AreEqual("A", host.Navigator.TopmostRoute.Key);
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, A)", "DidPush(B, A)", "WillPop(B, A)", "DidPop(B, A)" },
                 listening.Calls,
-                "an observer earlier in the list throwing must not cost a later one its callbacks");
+                "an observer earlier in the list throwing must not cost a later one its callbacks"
+            );
         }
 
         /// <summary>
@@ -225,16 +278,21 @@ namespace UniMob.UI.Tests
 
             // Only on the push under test: at mount the host does not exist yet, and the point is to
             // replace the observer list part-way through an operation that is already announcing.
-            var removing = new CallbackObserver(
-                onWillPush: route =>
+            var removing = new CallbackObserver(onWillPush: route =>
+            {
+                if (route.Key == "B")
                 {
-                    if (route.Key == "B")
-                    {
-                        host.Rebuild();
-                    }
-                });
+                    host.Rebuild();
+                }
+            });
 
-            host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, removing, listening);
+            host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                removing,
+                listening
+            );
             yield return host.Settle();
             listening.Calls.Clear();
 
@@ -244,8 +302,9 @@ namespace UniMob.UI.Tests
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, A)", "DidPush(B, A)" },
                 listening.Calls,
-                "the operation announces to the set it started with, even after the widget was replaced " +
-                "part-way through it");
+                "the operation announces to the set it started with, even after the widget was replaced "
+                    + "part-way through it"
+            );
         }
 
         /// <summary>
@@ -258,7 +317,12 @@ namespace UniMob.UI.Tests
             var mounted = new RecordingObserver();
             var rebuilt = new RecordingObserver();
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, mounted);
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                mounted
+            );
             yield return host.Settle();
 
             host.Rebuild(rebuilt);
@@ -270,10 +334,12 @@ namespace UniMob.UI.Tests
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, A)", "DidPush(B, A)" },
                 rebuilt.Calls,
-                "the observer the rebuild supplied hears the push");
+                "the observer the rebuild supplied hears the push"
+            );
             CollectionAssert.IsEmpty(
                 mounted.Calls,
-                "the observer it replaced hears nothing further");
+                "the observer it replaced hears nothing further"
+            );
         }
 
         /// <summary>
@@ -291,14 +357,15 @@ namespace UniMob.UI.Tests
         {
             NavigatorHost host = null;
 
-            var pushing = new CallbackObserver(
-                onDidPush: route =>
+            var pushing = new CallbackObserver(onDidPush: route =>
+            {
+                if (route.Key == "B")
                 {
-                    if (route.Key == "B")
-                    {
-                        host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
-                    }
-                });
+                    host.Navigator.Push(
+                        host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                    );
+                }
+            });
 
             host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, pushing);
             yield return host.Settle();
@@ -335,7 +402,8 @@ namespace UniMob.UI.Tests
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
-                "  stack: [C, B, A]");
+                "  stack: [C, B, A]"
+            );
         }
 
         /// <summary>
@@ -371,8 +439,12 @@ namespace UniMob.UI.Tests
             // active, which UniMob reports. See the remarks: that is the premise, not a side effect.
             LogAssert.ignoreFailingMessages = true;
 
-            var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain,
-                new StateReadingObserver());
+            var host = NavigatorHost.Mount(
+                "A",
+                RouteModalType.Fullscreen,
+                RouteFlavour.Plain,
+                new StateReadingObserver()
+            );
             yield return host.Settle();
 
             var runs = 0;
@@ -381,36 +453,53 @@ namespace UniMob.UI.Tests
 
             try
             {
-                Atom.Reaction(lifetime.Lifetime, () =>
-                {
-                    runs++;
-
-                    // A real dependency, so the reaction is a genuine computation rather than one that
-                    // could never re-run for want of anything to watch.
-                    _ = unrelated.Value;
-
-                    if (runs == 1)
+                Atom.Reaction(
+                    lifetime.Lifetime,
+                    () =>
                     {
-                        host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                        runs++;
+
+                        // A real dependency, so the reaction is a genuine computation rather than one that
+                        // could never re-run for want of anything to watch.
+                        _ = unrelated.Value;
+
+                        if (runs == 1)
+                        {
+                            host.Navigator.Push(
+                                host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                            );
+                        }
                     }
-                });
+                );
 
                 yield return host.Settle();
 
-                Assert.AreEqual(1, runs, "the reaction has run once, and pushed from inside that run");
+                Assert.AreEqual(
+                    1,
+                    runs,
+                    "the reaction has run once, and pushed from inside that run"
+                );
 
-                host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
+                host.Navigator.Push(
+                    host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
+                );
                 yield return host.Settle();
 
-                Assert.AreEqual(1, runs,
-                    "a push the reaction had nothing to do with must not re-run it: the observer's read of B's " +
-                    "ScreenState must not have been recorded against the reaction");
+                Assert.AreEqual(
+                    1,
+                    runs,
+                    "a push the reaction had nothing to do with must not re-run it: the observer's read of B's "
+                        + "ScreenState must not have been recorded against the reaction"
+                );
 
                 host.Rebuild();
                 yield return host.Settle();
 
-                Assert.AreEqual(1, runs,
-                    "nor may reading the observer list off the widget leave the reaction depending on it");
+                Assert.AreEqual(
+                    1,
+                    runs,
+                    "nor may reading the observer list off the widget leave the reaction depending on it"
+                );
             }
             finally
             {
@@ -450,17 +539,23 @@ namespace UniMob.UI.Tests
         {
             public List<string> Calls { get; } = new List<string>();
 
-            public void WillPush(Route route, Route previousRoute) => Record("WillPush", route, previousRoute);
+            public void WillPush(Route route, Route previousRoute) =>
+                Record("WillPush", route, previousRoute);
 
-            public void DidPush(Route route, Route previousRoute) => Record("DidPush", route, previousRoute);
+            public void DidPush(Route route, Route previousRoute) =>
+                Record("DidPush", route, previousRoute);
 
-            public void WillPop(Route route, Route previousRoute) => Record("WillPop", route, previousRoute);
+            public void WillPop(Route route, Route previousRoute) =>
+                Record("WillPop", route, previousRoute);
 
-            public void DidPop(Route route, Route previousRoute) => Record("DidPop", route, previousRoute);
+            public void DidPop(Route route, Route previousRoute) =>
+                Record("DidPop", route, previousRoute);
 
-            public void WillReplace(Route newRoute, Route oldRoute) => Record("WillReplace", newRoute, oldRoute);
+            public void WillReplace(Route newRoute, Route oldRoute) =>
+                Record("WillReplace", newRoute, oldRoute);
 
-            public void DidReplace(Route newRoute, Route oldRoute) => Record("DidReplace", newRoute, oldRoute);
+            public void DidReplace(Route newRoute, Route oldRoute) =>
+                Record("DidReplace", newRoute, oldRoute);
 
             private void Record(string callback, Route route, Route other)
             {
@@ -472,17 +567,23 @@ namespace UniMob.UI.Tests
 
         private sealed class ThrowingObserver : INavigatorObserver
         {
-            public void WillPush(Route route, Route previousRoute) => throw new InvalidOperationException("observer failed");
+            public void WillPush(Route route, Route previousRoute) =>
+                throw new InvalidOperationException("observer failed");
 
-            public void DidPush(Route route, Route previousRoute) => throw new InvalidOperationException("observer failed");
+            public void DidPush(Route route, Route previousRoute) =>
+                throw new InvalidOperationException("observer failed");
 
-            public void WillPop(Route route, Route previousRoute) => throw new InvalidOperationException("observer failed");
+            public void WillPop(Route route, Route previousRoute) =>
+                throw new InvalidOperationException("observer failed");
 
-            public void DidPop(Route route, Route previousRoute) => throw new InvalidOperationException("observer failed");
+            public void DidPop(Route route, Route previousRoute) =>
+                throw new InvalidOperationException("observer failed");
 
-            public void WillReplace(Route newRoute, Route oldRoute) => throw new InvalidOperationException("observer failed");
+            public void WillReplace(Route newRoute, Route oldRoute) =>
+                throw new InvalidOperationException("observer failed");
 
-            public void DidReplace(Route newRoute, Route oldRoute) => throw new InvalidOperationException("observer failed");
+            public void DidReplace(Route newRoute, Route oldRoute) =>
+                throw new InvalidOperationException("observer failed");
         }
 
         /// <summary>
@@ -504,21 +605,13 @@ namespace UniMob.UI.Tests
 
             public void DidPush(Route route, Route previousRoute) => _onDidPush?.Invoke(route);
 
-            public void WillPop(Route route, Route previousRoute)
-            {
-            }
+            public void WillPop(Route route, Route previousRoute) { }
 
-            public void DidPop(Route route, Route previousRoute)
-            {
-            }
+            public void DidPop(Route route, Route previousRoute) { }
 
-            public void WillReplace(Route newRoute, Route oldRoute)
-            {
-            }
+            public void WillReplace(Route newRoute, Route oldRoute) { }
 
-            public void DidReplace(Route newRoute, Route oldRoute)
-            {
-            }
+            public void DidReplace(Route newRoute, Route oldRoute) { }
         }
     }
 }

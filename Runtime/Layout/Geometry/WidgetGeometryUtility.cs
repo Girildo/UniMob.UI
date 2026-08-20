@@ -15,7 +15,11 @@ namespace UniMob.UI.Layout
         // GetWorldCorners fills-then-reads within a single call, so a shared buffer is safe.
         private static readonly Vector3[] WorldCornersBuffer = new Vector3[4];
 
-        public static bool TryCompute(RectTransform rectTransform, Canvas rootCanvas, out WidgetGeometry geometry)
+        public static bool TryCompute(
+            RectTransform rectTransform,
+            Canvas rootCanvas,
+            out WidgetGeometry geometry
+        )
         {
             if (rectTransform == null || rootCanvas == null)
             {
@@ -29,16 +33,18 @@ namespace UniMob.UI.Layout
                 WorldCornersBuffer[0],
                 WorldCornersBuffer[1],
                 WorldCornersBuffer[2],
-                WorldCornersBuffer[3]);
+                WorldCornersBuffer[3]
+            );
 
             var scale = rootCanvas.scaleFactor;
             var inverseScale = Mathf.Approximately(scale, 0f) ? 1f : 1f / scale;
 
             var canvas = new Quad(
-                (Vector2) WorldCornersBuffer[0] * inverseScale,
-                (Vector2) WorldCornersBuffer[1] * inverseScale,
-                (Vector2) WorldCornersBuffer[2] * inverseScale,
-                (Vector2) WorldCornersBuffer[3] * inverseScale);
+                (Vector2)WorldCornersBuffer[0] * inverseScale,
+                (Vector2)WorldCornersBuffer[1] * inverseScale,
+                (Vector2)WorldCornersBuffer[2] * inverseScale,
+                (Vector2)WorldCornersBuffer[3] * inverseScale
+            );
 
             geometry = new WidgetGeometry(canvas, world);
             return true;

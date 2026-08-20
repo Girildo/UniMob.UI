@@ -4,7 +4,11 @@ using UniMob.UI.Layout;
 using UnityEngine;
 using UnityEngine.UI;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.ImageView", typeof(RectTransform), typeof(UniMob.UI.Layout.Internal.Views.ImageView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.ImageView",
+    typeof(RectTransform),
+    typeof(UniMob.UI.Layout.Internal.Views.ImageView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -24,16 +28,19 @@ namespace UniMob.UI.Layout.Internal.Views
 
         protected override void Render()
         {
-            if (_rawImage == null) return;
-            if (State.Texture == null) return;
+            if (_rawImage == null)
+                return;
+            if (State.Texture == null)
+                return;
 
             _rawImage.color = State.Color;
             _rawImage.texture = State.Texture;
 
             // Sizing: The RenderImage already calculated our RectTransform size.
             // Painting: Now we calculate the UVs to map the texture inside this RectTransform.
-            Rect rect = ((RectTransform) transform).rect;
-            if (rect.width <= 0 || rect.height <= 0) return;
+            Rect rect = ((RectTransform)transform).rect;
+            if (rect.width <= 0 || rect.height <= 0)
+                return;
 
             Vector2 texSize = new Vector2(State.Texture.width, State.Texture.height);
             _rawImage.uvRect = CalculateUVRect(rect.size, texSize, State.Fit, State.Alignment);
@@ -42,7 +49,12 @@ namespace UniMob.UI.Layout.Internal.Views
         /// <summary>
         /// Calculate the UVs to apply the fitting mode (cover, contain, etc) and alignment to the RawImage.
         /// </summary>
-        private Rect CalculateUVRect(Vector2 boxSize, Vector2 texSize, ImageFit fit, Alignment alignment)
+        private Rect CalculateUVRect(
+            Vector2 boxSize,
+            Vector2 texSize,
+            ImageFit fit,
+            Alignment alignment
+        )
         {
             if (fit == ImageFit.Fill)
             {
@@ -75,8 +87,8 @@ namespace UniMob.UI.Layout.Internal.Views
 
                 case ImageFit.Contain:
                 case ImageFit.ScaleDown:
-                    // Contain actually shrinks the mesh visually, so UVs stay 0..1. 
-                    // However, in our architecture, the RenderImage ALREADY shrunk the boxSize 
+                    // Contain actually shrinks the mesh visually, so UVs stay 0..1.
+                    // However, in our architecture, the RenderImage ALREADY shrunk the boxSize
                     // to perfectly match the aspect ratio during PerformSizing.
                     // So if it's Contain, boxAspect should perfectly equal texAspect, meaning uv is 1,1.
                     return new Rect(0, 0, 1, 1);

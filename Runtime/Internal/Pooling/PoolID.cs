@@ -4,7 +4,8 @@ namespace UniMob.UI.Internal.Pooling
 {
     internal sealed class PoolID : MonoBehaviour
     {
-        [SerializeField] private int prefabInstanceID;
+        [SerializeField]
+        private int prefabInstanceID;
 
         // ReSharper disable once ConvertToAutoProperty
         public int PrefabInstanceID

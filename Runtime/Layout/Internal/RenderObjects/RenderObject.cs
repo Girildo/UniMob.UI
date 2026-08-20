@@ -439,18 +439,22 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             // IsFinite, so both of the legal shapes fall out without being special-cased. A NaN desire
             // reports nothing here: that is ValidateLayout's fault to name, not this one's.
             var overWidth = desired.x - constraints.MaxWidth;
-            if ((considered & LayoutAxes.Horizontal) != 0
+            if (
+                (considered & LayoutAxes.Horizontal) != 0
                 && float.IsFinite(desired.x)
-                && overWidth > LayoutConstants.OverflowTolerance)
+                && overWidth > LayoutConstants.OverflowTolerance
+            )
             {
                 axes |= LayoutAxes.Horizontal;
                 amount = Mathf.Max(amount, overWidth);
             }
 
             var overHeight = desired.y - constraints.MaxHeight;
-            if ((considered & LayoutAxes.Vertical) != 0
+            if (
+                (considered & LayoutAxes.Vertical) != 0
                 && float.IsFinite(desired.y)
-                && overHeight > LayoutConstants.OverflowTolerance)
+                && overHeight > LayoutConstants.OverflowTolerance
+            )
             {
                 axes |= LayoutAxes.Vertical;
                 amount = Mathf.Max(amount, overHeight);
@@ -538,10 +542,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             amount = 0f;
             var axes = LayoutAxes.None;
 
-            var horizontal = Mathf.Max(
-                -childPosition.x,
-                childPosition.x + childSize.x - size.x
-            );
+            var horizontal = Mathf.Max(-childPosition.x, childPosition.x + childSize.x - size.x);
             if (float.IsFinite(horizontal) && horizontal > LayoutConstants.OverflowTolerance)
             {
                 axes |= LayoutAxes.Horizontal;
@@ -611,7 +612,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         [Conditional("UNITY_EDITOR")]
         [Conditional("DEVELOPMENT_BUILD")]
         [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
-        protected void ReportNonFiniteSize(LayoutAxes axes, LayoutConstraints constraints, string remedy)
+        protected void ReportNonFiniteSize(
+            LayoutAxes axes,
+            LayoutConstraints constraints,
+            string remedy
+        )
         {
 #if UNIMOB_UI_DIAGNOSTICS
             Emit(
@@ -765,7 +770,7 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 #if UNIMOB_UI_DIAGNOSTICS
         private void Emit(in LayoutIssue issue)
         {
-            var bit = 1 << (int) issue.Code;
+            var bit = 1 << (int)issue.Code;
 
             // Always, even when suppressed. Noticing is not emitting: without this, a fault that
             // persists clears the latch at the end of every pass and reports on every other one --

@@ -10,11 +10,14 @@ namespace UniMob.UI.Internal
     {
         public static bool CanUpdateWidget(Widget oldWidget, Widget newWidget)
         {
-            return oldWidget.Key == newWidget.Key &&
-                   oldWidget.Type == newWidget.Type;
+            return oldWidget.Key == newWidget.Key && oldWidget.Type == newWidget.Type;
         }
 
-        public static State[] UpdateChildren(BuildContext context, State[] oldChildren, List<Widget> newWidgets)
+        public static State[] UpdateChildren(
+            BuildContext context,
+            State[] oldChildren,
+            List<Widget> newWidgets
+        )
         {
             // Checked before anything is inflated or deactivated, so a bad list fails clean rather
             // than half-diffed. UpdateChild reads null as "no child", which is meaningful for a slot
@@ -29,7 +32,8 @@ namespace UniMob.UI.Internal
                 // rebuild of every list.
                 Assert.IsNotNull(
                     newWidgets[i],
-                    $"Children[{i}] is null. A list drops an absent child rather than holding a null.");
+                    $"Children[{i}] is null. A list drops an absent child rather than holding a null."
+                );
             }
 
             var newChildrenTop = 0;
@@ -37,7 +41,8 @@ namespace UniMob.UI.Internal
             var newChildrenBottom = newWidgets.Count - 1;
             var oldChildrenBottom = oldChildren.Length - 1;
 
-            var newChildren = oldChildren.Length == newWidgets.Count ? oldChildren : new State[newWidgets.Count];
+            var newChildren =
+                oldChildren.Length == newWidgets.Count ? oldChildren : new State[newWidgets.Count];
 
             // Update the top of the list.
             while ((oldChildrenTop <= oldChildrenBottom) && (newChildrenTop <= newChildrenBottom))
@@ -53,7 +58,6 @@ namespace UniMob.UI.Internal
                 newChildrenTop += 1;
                 oldChildrenTop += 1;
             }
-
 
             // Scan the bottom of the list.
             while ((oldChildrenTop <= oldChildrenBottom) && (newChildrenTop <= newChildrenBottom))
@@ -160,7 +164,8 @@ namespace UniMob.UI.Internal
 
         public static void DeactivateChild([NotNull] State child)
         {
-            if (child == null) throw new ArgumentNullException(nameof(child));
+            if (child == null)
+                throw new ArgumentNullException(nameof(child));
             Assert.IsNull(Atom.CurrentScope);
 
             if (child.RawWidget.Key is GlobalKey globalKey)
@@ -171,12 +176,13 @@ namespace UniMob.UI.Internal
             child.Dispose();
         }
 
-        public static State UpdateChild(BuildContext context, [CanBeNull] State child, [CanBeNull] Widget newWidget)
+        public static State UpdateChild(
+            BuildContext context,
+            [CanBeNull] State child,
+            [CanBeNull] Widget newWidget
+        )
         {
             Assert.IsNull(Atom.CurrentScope);
-            
-            
-            
 
             // A null widget means "no child here anymore". Without this the caller has to skip the
             // build to avoid a crash, and skipping it is what leaves the outgoing child undisposed.
@@ -205,19 +211,19 @@ namespace UniMob.UI.Internal
 
                 DeactivateChild(child);
             }
-            
+
             return InflateWidget(context, newWidget);
         }
 
         public static State InflateWidget(BuildContext context, [NotNull] Widget newWidget)
         {
-            if (newWidget == null) throw new ArgumentNullException(nameof(newWidget));
+            if (newWidget == null)
+                throw new ArgumentNullException(nameof(newWidget));
             Assert.IsNull(Atom.CurrentScope);
 
             var newChild = newWidget.CreateState();
             if (newChild == null)
             {
-
                 var providerSource = context.FindAncestorStateImplementing<IStateProviderSource>();
                 if (providerSource != null)
                 {
@@ -225,10 +231,11 @@ namespace UniMob.UI.Internal
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Widget {newWidget} requires a StateProvider, but no IStateProviderSource was found in the context.");
+                    throw new InvalidOperationException(
+                        $"Widget {newWidget} requires a StateProvider, but no IStateProviderSource was found in the context."
+                    );
                 }
             }
-
 
             newChild.Mount(context);
             newChild.Update(newWidget);

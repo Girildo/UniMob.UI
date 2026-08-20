@@ -2,8 +2,12 @@ using UniMob.UI.Internal;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.Opacity",
-    typeof(RectTransform), typeof(CanvasGroup), typeof(UniMob.UI.Layout.Internal.Views.OpacityView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.Opacity",
+    typeof(RectTransform),
+    typeof(CanvasGroup),
+    typeof(UniMob.UI.Layout.Internal.Views.OpacityView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -25,8 +29,6 @@ namespace UniMob.UI.Layout.Internal.Views
             _canvasGroup.alpha = State.OpacityValue.Value;
 
             var childTransform = ChildView.rectTransform;
-
-            
         }
     }
 

@@ -1,9 +1,10 @@
 using UniMob.UI.Internal;
 using UnityEngine;
 
-
-[assembly: RegisterComponentViewFactory("$$_Layout.ColoredImageBoxView",
-    typeof(UniMob.UI.Layout.Internal.Views.ColoredImageBoxView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.ColoredImageBoxView",
+    typeof(UniMob.UI.Layout.Internal.Views.ColoredImageBoxView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -22,12 +23,11 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             base.Render();
 
-            if (_backgroundImage == null) return;
-            
+            if (_backgroundImage == null)
+                return;
+
             _backgroundImage.sprite = State.BackgroundImage;
             _backgroundImage.color = State.BackgroundColor;
         }
     }
-
-    
 }

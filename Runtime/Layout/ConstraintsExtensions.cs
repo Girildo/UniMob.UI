@@ -12,7 +12,7 @@ namespace UniMob.UI.Layout
 
         /// <summary>
         /// Return the maximum constraint along the given axis.
-        /// </summary> 
+        /// </summary>
         public static float MaxAlongAxis(this LayoutConstraints constraints, Axis axis)
         {
             return axis == Axis.Horizontal ? constraints.MaxWidth : constraints.MaxHeight;

@@ -39,18 +39,28 @@ namespace UniMob.UI.Tests
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
             yield return host.Settle();
 
-            var failing = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy);
+            var failing = host.Create(
+                "B",
+                RouteModalType.Fullscreen,
+                RouteFlavour.ThrowsAsyncOnDestroy
+            );
             host.Navigator.Push(failing);
             yield return host.Settle();
 
             host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
-            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,
-                "a route whose destroy failed must still leave the stack");
+            CollectionAssert.DoesNotContain(
+                host.Navigator.NavigationStack,
+                failing,
+                "a route whose destroy failed must still leave the stack"
+            );
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
-            Assert.AreEqual(ScreenState.Destroyed, failing.ScreenState,
-                "the machine had already committed to Destroyed before the handler ran");
+            Assert.AreEqual(
+                ScreenState.Destroyed,
+                failing.ScreenState,
+                "the machine had already committed to Destroyed before the handler ran"
+            );
         }
 
         [UnityTest]
@@ -62,7 +72,8 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             host.Navigator.Push(
-                host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy));
+                host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy)
+            );
             yield return host.Settle();
 
             host.Navigator.TopmostRoute.Pop();
@@ -93,17 +104,27 @@ namespace UniMob.UI.Tests
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
             yield return host.Settle();
 
-            var failing = host.Create("C", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy);
+            var failing = host.Create(
+                "C",
+                RouteModalType.Fullscreen,
+                RouteFlavour.ThrowsAsyncOnDestroy
+            );
             host.Navigator.Push(failing);
             yield return host.Settle();
 
             host.Navigator.RequestPopTo(root, "test");
             yield return host.Settle();
 
-            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,
-                "the route that failed to destroy is still removed");
-            Assert.AreEqual(1, host.Navigator.NavigationStack.Count,
-                "the walk carries on past the failed route down to the root");
+            CollectionAssert.DoesNotContain(
+                host.Navigator.NavigationStack,
+                failing,
+                "the route that failed to destroy is still removed"
+            );
+            Assert.AreEqual(
+                1,
+                host.Navigator.NavigationStack.Count,
+                "the walk carries on past the failed route down to the root"
+            );
 
             AssertNoFinishedRouteOnTheStack(host);
         }
@@ -136,8 +157,11 @@ namespace UniMob.UI.Tests
             host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
-            CollectionAssert.DoesNotContain(host.Navigator.NavigationStack, failing,
-                "a route whose destroy failed must still leave the stack");
+            CollectionAssert.DoesNotContain(
+                host.Navigator.NavigationStack,
+                failing,
+                "a route whose destroy failed must still leave the stack"
+            );
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
             AssertNoFinishedRouteOnTheStack(host);
         }
@@ -146,8 +170,11 @@ namespace UniMob.UI.Tests
         {
             foreach (var route in host.Navigator.NavigationStack)
             {
-                Assert.AreNotEqual(ScreenState.Destroyed, route.ScreenState,
-                    "no route on the stack may report itself destroyed: " + route.Key);
+                Assert.AreNotEqual(
+                    ScreenState.Destroyed,
+                    route.ScreenState,
+                    "no route on the stack may report itself destroyed: " + route.Key
+                );
             }
         }
     }

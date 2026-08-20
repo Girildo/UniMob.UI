@@ -14,7 +14,7 @@ namespace UniMob.UI.Tests
     {
         private static CountingBox Leaf() => new CountingBox { BoxSize = new Vector2(30, 40) };
 
-        private static State ChildOf(State root) => (State) ((ISingleChildLayoutState) root).Child;
+        private static State ChildOf(State root) => (State)((ISingleChildLayoutState)root).Child;
 
         [Test]
         public void AChildReplacedByNull_IsDisposed_AndTheSlotReadsEmpty()
@@ -27,8 +27,10 @@ namespace UniMob.UI.Tests
             TestHarness.Update(root, SizedBox.Shrink());
 
             Assert.IsNull(ChildOf(root), "the slot reads empty once its widget has no child");
-            Assert.IsTrue(child.StateLifetime.IsDisposed,
-                "the outgoing child's state is disposed, not left alive with nothing rendering it");
+            Assert.IsTrue(
+                child.StateLifetime.IsDisposed,
+                "the outgoing child's state is disposed, not left alive with nothing rendering it"
+            );
         }
 
         [Test]
@@ -55,9 +57,14 @@ namespace UniMob.UI.Tests
             var widgets = new List<Widget> { Leaf(), null };
 
             var exception = Assert.Throws<UnityEngine.Assertions.AssertionException>(() =>
-                StateUtilities.UpdateChildren(new BuildContext(null, null), new State[0], widgets));
+                StateUtilities.UpdateChildren(new BuildContext(null, null), new State[0], widgets)
+            );
 
-            StringAssert.Contains("Children[1]", exception.Message, "the failure names the offending index");
+            StringAssert.Contains(
+                "Children[1]",
+                exception.Message,
+                "the failure names the offending index"
+            );
         }
     }
 }

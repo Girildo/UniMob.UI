@@ -12,7 +12,9 @@ namespace UniMob.UI.Tests
         [Test]
         public void FixedCount_SplitsCrossExtentEvenly()
         {
-            var layout = new SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3).GetLayout(300f);
+            var layout = new SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3).GetLayout(
+                300f
+            );
 
             Assert.AreEqual(3, layout.CrossAxisCount);
             Assert.AreEqual(100f, layout.CellCrossAxisExtent, 0.01f);
@@ -26,7 +28,10 @@ namespace UniMob.UI.Tests
         public void FixedCount_AccountsForCrossAxisSpacing()
         {
             // 3 columns, 2 inter-column gaps of 5 => usable 300 => 100 per cell, stride 105.
-            var layout = new SliverGridDelegateWithFixedCrossAxisCount(3, crossAxisSpacing: 5f).GetLayout(310f);
+            var layout = new SliverGridDelegateWithFixedCrossAxisCount(
+                3,
+                crossAxisSpacing: 5f
+            ).GetLayout(310f);
 
             Assert.AreEqual(100f, layout.CellCrossAxisExtent, 0.01f);
             Assert.AreEqual(105f, layout.CrossAxisStride, 0.01f);
@@ -37,7 +42,10 @@ namespace UniMob.UI.Tests
         public void ChildAspectRatio_DerivesMainExtent()
         {
             // ratio = cross / main. avail 200 / 2 cols => cellCross 100. ratio 0.5 => main = 100 / 0.5 = 200.
-            var layout = new SliverGridDelegateWithFixedCrossAxisCount(2, childAspectRatio: 0.5f).GetLayout(200f);
+            var layout = new SliverGridDelegateWithFixedCrossAxisCount(
+                2,
+                childAspectRatio: 0.5f
+            ).GetLayout(200f);
 
             Assert.IsTrue(layout.IsFixedMainAxis);
             Assert.AreEqual(100f, layout.CellCrossAxisExtent, 0.01f);
@@ -47,8 +55,11 @@ namespace UniMob.UI.Tests
         [Test]
         public void MainAxisExtent_OverridesAspectRatio()
         {
-            var layout = new SliverGridDelegateWithFixedCrossAxisCount(2, childAspectRatio: 1f, mainAxisExtent: 50f)
-                .GetLayout(200f);
+            var layout = new SliverGridDelegateWithFixedCrossAxisCount(
+                2,
+                childAspectRatio: 1f,
+                mainAxisExtent: 50f
+            ).GetLayout(200f);
 
             Assert.IsTrue(layout.IsFixedMainAxis);
             Assert.AreEqual(50f, layout.CellMainAxisExtent.Value, 0.01f);
@@ -92,7 +103,10 @@ namespace UniMob.UI.Tests
         public void MaxExtent_AccountsForCrossAxisSpacing()
         {
             // ceil(650 / (200 + 10)) = ceil(3.095) = 4 columns; usable = 650 - 3*10 = 620 => 155 each.
-            var layout = new SliverGridDelegateWithMaxCrossAxisExtent(200f, crossAxisSpacing: 10f).GetLayout(650f);
+            var layout = new SliverGridDelegateWithMaxCrossAxisExtent(
+                200f,
+                crossAxisSpacing: 10f
+            ).GetLayout(650f);
 
             Assert.AreEqual(4, layout.CrossAxisCount);
             Assert.AreEqual(155f, layout.CellCrossAxisExtent, 0.01f);
@@ -128,10 +142,12 @@ namespace UniMob.UI.Tests
         [Test]
         public void Constructors_RejectInvalidArguments()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => new SliverGridDelegateWithFixedCrossAxisCount(0));
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => new SliverGridDelegateWithMaxCrossAxisExtent(0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new SliverGridDelegateWithFixedCrossAxisCount(0)
+            );
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new SliverGridDelegateWithMaxCrossAxisExtent(0f)
+            );
         }
     }
 }

@@ -16,7 +16,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderProxy((ClickableState) state);
+            return new RenderProxy((ClickableState)state);
         }
     }
 
@@ -26,12 +26,12 @@ namespace UniMob.UI.Layout
         void OnClick();
     }
 
-    internal class ClickableState : SingleChildLayoutState<Clickable>,
-        IClickableState
+    internal class ClickableState : SingleChildLayoutState<Clickable>, IClickableState
     {
-        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.ClickableView");
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("$$_Layout.ClickableView");
         public bool Interactable => Widget.Interactable;
-        
+
         public void OnClick()
         {
             using (Atom.NoWatch)
@@ -40,5 +40,4 @@ namespace UniMob.UI.Layout
             }
         }
     }
-
 }

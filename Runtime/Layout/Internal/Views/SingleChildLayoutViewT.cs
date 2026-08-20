@@ -6,14 +6,13 @@ using System;
 using System.Diagnostics;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
+using UniMob.UI.Layout.Internal.RenderObjects;
+using UnityEngine;
 #if UNIMOB_UI_DIAGNOSTICS
 // LayoutWarningOverlay is the only type in this namespace and it compiles out with the diagnostics,
 // taking the namespace with it -- so an unguarded using of it is a compile error in a build without.
 using UniMob.UI.Layout.Internal.Diagnostics;
 #endif
-using UniMob.UI.Layout.Internal.RenderObjects;
-using UnityEngine;
-
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -26,7 +25,7 @@ namespace UniMob.UI.Layout.Internal.Views
     /// cref="RectTransform"/>  and a <see cref="CanvasRenderer"/> component.  The layout logic ensures that the child
     /// element is positioned and sized  according to the layout state provided by the <typeparamref
     /// name="TState"/>.</remarks>
-    /// <typeparam name="TState">The type of the state object associated with the view </typeparam> 
+    /// <typeparam name="TState">The type of the state object associated with the view </typeparam>
     [RequireComponent(typeof(RectTransform), typeof(CanvasRenderer))]
     public abstract class SingleChildLayoutView<TState> : View<TState>
         where TState : class, ISingleChildLayoutState
@@ -41,10 +40,8 @@ namespace UniMob.UI.Layout.Internal.Views
             _mapper = new PooledViewMapper(transform);
         }
 
-
         protected override void Render()
         {
-
             if (State.RenderObject is not ISingleChildRenderObject renderObject)
             {
                 // Structural, so it stays a throw: a view paired with the wrong render object has no
@@ -100,7 +97,8 @@ namespace UniMob.UI.Layout.Internal.Views
                 );
 
                 rt.sizeDelta = childSize;
-                rt.anchoredPosition = new Vector2(topLeftPosition.x, -topLeftPosition.y) + pivotOffset;
+                rt.anchoredPosition =
+                    new Vector2(topLeftPosition.x, -topLeftPosition.y) + pivotOffset;
             }
 
             PaintOwnIssue();
@@ -137,6 +135,5 @@ namespace UniMob.UI.Layout.Internal.Views
 #if UNIMOB_UI_DIAGNOSTICS
         private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
 #endif
-
     }
 }

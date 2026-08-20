@@ -14,8 +14,11 @@ namespace UniMob.UI.Widgets
 
         public override void OnInitializePotentialDrag(PointerEventData eventData)
         {
-            ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData,
-                ExecuteEvents.initializePotentialDrag);
+            ExecuteEvents.ExecuteHierarchy(
+                transform.parent.gameObject,
+                eventData,
+                ExecuteEvents.initializePotentialDrag
+            );
 
             base.OnInitializePotentialDrag(eventData);
         }
@@ -23,12 +26,16 @@ namespace UniMob.UI.Widgets
         public override void OnBeginDrag(PointerEventData eventData)
         {
             _routeToParent =
-                vertical && Mathf.Abs(eventData.delta.x) > Mathf.Abs(eventData.delta.y) ||
-                horizontal && Mathf.Abs(eventData.delta.x) < Mathf.Abs(eventData.delta.y);
+                vertical && Mathf.Abs(eventData.delta.x) > Mathf.Abs(eventData.delta.y)
+                || horizontal && Mathf.Abs(eventData.delta.x) < Mathf.Abs(eventData.delta.y);
 
             if (_routeToParent)
             {
-                ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.beginDragHandler);
+                ExecuteEvents.ExecuteHierarchy(
+                    transform.parent.gameObject,
+                    eventData,
+                    ExecuteEvents.beginDragHandler
+                );
                 return;
             }
 
@@ -39,7 +46,11 @@ namespace UniMob.UI.Widgets
         {
             if (_routeToParent)
             {
-                ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.dragHandler);
+                ExecuteEvents.ExecuteHierarchy(
+                    transform.parent.gameObject,
+                    eventData,
+                    ExecuteEvents.dragHandler
+                );
                 return;
             }
 
@@ -50,7 +61,11 @@ namespace UniMob.UI.Widgets
         {
             if (_routeToParent)
             {
-                ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.endDragHandler);
+                ExecuteEvents.ExecuteHierarchy(
+                    transform.parent.gameObject,
+                    eventData,
+                    ExecuteEvents.endDragHandler
+                );
                 return;
             }
 

@@ -45,13 +45,17 @@ namespace UniMob.UI.Tests
             yield return host.Settle();
 
             Assert.AreEqual(3, host.Navigator.NavigationStack.Count);
-            Assert.AreEqual("C", host.Navigator.TopmostRoute.Key,
-                "the route pushed from inside B's initialization must end up above B, not below it");
+            Assert.AreEqual(
+                "C",
+                host.Navigator.TopmostRoute.Key,
+                "the route pushed from inside B's initialization must end up above B, not below it"
+            );
 
             CollectionAssert.AreEqual(
                 new[] { "C", "B", "A" },
                 Keys(host),
-                "the stack is in the order the pushes were issued, topmost first");
+                "the stack is in the order the pushes were issued, topmost first"
+            );
         }
 
         /// <summary>
@@ -66,18 +70,19 @@ namespace UniMob.UI.Tests
             var first = host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain);
             var second = host.Create("D", RouteModalType.Fullscreen, RouteFlavour.Plain);
 
-            var outer = new PushingOnInitializeRoute("B", () =>
-            {
-                host.Navigator.Push(first);
-                host.Navigator.Push(second);
-            });
+            var outer = new PushingOnInitializeRoute(
+                "B",
+                () =>
+                {
+                    host.Navigator.Push(first);
+                    host.Navigator.Push(second);
+                }
+            );
 
             host.Navigator.Push(outer);
             yield return host.Settle();
 
-            CollectionAssert.AreEqual(
-                new[] { "D", "C", "B", "A" },
-                Keys(host));
+            CollectionAssert.AreEqual(new[] { "D", "C", "B", "A" }, Keys(host));
         }
 
         private static string[] Keys(NavigatorHost host)

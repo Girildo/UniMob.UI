@@ -7,8 +7,12 @@ using UniMob.UI.Layout.Internal.Views;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.GestureDetector",
-    typeof(RectTransform), typeof(InvisibleRaycastTarget), typeof(GestureDetectorView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.GestureDetector",
+    typeof(RectTransform),
+    typeof(InvisibleRaycastTarget),
+    typeof(GestureDetectorView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -30,12 +34,14 @@ namespace UniMob.UI.Layout.Internal.Views
         protected override void Render()
         {
             base.Render();
-            if (State == null) return;
+            if (State == null)
+                return;
 
             // 1. Manage TAP
             if (State.OnTap != null)
             {
-                if (_tapReceiver == null) _tapReceiver = gameObject.AddComponent<GestureDetectorTapReceiver>();
+                if (_tapReceiver == null)
+                    _tapReceiver = gameObject.AddComponent<GestureDetectorTapReceiver>();
                 _tapReceiver.OnTap = State.OnTap;
             }
             else if (_tapReceiver != null)
@@ -47,7 +53,8 @@ namespace UniMob.UI.Layout.Internal.Views
             // 2. Manage PRESS (Down/Up)
             if (State.OnPointerDown != null || State.OnPointerUp != null)
             {
-                if (_pressReceiver == null) _pressReceiver = gameObject.AddComponent<GestureDetectorPressReceiver>();
+                if (_pressReceiver == null)
+                    _pressReceiver = gameObject.AddComponent<GestureDetectorPressReceiver>();
                 _pressReceiver.OnPointerDownDelegate = State.OnPointerDown;
                 _pressReceiver.OnPointerUpDelegate = State.OnPointerUp;
             }
@@ -60,9 +67,9 @@ namespace UniMob.UI.Layout.Internal.Views
             // Manage MOVE
             if (State.OnPointerMove != null)
             {
-                if (_moveReceiver == null) _moveReceiver = gameObject.AddComponent<GestureDetectorMoveReceiver>();
+                if (_moveReceiver == null)
+                    _moveReceiver = gameObject.AddComponent<GestureDetectorMoveReceiver>();
                 _moveReceiver.OnMove = State.OnPointerMove;
-             
             }
             else if (_moveReceiver != null)
             {
@@ -73,7 +80,8 @@ namespace UniMob.UI.Layout.Internal.Views
             // 3. Manage DRAG
             if (State.OnDragUpdate != null)
             {
-                if (_dragReceiver == null) _dragReceiver = gameObject.AddComponent<GestureDetectorDragReceiver>();
+                if (_dragReceiver == null)
+                    _dragReceiver = gameObject.AddComponent<GestureDetectorDragReceiver>();
                 _dragReceiver.OnDragUpdate = State.OnDragUpdate;
             }
             else if (_dragReceiver != null)
@@ -83,7 +91,6 @@ namespace UniMob.UI.Layout.Internal.Views
             }
         }
     }
-
 
     public class GestureDetectorTapReceiver : UIBehaviour, IPointerClickHandler
     {
@@ -99,7 +106,11 @@ namespace UniMob.UI.Layout.Internal.Views
 
         private TapDetails Convert(PointerEventData eventData)
         {
-            var localPosition = CoordinateUtils.GetLocalPosition(eventData.position, this.transform as RectTransform, canvas.worldCamera);
+            var localPosition = CoordinateUtils.GetLocalPosition(
+                eventData.position,
+                this.transform as RectTransform,
+                canvas.worldCamera
+            );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
             return new TapDetails
             {
@@ -127,7 +138,11 @@ namespace UniMob.UI.Layout.Internal.Views
 
         private PointerDetails Convert(PointerEventData eventData)
         {
-            var localPosition = CoordinateUtils.GetLocalPosition(eventData.position, this.transform as RectTransform, canvas.worldCamera);
+            var localPosition = CoordinateUtils.GetLocalPosition(
+                eventData.position,
+                this.transform as RectTransform,
+                canvas.worldCamera
+            );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
             return new PointerDetails
             {
@@ -147,18 +162,25 @@ namespace UniMob.UI.Layout.Internal.Views
         public Action<PointerDetails>? OnPointerDownDelegate;
         public Action<PointerDetails>? OnPointerUpDelegate;
         private Canvas canvas;
+
         protected override void Awake()
         {
             this.canvas = this.GetComponentInParent<Canvas>();
         }
 
+        public void OnPointerDown(PointerEventData eventData) =>
+            OnPointerDownDelegate?.Invoke(Convert(eventData));
 
-        public void OnPointerDown(PointerEventData eventData) => OnPointerDownDelegate?.Invoke(Convert(eventData));
-        public void OnPointerUp(PointerEventData eventData) => OnPointerUpDelegate?.Invoke(Convert(eventData));
+        public void OnPointerUp(PointerEventData eventData) =>
+            OnPointerUpDelegate?.Invoke(Convert(eventData));
 
         private PointerDetails Convert(PointerEventData eventData)
         {
-            var localPosition = CoordinateUtils.GetLocalPosition(eventData.position, this.transform as RectTransform, canvas.worldCamera);
+            var localPosition = CoordinateUtils.GetLocalPosition(
+                eventData.position,
+                this.transform as RectTransform,
+                canvas.worldCamera
+            );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
             return new PointerDetails
             {
@@ -173,7 +195,11 @@ namespace UniMob.UI.Layout.Internal.Views
     }
 
     // --- DRAG RECEIVER ---
-    public class GestureDetectorDragReceiver : UIBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public class GestureDetectorDragReceiver
+        : UIBehaviour,
+            IBeginDragHandler,
+            IDragHandler,
+            IEndDragHandler
     {
         public Action<DragDetails>? OnDragBegin;
         public Action<DragDetails>? OnDragEnd;
@@ -186,7 +212,9 @@ namespace UniMob.UI.Layout.Internal.Views
         }
 
         // Unity requires Begin/End to exist for IDragHandler to play nicely with ScrollRects
-        public void OnBeginDrag(PointerEventData eventData) => OnDragBegin?.Invoke(Convert(eventData));
+        public void OnBeginDrag(PointerEventData eventData) =>
+            OnDragBegin?.Invoke(Convert(eventData));
+
         public void OnEndDrag(PointerEventData eventData) => OnDragEnd?.Invoke(Convert(eventData));
 
         public void OnDrag(PointerEventData eventData) => OnDragUpdate?.Invoke(Convert(eventData));
@@ -195,7 +223,11 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             // 1. Calculate the points
             // Pass the raw screen position directly to both utilities
-            var localPosition = CoordinateUtils.GetLocalPosition(eventData.position, this.transform as RectTransform, canvas.worldCamera);
+            var localPosition = CoordinateUtils.GetLocalPosition(
+                eventData.position,
+                this.transform as RectTransform,
+                canvas.worldCamera
+            );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
             // 2. Calculate the deltas
             var logicalDelta = CoordinateUtils.GetLogicalDelta(eventData.delta, canvas);
@@ -205,8 +237,8 @@ namespace UniMob.UI.Layout.Internal.Views
                 GlobalPosition = globalPosition,
                 LocalPosition = localPosition,
 
-                // Since deltas are just directional distances, Global and Local deltas 
-                // are identical unless the widget is rotated or scaled. 
+                // Since deltas are just directional distances, Global and Local deltas
+                // are identical unless the widget is rotated or scaled.
                 GlobalDelta = logicalDelta,
                 LocalDelta = logicalDelta,
 
@@ -225,7 +257,11 @@ namespace UniMob.UI.Layout.Internal.Views
         /// Converts a physical screen point into a Flutter-style Local coordinate.
         /// Result: (0,0) is exactly the Top-Left of the widget, Y goes down.
         /// </summary>
-        public static Vector2 GetLocalPosition(Vector2 screenPos, RectTransform widgetRect, Camera? camera)
+        public static Vector2 GetLocalPosition(
+            Vector2 screenPos,
+            RectTransform widgetRect,
+            Camera? camera
+        )
         {
             // 1. Get the raw point relative to the Widget's pivot (handles Canvas scaling automatically!)
             RectTransformUtility.ScreenPointToLocalPointInRectangle(

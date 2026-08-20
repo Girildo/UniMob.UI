@@ -12,14 +12,12 @@ namespace UniMob.UI.Tests
         // ComputeIntrinsicWidth/Height forwarding, which every subclass inherits unchanged.
         private class MinimalSingleChildRenderObject : SingleChildRenderObject
         {
-            public MinimalSingleChildRenderObject(ISingleChildLayoutState state) : base(state)
-            {
-            }
+            public MinimalSingleChildRenderObject(ISingleChildLayoutState state)
+                : base(state) { }
 
             protected override Vector2 PerformSizing(LayoutConstraints constraints) => Vector2.zero;
-            protected override void PerformPositioning(Vector2 size)
-            {
-            }
+
+            protected override void PerformPositioning(Vector2 size) { }
         }
 
         [Test]

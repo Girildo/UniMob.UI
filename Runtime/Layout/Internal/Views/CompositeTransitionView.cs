@@ -1,8 +1,12 @@
 using UniMob.UI.Internal;
 using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Layout.CompositeTransition",
-    typeof(RectTransform), typeof(CanvasGroup), typeof(UniMob.UI.Layout.Internal.Views.CompositeTransitionView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Layout.CompositeTransition",
+    typeof(RectTransform),
+    typeof(CanvasGroup),
+    typeof(UniMob.UI.Layout.Internal.Views.CompositeTransitionView)
+)]
 
 namespace UniMob.UI.Layout.Internal.Views
 {
@@ -27,7 +31,10 @@ namespace UniMob.UI.Layout.Internal.Views
 
             var childTransform = ChildView.rectTransform;
             childTransform.localScale = State.Scale.Value;
-            childTransform.anchoredPosition += Vector2.Scale(State.Position.Value, childTransform.rect.size);
+            childTransform.anchoredPosition += Vector2.Scale(
+                State.Position.Value,
+                childTransform.rect.size
+            );
             childTransform.localRotation = State.Rotation.Value;
         }
     }

@@ -13,12 +13,11 @@ namespace UniMob.UI.Layout
 
         public float Spacing { get; set; } = 0f;
 
-
         public override State CreateState() => new ColumnState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderFlex((ColumnState) state, Axis.Vertical);
+            return new RenderFlex((ColumnState)state, Axis.Vertical);
         }
     }
 
@@ -33,7 +32,8 @@ namespace UniMob.UI.Layout
 
         public IState[] Children => _children.Value;
 
-        public override WidgetViewReference View => WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+        public override WidgetViewReference View =>
+            WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
 
         public CrossAxisAlignment CrossAxisAlignment => Widget.CrossAxisAlignment;
 

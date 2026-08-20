@@ -5,9 +5,7 @@ namespace UniMob.UI.Widgets
 {
     public class Builder : StatefulWidget
     {
-        public Builder(
-            [NotNull] WidgetBuilder<Widget> build
-        )
+        public Builder([NotNull] WidgetBuilder<Widget> build)
         {
             Build = build;
         }

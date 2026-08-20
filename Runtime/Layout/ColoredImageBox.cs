@@ -11,15 +11,16 @@ namespace UniMob.UI.Layout
     public class ColoredImageBox : SingleChildLayoutWidget
     {
         public Color Color { get; set; } = Color.clear;
-        
-        [CanBeNull] public Sprite Image { get; set; } = null;
+
+        [CanBeNull]
+        public Sprite Image { get; set; } = null;
 
         public override State CreateState() => new ColoredImageBoxState();
 
         // This widget does not affect the layout of its child.
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderProxy((ColoredImageBoxState) state);
+            return new RenderProxy((ColoredImageBoxState)state);
         }
     }
 
@@ -29,11 +30,14 @@ namespace UniMob.UI.Layout
         Sprite BackgroundImage { get; }
     }
 
-    internal class ColoredImageBoxState : SingleChildLayoutState<ColoredImageBox>, IColoredImageBoxState
+    internal class ColoredImageBoxState
+        : SingleChildLayoutState<ColoredImageBox>,
+            IColoredImageBoxState
     {
         public Color BackgroundColor => Widget.Color;
 
-        public Sprite BackgroundImage => Widget.Image != null ? Widget.Image : UniMobViewContext.DefaultWhiteImage;
+        public Sprite BackgroundImage =>
+            Widget.Image != null ? Widget.Image : UniMobViewContext.DefaultWhiteImage;
 
         public override WidgetViewReference View =>
             WidgetViewReference.Resource("$$_Layout.ColoredImageBoxView");

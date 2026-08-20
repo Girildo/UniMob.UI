@@ -3,8 +3,11 @@ using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
-[assembly: RegisterComponentViewFactory("$$_Navigator",
-    typeof(RectTransform), typeof(NavigatorView))]
+[assembly: RegisterComponentViewFactory(
+    "$$_Navigator",
+    typeof(RectTransform),
+    typeof(NavigatorView)
+)]
 
 namespace UniMob.UI.Widgets
 {

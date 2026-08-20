@@ -14,12 +14,13 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderConstrainedBox((ConstrainedBoxState) state);
+            return new RenderConstrainedBox((ConstrainedBoxState)state);
         }
     }
 
-
-    internal class ConstrainedBoxState : SingleChildLayoutState<ConstrainedBox>, IConstrainedBoxState
+    internal class ConstrainedBoxState
+        : SingleChildLayoutState<ConstrainedBox>,
+            IConstrainedBoxState
     {
         public LayoutConstraints BoxConstraints => Widget.BoxConstraints;
     }

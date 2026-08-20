@@ -6,14 +6,15 @@ using TMPro;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Widgets;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using UnityEngine.TextCore.Text;
+using Object = UnityEngine.Object;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
     public class RenderText : LeafRenderObject
     {
-        private static Dictionary<WidgetViewReference, TextMeshProUGUI?> s_textMeshProMeasurers = new();
+        private static Dictionary<WidgetViewReference, TextMeshProUGUI?> s_textMeshProMeasurers =
+            new();
         private static TMP_StyleSheet? s_styleSheet;
 
         // Measured sizes are cached across layout passes, but the key space is unbounded: MaxWidth is a
@@ -38,7 +39,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private readonly ITextState _state;
 
-        public RenderText(ITextState state) : base(state)
+        public RenderText(ITextState state)
+            : base(state)
         {
             _state = state;
 
@@ -68,7 +70,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 // can't just disable the component to hide it -- instead make it WorldSpace and park
                 // it far from the origin so it resolves correctly but is never in view of any camera.
                 var measurerCanvas = go.GetComponent<Canvas>();
-                if (measurerCanvas == null) measurerCanvas = go.AddComponent<Canvas>();
+                if (measurerCanvas == null)
+                    measurerCanvas = go.AddComponent<Canvas>();
                 measurerCanvas.renderMode = RenderMode.WorldSpace;
                 go.transform.position = new Vector3(1_000_000f, 1_000_000f, 1_000_000f);
 
@@ -121,7 +124,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         /// </remarks>
         private static void SubscribeToStyleChanges()
         {
-            if (s_subscribedToStyleChanges) return;
+            if (s_subscribedToStyleChanges)
+                return;
 
             s_subscribedToStyleChanges = true;
 
@@ -143,9 +147,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private static bool TryGetCachedSize(in PreferredSizeCacheKey key, out Vector2 size)
         {
-            if (s_sizeCache.TryGetValue(key, out size)) return true;
+            if (s_sizeCache.TryGetValue(key, out size))
+                return true;
 
-            if (!s_demotedSizeCache.TryGetValue(key, out size)) return false;
+            if (!s_demotedSizeCache.TryGetValue(key, out size))
+                return false;
 
             // Still being measured despite the rollover, so carry it into the live generation rather
             // than letting the next one drop it.
@@ -169,7 +175,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
         private Vector2 GetPreferredSize(float maxWidth, float maxHeight)
         {
-            if (s_textMeshProMeasurers == null || s_styleSheet == null) return Vector2.zero;
+            if (s_textMeshProMeasurers == null || s_styleSheet == null)
+                return Vector2.zero;
             var key = new PreferredSizeCacheKey
             {
                 Text = _state.Value,
@@ -181,10 +188,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 MaxLines = _state.MaxLines,
                 WrappingEnabled = _state.WrappingEnabled,
                 OverflowMode = _state.OverflowMode,
-                ViewReference = _state.View
+                ViewReference = _state.View,
             };
 
-            if (TryGetCachedSize(key, out var cachedSize)) return cachedSize;
+            if (TryGetCachedSize(key, out var cachedSize))
+                return cachedSize;
 
             var measurer = s_textMeshProMeasurers[_state.View];
             if (measurer == null)
@@ -235,9 +243,10 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 // PerformSizing) then has nothing left to clamp, so the real box ends up just shy of what's
                 // actually needed, and the real TMP component ellipsizes at render time even though there
                 // was enough room. Height never has a legitimate bound to begin with -- see PerformSizing.
-                var measureWidth = _state.WrappingEnabled && !float.IsPositiveInfinity(maxWidth)
-                    ? maxWidth
-                    : UnconstrainedMeasureExtent;
+                var measureWidth =
+                    _state.WrappingEnabled && !float.IsPositiveInfinity(maxWidth)
+                        ? maxWidth
+                        : UnconstrainedMeasureExtent;
 
                 var measurerRect = measurer.rectTransform;
                 measurerRect.sizeDelta = new Vector2(measureWidth, UnconstrainedMeasureExtent);
@@ -313,7 +322,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             return GetPreferredSize(float.PositiveInfinity, height).x;
         }
 
-
         /// <summary>
         ///     Identifies one measurement of one string against one measurer configuration.
         /// </summary>
@@ -346,16 +354,21 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
 
             public bool Equals(PreferredSizeCacheKey other)
             {
-                return Text == other.Text && MaxWidth.Equals(other.MaxWidth) && MaxHeight.Equals(other.MaxHeight) &&
-                       FontSize == other.FontSize && FontWeight == other.FontWeight
-                       // By identity, not by hashCode: that is the hash of the style's *name*, so styles
-                       // named alike in two different sheets would share an entry despite defining
-                       // different fonts, sizes and line heights. TMP_Style is a plain class and both
-                       // sources of one -- TMP_StyleSheet.GetStyle and TMP_Style.NormalStyle -- return a
-                       // stable instance, so identity is both safe to rely on and strictly sharper.
-                       && ReferenceEquals(Style, other.Style) && MaxLines == other.MaxLines &&
-                       WrappingEnabled == other.WrappingEnabled && OverflowMode == other.OverflowMode &&
-                       ViewReference.Equals(other.ViewReference);
+                return Text == other.Text
+                    && MaxWidth.Equals(other.MaxWidth)
+                    && MaxHeight.Equals(other.MaxHeight)
+                    && FontSize == other.FontSize
+                    && FontWeight == other.FontWeight
+                    // By identity, not by hashCode: that is the hash of the style's *name*, so styles
+                    // named alike in two different sheets would share an entry despite defining
+                    // different fonts, sizes and line heights. TMP_Style is a plain class and both
+                    // sources of one -- TMP_StyleSheet.GetStyle and TMP_Style.NormalStyle -- return a
+                    // stable instance, so identity is both safe to rely on and strictly sharper.
+                    && ReferenceEquals(Style, other.Style)
+                    && MaxLines == other.MaxLines
+                    && WrappingEnabled == other.WrappingEnabled
+                    && OverflowMode == other.OverflowMode
+                    && ViewReference.Equals(other.ViewReference);
             }
 
             public override bool Equals(object? obj)
@@ -370,11 +383,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 hash.Add(MaxWidth);
                 hash.Add(MaxHeight);
                 hash.Add(FontSize);
-                hash.Add((int) FontWeight);
+                hash.Add((int)FontWeight);
                 hash.Add(Style == null ? 0 : RuntimeHelpers.GetHashCode(Style));
                 hash.Add(MaxLines);
                 hash.Add(WrappingEnabled);
-                hash.Add((int) OverflowMode);
+                hash.Add((int)OverflowMode);
                 hash.Add(ViewReference);
                 return hash.ToHashCode();
             }

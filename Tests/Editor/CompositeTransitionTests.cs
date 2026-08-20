@@ -11,7 +11,8 @@ namespace UniMob.UI.Tests
         {
             var size = TestHarness.MountAndLayout(
                 new CompositeTransition { Child = new FixedSizeBox { Size = new Vector2(30, 40) } },
-                LayoutConstraints.Loose(100, 100));
+                LayoutConstraints.Loose(100, 100)
+            );
 
             Assert.AreEqual(new Vector2(30, 40), size);
         }
@@ -29,7 +30,8 @@ namespace UniMob.UI.Tests
                     Position = new ConstAnimation<Vector2>(new Vector2(0.5f, 0.5f)),
                     Rotation = new ConstAnimation<Quaternion>(Quaternion.Euler(0f, 0f, 45f)),
                 },
-                LayoutConstraints.Loose(100, 100));
+                LayoutConstraints.Loose(100, 100)
+            );
 
             Assert.AreEqual(new Vector2(30, 40), size);
         }
@@ -39,7 +41,8 @@ namespace UniMob.UI.Tests
         {
             var size = TestHarness.MountAndLayout(
                 new CompositeTransition(),
-                new LayoutConstraints(10, 20, 100, 100));
+                new LayoutConstraints(10, 20, 100, 100)
+            );
 
             Assert.AreEqual(new Vector2(10, 20), size);
         }

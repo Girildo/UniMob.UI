@@ -12,10 +12,10 @@ namespace UniMob.UI.Layout
 
         public LayoutConstraints(float minWidth, float minHeight, float maxWidth, float maxHeight)
         {
-            if(minWidth > maxWidth)
+            if (minWidth > maxWidth)
                 minWidth = maxWidth;
 
-            if(minHeight > maxHeight)
+            if (minHeight > maxHeight)
                 minHeight = maxHeight;
             MinWidth = minWidth;
             MinHeight = minHeight;
@@ -23,9 +23,19 @@ namespace UniMob.UI.Layout
             MaxHeight = maxHeight;
         }
 
-        public LayoutConstraints CopyWith(float? minWidth = null, float? minHeight = null, float? maxWidth = null, float? maxHeight = null)
+        public LayoutConstraints CopyWith(
+            float? minWidth = null,
+            float? minHeight = null,
+            float? maxWidth = null,
+            float? maxHeight = null
+        )
         {
-            return new LayoutConstraints(minWidth ?? this.MinWidth, minHeight ?? this.MinHeight, maxWidth??this.MaxWidth, maxHeight ?? this.MaxHeight);
+            return new LayoutConstraints(
+                minWidth ?? this.MinWidth,
+                minHeight ?? this.MinHeight,
+                maxWidth ?? this.MaxWidth,
+                maxHeight ?? this.MaxHeight
+            );
         }
 
         /// <summary>
@@ -60,7 +70,6 @@ namespace UniMob.UI.Layout
             );
         }
 
-
         /// <summary>
         ///     Creates a set of unbounded constraints, allowing any size.
         /// </summary>
@@ -77,13 +86,11 @@ namespace UniMob.UI.Layout
             return Tight(float.PositiveInfinity, float.PositiveInfinity);
         }
 
-
         public bool HasTightWidth => MinWidth >= MaxWidth;
         public bool HasTightHeight => MinHeight >= MaxHeight;
         public bool IsTight => HasTightWidth && HasTightHeight;
         public bool HasBoundedWidth => float.IsFinite(MaxWidth);
         public bool HasBoundedHeight => float.IsFinite(MaxHeight);
-
 
         /// <summary>
         ///     Creates a new set of constraints with the minimums removed.
@@ -94,14 +101,14 @@ namespace UniMob.UI.Layout
         }
 
         /// <summary>
-        ///     Returns a new set of constraints by taking the current constraints and clamping them 
+        ///     Returns a new set of constraints by taking the current constraints and clamping them
         ///     to safely fit inside the bounds of the <paramref name="other"/> constraints.
         /// </summary>
         /// <remarks>
-        ///     In UI layout math, <c>this</c> instance usually represents the "desired" constraints (e.g., a child's requested size), 
+        ///     In UI layout math, <c>this</c> instance usually represents the "desired" constraints (e.g., a child's requested size),
         ///     and the <paramref name="other"/> instance represents the "strict" constraints (e.g., the rules passed down by a parent).
         ///     <br/>
-        ///     This operation is <i>not</i> commutative. 
+        ///     This operation is <i>not</i> commutative.
         ///     <br/>
         ///     <c>childRequest.Enforce(parentRules)</c> means: "Take the child's desired size, and force it to obey the parent's rules."
         /// </remarks>
@@ -164,6 +171,7 @@ namespace UniMob.UI.Layout
         /// Returns the largest possible size that obeys these constraints.
         /// </summary>
         public Vector2 Largest => new Vector2(this.MaxWidth, this.MaxHeight);
+
         /// <summary>
         /// Returns the smallest possible size that respects these constraints.
         /// </summary>
@@ -176,6 +184,7 @@ namespace UniMob.UI.Layout
         {
             return Mathf.Clamp(width, MinWidth, MaxWidth);
         }
+
         /// <summary>
         /// Clamps <paramref name="height"/> to make it respect these constraints.
         /// </summary>
@@ -191,10 +200,10 @@ namespace UniMob.UI.Layout
 
         public bool Equals(LayoutConstraints other)
         {
-            return MinWidth.Equals(other.MinWidth) &&
-                   MinHeight.Equals(other.MinHeight) &&
-                   MaxWidth.Equals(other.MaxWidth) &&
-                   MaxHeight.Equals(other.MaxHeight);
+            return MinWidth.Equals(other.MinWidth)
+                && MinHeight.Equals(other.MinHeight)
+                && MaxWidth.Equals(other.MaxWidth)
+                && MaxHeight.Equals(other.MaxHeight);
         }
 
         public override bool Equals(object obj)
@@ -206,7 +215,5 @@ namespace UniMob.UI.Layout
         {
             return HashCode.Combine(MinWidth, MinHeight, MaxWidth, MaxHeight);
         }
-
-
     }
 }

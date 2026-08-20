@@ -6,14 +6,18 @@ namespace UniMob.UI.Internal
     internal class TriggerStateMachine<TState, TTrigger, TResult>
         where TTrigger : struct
     {
-        private readonly Dictionary<Transition, TState> _transitions =
-            new Dictionary<Transition, TState>(new Comparer());
+        private readonly Dictionary<Transition, TState> _transitions = new Dictionary<
+            Transition,
+            TState
+        >(new Comparer());
 
         private readonly Dictionary<Transition, Func<TResult, TResult>> _postCallbacks =
             new Dictionary<Transition, Func<TResult, TResult>>(new Comparer());
 
-        private readonly Dictionary<Transition, Func<TResult>> _resultBuilders =
-            new Dictionary<Transition, Func<TResult>>(new Comparer());
+        private readonly Dictionary<Transition, Func<TResult>> _resultBuilders = new Dictionary<
+            Transition,
+            Func<TResult>
+        >(new Comparer());
 
         public TState State { get; private set; }
 
@@ -36,8 +40,11 @@ namespace UniMob.UI.Internal
         public void AddTransition(TState state, TTrigger trigger, TState nextState) =>
             _transitions.Add(Transition.Of(state, trigger), nextState);
 
-        public void AddPostCallback(TState state, TTrigger trigger, Func<TResult, TResult> callback) =>
-            _postCallbacks.Add(Transition.Of(state, trigger), callback);
+        public void AddPostCallback(
+            TState state,
+            TTrigger trigger,
+            Func<TResult, TResult> callback
+        ) => _postCallbacks.Add(Transition.Of(state, trigger), callback);
 
         public void AddResultBuilder(TState state, TTrigger trigger, Func<TResult> builder) =>
             _resultBuilders.Add(Transition.Of(state, trigger), builder);
@@ -101,13 +108,16 @@ namespace UniMob.UI.Internal
             public TState State;
 
             public static Transition Of(TState state, TTrigger trigger) =>
-                new Transition {State = state, Trigger = trigger};
+                new Transition { State = state, Trigger = trigger };
         }
 
         private class Comparer : IEqualityComparer<Transition>
         {
-            public bool Equals(Transition x, Transition y) => x.State.Equals(y.State) && x.Trigger.Equals(y.Trigger);
-            public int GetHashCode(Transition obj) => obj.State.GetHashCode() ^ obj.Trigger.GetHashCode() << 2;
+            public bool Equals(Transition x, Transition y) =>
+                x.State.Equals(y.State) && x.Trigger.Equals(y.Trigger);
+
+            public int GetHashCode(Transition obj) =>
+                obj.State.GetHashCode() ^ obj.Trigger.GetHashCode() << 2;
         }
     }
 }

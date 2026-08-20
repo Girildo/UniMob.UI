@@ -14,7 +14,9 @@ namespace UniMob.UI.Tests
 
         private static RenderAspectRatio Build(float aspectRatio, IState child = null)
         {
-            return new RenderAspectRatio(new FakeAspectRatioState { AspectRatio = aspectRatio, Child = child });
+            return new RenderAspectRatio(
+                new FakeAspectRatioState { AspectRatio = aspectRatio, Child = child }
+            );
         }
 
         [Test]

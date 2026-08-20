@@ -6,7 +6,8 @@ namespace UniMob.UI
 {
     public class StateProvider : IStateProvider
     {
-        private readonly Dictionary<Type, Func<State>> _stateFactories = new Dictionary<Type, Func<State>>();
+        private readonly Dictionary<Type, Func<State>> _stateFactories =
+            new Dictionary<Type, Func<State>>();
 
         public static StateProvider Shared { get; } = new StateProvider();
 
@@ -16,13 +17,16 @@ namespace UniMob.UI
             Shared.Clear();
         }
 
-        public void Register<TWidget>(Func<State> factory) where TWidget : Widget
+        public void Register<TWidget>(Func<State> factory)
+            where TWidget : Widget
         {
             var type = typeof(TWidget);
 
             if (_stateFactories.ContainsKey(type))
             {
-                throw new InvalidOperationException($"StateProvider for widget {type.Name} already registered");
+                throw new InvalidOperationException(
+                    $"StateProvider for widget {type.Name} already registered"
+                );
             }
 
             _stateFactories.Add(type, factory);
@@ -37,7 +41,9 @@ namespace UniMob.UI
         {
             if (!_stateFactories.TryGetValue(w.Type, out var factory))
             {
-                throw new InvalidOperationException($"StateProvider for widget {w.Type.Name} not registered");
+                throw new InvalidOperationException(
+                    $"StateProvider for widget {w.Type.Name} not registered"
+                );
             }
 
             return factory();

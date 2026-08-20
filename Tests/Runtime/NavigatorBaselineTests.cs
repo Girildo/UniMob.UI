@@ -49,7 +49,8 @@ namespace UniMob.UI.Tests
                 "  A OnCreate",
                 "  A OnResume",
                 "  A OnFocus",
-                "  stack: [A]");
+                "  stack: [A]"
+            );
         }
 
         /// <summary>
@@ -87,7 +88,8 @@ namespace UniMob.UI.Tests
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
-                "  stack: [B, A]");
+                "  stack: [B, A]"
+            );
         }
 
         /// <summary>
@@ -123,7 +125,8 @@ namespace UniMob.UI.Tests
                 "  B OnCreate",
                 "  B OnResume",
                 "  B OnFocus",
-                "  stack: [B, A]");
+                "  stack: [B, A]"
+            );
         }
 
         /// <summary>
@@ -173,7 +176,8 @@ namespace UniMob.UI.Tests
                 "  C OnCreate",
                 "  C OnResume",
                 "  C OnFocus",
-                "  stack: [C, B, A]");
+                "  stack: [C, B, A]"
+            );
         }
 
         [UnityTest]
@@ -221,7 +225,8 @@ namespace UniMob.UI.Tests
                 "  > DidPop(B, A)",
                 "  A OnFocus",
                 "  B Dispose",
-                "  stack: [A]");
+                "  stack: [A]"
+            );
         }
 
         /// <summary>
@@ -250,7 +255,8 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  stack: [A]",
                 "pop at depth 1",
-                "  stack: [A]");
+                "  stack: [A]"
+            );
         }
 
         /// <summary>
@@ -330,7 +336,8 @@ namespace UniMob.UI.Tests
                 "  A OnFocus",
                 "  B Dispose",
                 "  C Dispose",
-                "  stack: [A]");
+                "  stack: [A]"
+            );
         }
 
         /// <summary>
@@ -385,7 +392,8 @@ namespace UniMob.UI.Tests
                 "  > DidPop(B, A)",
                 "  A OnFocus",
                 "  B Dispose",
-                "  stack: [A]");
+                "  stack: [A]"
+            );
         }
 
         /// <summary>
@@ -425,7 +433,8 @@ namespace UniMob.UI.Tests
                 "  B OnResume",
                 "  B OnFocus",
                 "  A Dispose",
-                "  stack: [B]");
+                "  stack: [B]"
+            );
         }
 
         /// <summary>
@@ -480,7 +489,8 @@ namespace UniMob.UI.Tests
                 "  C OnResume",
                 "  C OnFocus",
                 "  B Dispose",
-                "  stack: [C, A]");
+                "  stack: [C, A]"
+            );
         }
 
         /// <summary>
@@ -535,7 +545,8 @@ namespace UniMob.UI.Tests
                 "  C OnResume",
                 "  C OnFocus",
                 "  B Dispose",
-                "  stack: [C, A]");
+                "  stack: [C, A]"
+            );
         }
 
         /// <summary>
@@ -595,7 +606,8 @@ namespace UniMob.UI.Tests
                 "  C OnFocus",
                 "  A Dispose",
                 "  B Dispose",
-                "  stack: [C]");
+                "  stack: [C]"
+            );
         }
 
         /// <summary>
@@ -612,7 +624,9 @@ namespace UniMob.UI.Tests
             host.End();
 
             host.Begin("push B animated");
-            host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage));
+            host.Navigator.Push(
+                host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage)
+            );
             yield return host.Settle();
             host.End();
 
@@ -650,7 +664,8 @@ namespace UniMob.UI.Tests
                 "  > DidPop(B, A)",
                 "  A OnFocus",
                 "  B Dispose",
-                "  stack: [A]");
+                "  stack: [A]"
+            );
         }
 
         /// <summary>
@@ -669,14 +684,26 @@ namespace UniMob.UI.Tests
             host.Navigator.Push(pushed);
             yield return host.Settle();
 
-            Assert.IsTrue(pushed.PushTask.IsCompleted, "PushTask should complete once the route is pushed");
-            Assert.IsFalse(pushed.PopTask.IsCompleted, "PopTask should not complete while the route is on the stack");
+            Assert.IsTrue(
+                pushed.PushTask.IsCompleted,
+                "PushTask should complete once the route is pushed"
+            );
+            Assert.IsFalse(
+                pushed.PopTask.IsCompleted,
+                "PopTask should not complete while the route is on the stack"
+            );
 
             host.Navigator.TopmostRoute.Pop();
             yield return host.Settle();
 
-            Assert.IsTrue(pushed.PopTask.IsCompleted, "PopTask should complete once the route is popped");
-            Assert.IsTrue(pushed.DisposeTask.IsCompleted, "DisposeTask should complete once the route leaves the tree");
+            Assert.IsTrue(
+                pushed.PopTask.IsCompleted,
+                "PopTask should complete once the route is popped"
+            );
+            Assert.IsTrue(
+                pushed.DisposeTask.IsCompleted,
+                "DisposeTask should complete once the route leaves the tree"
+            );
         }
     }
 }

@@ -8,11 +8,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     {
         private readonly IZStackState _state;
 
-
         /// <summary>A positioned child is placed relative to the stack and may sit outside it on purpose.</summary>
         protected override bool ChildrenMayOverhang => true;
 
-        public RenderZStack(IZStackState state) : base(state)
+        public RenderZStack(IZStackState state)
+            : base(state)
         {
             _state = state;
         }
@@ -114,7 +114,11 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 y = size.y - childSize.y - (pos.Bottom ?? 0);
             }
 
-            ChildrenLayoutBuffer[index] = new LayoutInfo { Size = childSize, Position = new Vector2(x.Value, y.Value) };
+            ChildrenLayoutBuffer[index] = new LayoutInfo
+            {
+                Size = childSize,
+                Position = new Vector2(x.Value, y.Value),
+            };
         }
 
         protected override float ComputeIntrinsicWidth(float height)
@@ -122,7 +126,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             float maxWidth = 0;
             foreach (var child in _state.Children)
             {
-                if (child.InnerViewState is PositionedState) continue;
+                if (child.InnerViewState is PositionedState)
+                    continue;
                 maxWidth = Mathf.Max(maxWidth, child.RenderObject.GetIntrinsicWidth(height));
             }
             return maxWidth;
@@ -133,7 +138,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
             float maxHeight = 0;
             foreach (var child in _state.Children)
             {
-                if (child.InnerViewState is PositionedState) continue;
+                if (child.InnerViewState is PositionedState)
+                    continue;
                 maxHeight = Mathf.Max(maxHeight, child.RenderObject.GetIntrinsicHeight(width));
             }
             return maxHeight;

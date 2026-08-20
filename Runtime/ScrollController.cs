@@ -13,7 +13,8 @@ namespace UniMob.UI
 
         public Lifetime Lifetime { get; }
 
-        [Atom] public float NormalizedValue { get; internal set; }
+        [Atom]
+        public float NormalizedValue { get; internal set; }
 
         /// <summary>
         ///     The current scroll offset in pixels along the scrolling axis, measured from the start (top/left)
@@ -23,17 +24,27 @@ namespace UniMob.UI
         ///     essentially every layout pass. Used internally by <see cref="Layout.ScrollList"/>; other
         ///     scrollable widgets that share this controller type are unaffected (they never read/write it).
         /// </summary>
-        [Atom] public float PixelOffset { get; internal set; }
+        [Atom]
+        public float PixelOffset { get; internal set; }
 
         /// <summary>
         ///     Scrolls to the item at the given index, if this controller is currently attached to a
         ///     mounted <see cref="ScrollList"/>.
         /// </summary>
         /// <returns><c>false</c> if no list is currently attached to this controller.</returns>
-        public bool ScrollTo(int index, float duration = 0, ScrollToPosition? position = null, Easing easing = null)
+        public bool ScrollTo(
+            int index,
+            float duration = 0,
+            ScrollToPosition? position = null,
+            Easing easing = null
+        )
         {
-            return _executor?.ScrollTo(index, duration, position ?? ScrollToPosition.Start, easing ?? Ease.InOutCirc)
-                   ?? false;
+            return _executor?.ScrollTo(
+                    index,
+                    duration,
+                    position ?? ScrollToPosition.Start,
+                    easing ?? Ease.InOutCirc
+                ) ?? false;
         }
 
         /// <summary>
@@ -41,10 +52,19 @@ namespace UniMob.UI
         ///     mounted <see cref="ScrollList"/>.
         /// </summary>
         /// <returns><c>false</c> if no list is currently attached to this controller, or no item with the given key exists.</returns>
-        public bool ScrollTo(Key key, float duration = 0, ScrollToPosition? position = null, Easing easing = null)
+        public bool ScrollTo(
+            Key key,
+            float duration = 0,
+            ScrollToPosition? position = null,
+            Easing easing = null
+        )
         {
-            return _executor?.ScrollTo(key, duration, position ?? ScrollToPosition.Start, easing ?? Ease.InOutCirc)
-                   ?? false;
+            return _executor?.ScrollTo(
+                    key,
+                    duration,
+                    position ?? ScrollToPosition.Start,
+                    easing ?? Ease.InOutCirc
+                ) ?? false;
         }
 
         /// <summary>

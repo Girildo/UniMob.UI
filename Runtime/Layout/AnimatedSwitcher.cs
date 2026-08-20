@@ -16,27 +16,28 @@ namespace UniMob.UI.Layout
         public Widget Child { get; set; }
         public float Duration { get; set; }
         public float ReverseDuration { get; set; }
-        public AnimatedSwitcherTransitionMode TransitionMode { get; set; } = AnimatedSwitcherTransitionMode.Parallel;
-        public AnimatedSwitcherTransitionBuilder TransitionBuilder { get; set; } = DefaultTransitionBuilder;
+        public AnimatedSwitcherTransitionMode TransitionMode { get; set; } =
+            AnimatedSwitcherTransitionMode.Parallel;
+        public AnimatedSwitcherTransitionBuilder TransitionBuilder { get; set; } =
+            DefaultTransitionBuilder;
         public AnimatedSwitcherLayoutBuilder LayoutBuilder { get; set; } = DefaultLayoutBuilder;
 
         public override State CreateState() => new AnimatedSwitcherState();
 
         private static Widget DefaultTransitionBuilder(IAnimation<float> animation, Widget child)
         {
-            return new Opacity
-            {
-                OpacityValue = animation,
-                Child = child,
-            };
+            return new Opacity { OpacityValue = animation, Child = child };
         }
 
-        private static Widget DefaultLayoutBuilder(Widget currentChild, IEnumerable<Widget> previousChildren)
+        private static Widget DefaultLayoutBuilder(
+            Widget currentChild,
+            IEnumerable<Widget> previousChildren
+        )
         {
             var stack = new ZStack
             {
                 Alignment = Alignment.Center,
-                Children = {previousChildren}
+                Children = { previousChildren },
             };
 
             if (currentChild != null)
@@ -52,7 +53,8 @@ namespace UniMob.UI.Layout
     {
         private readonly MutableAtom<int> _version = Atom.Value(int.MinValue);
         private readonly List<Entry> _outgoingEntries = new List<Entry>();
-        private readonly Queue<AnimationController> _pendingAnimations = new Queue<AnimationController>();
+        private readonly Queue<AnimationController> _pendingAnimations =
+            new Queue<AnimationController>();
 
         private List<Widget> _outgoingWidgets = new List<Widget>();
         private Entry _currentEntry;
@@ -71,7 +73,9 @@ namespace UniMob.UI.Layout
 
             RebuildOutgoingWidgetsIfNeed();
 
-            var previousChildren = _outgoingWidgets.Where(w => w.Key != _currentEntry?.Transition.Key);
+            var previousChildren = _outgoingWidgets.Where(w =>
+                w.Key != _currentEntry?.Transition.Key
+            );
             return Widget.LayoutBuilder.Invoke(_currentEntry?.Transition, previousChildren);
         }
 
@@ -97,8 +101,10 @@ namespace UniMob.UI.Layout
             var hasNewChild = Widget.Child != null;
             var hasOldChild = _currentEntry != null;
 
-            if (hasNewChild != hasOldChild ||
-                hasNewChild && !StateUtilities.CanUpdateWidget(Widget.Child, _currentEntry.Child))
+            if (
+                hasNewChild != hasOldChild
+                || hasNewChild && !StateUtilities.CanUpdateWidget(Widget.Child, _currentEntry.Child)
+            )
             {
                 _childNumber += 1;
                 AddEntryForNewChild(animate: true);
@@ -147,13 +153,20 @@ namespace UniMob.UI.Layout
             }
 
             var lc = StateLifetime.CreateNested();
-            var controller = new AnimationController(lc.Lifetime, Widget.Duration, Widget.ReverseDuration);
+            var controller = new AnimationController(
+                lc.Lifetime,
+                Widget.Duration,
+                Widget.ReverseDuration
+            );
 
             _currentEntry = NewEntry(lc, Widget.Child, controller, Widget.TransitionBuilder);
 
             if (animate)
             {
-                if (hasCurrentEntry && Widget.TransitionMode == AnimatedSwitcherTransitionMode.Sequential)
+                if (
+                    hasCurrentEntry
+                    && Widget.TransitionMode == AnimatedSwitcherTransitionMode.Sequential
+                )
                 {
                     _pendingAnimations.Enqueue(controller);
                 }
@@ -169,8 +182,12 @@ namespace UniMob.UI.Layout
             }
         }
 
-        private Entry NewEntry(ILifetimeController lc, Widget child, AnimationController controller,
-            AnimatedSwitcherTransitionBuilder transition)
+        private Entry NewEntry(
+            ILifetimeController lc,
+            Widget child,
+            AnimationController controller,
+            AnimatedSwitcherTransitionBuilder transition
+        )
         {
             var entry = new Entry
             {
@@ -180,13 +197,18 @@ namespace UniMob.UI.Layout
                 LifetimeController = lc,
             };
 
-            Atom.Reaction(lc.Lifetime, () => controller.Status, status =>
-            {
-                if (status == AnimationStatus.Dismissed)
+            Atom.Reaction(
+                lc.Lifetime,
+                () => controller.Status,
+                status =>
                 {
-                    Zone.Current.NextFrame(lc.Dispose);
-                }
-            }, fireImmediately: false);
+                    if (status == AnimationStatus.Dismissed)
+                    {
+                        Zone.Current.NextFrame(lc.Dispose);
+                    }
+                },
+                fireImmediately: false
+            );
 
             lc.Register(() =>
             {
@@ -218,15 +240,22 @@ namespace UniMob.UI.Layout
 
         private void UpdateTransitionForEntry(Entry entry)
         {
-            entry.Transition = MakeTransition(entry.Child, entry.AnimationController, Widget.TransitionBuilder);
+            entry.Transition = MakeTransition(
+                entry.Child,
+                entry.AnimationController,
+                Widget.TransitionBuilder
+            );
         }
 
-        private Builder MakeTransition(Widget child, IAnimation<float> animation,
-            AnimatedSwitcherTransitionBuilder transition)
+        private Builder MakeTransition(
+            Widget child,
+            IAnimation<float> animation,
+            AnimatedSwitcherTransitionBuilder transition
+        )
         {
             return new Builder(_ => transition.Invoke(animation, child))
             {
-                Key = child.Key ?? Key.Of(_childNumber)
+                Key = child.Key ?? Key.Of(_childNumber),
             };
         }
 
@@ -239,13 +268,14 @@ namespace UniMob.UI.Layout
         {
             if (_outgoingWidgets == null)
             {
-                _outgoingWidgets = _outgoingEntries
-                    .Select(entry => entry.Transition)
-                    .ToList();
+                _outgoingWidgets = _outgoingEntries.Select(entry => entry.Transition).ToList();
             }
 
             Assert.IsTrue(_outgoingEntries.Count == _outgoingWidgets.Count);
-            Assert.IsTrue(_outgoingEntries.Count == 0 || _outgoingEntries.Last().Transition == _outgoingWidgets.Last());
+            Assert.IsTrue(
+                _outgoingEntries.Count == 0
+                    || _outgoingEntries.Last().Transition == _outgoingWidgets.Last()
+            );
         }
 
         private class Entry
@@ -263,7 +293,13 @@ namespace UniMob.UI.Layout
         Sequential,
     }
 
-    public delegate Widget AnimatedSwitcherTransitionBuilder(IAnimation<float> animation, Widget child);
+    public delegate Widget AnimatedSwitcherTransitionBuilder(
+        IAnimation<float> animation,
+        Widget child
+    );
 
-    public delegate Widget AnimatedSwitcherLayoutBuilder(Widget currentChild, IEnumerable<Widget> previousWidget);
+    public delegate Widget AnimatedSwitcherLayoutBuilder(
+        Widget currentChild,
+        IEnumerable<Widget> previousWidget
+    );
 }

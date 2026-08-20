@@ -43,7 +43,7 @@ namespace UniMob.UI.Widgets
         public override State CreateState() => new NavigatorState();
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state) =>
-            new RenderNavigator((INavigatorState) state);
+            new RenderNavigator((INavigatorState)state);
 
         public static NavigatorState Of(
             BuildContext context,
@@ -58,9 +58,9 @@ namespace UniMob.UI.Widgets
             if (!nullOk && navigator == null)
             {
                 throw new Exception(
-                    "Navigator operation requested with a context that does not include a Navigator.\n" +
-                    "The context used to push or pop routes from the Navigator must be that of a " +
-                    "widget that is a descendant of a Navigator widget."
+                    "Navigator operation requested with a context that does not include a Navigator.\n"
+                        + "The context used to push or pop routes from the Navigator must be that of a "
+                        + "widget that is a descendant of a Navigator widget."
                 );
             }
 
@@ -69,18 +69,23 @@ namespace UniMob.UI.Widgets
 
         public static Route Push(BuildContext context, Route route) => Of(context).Push(route);
 
-        public static Route PushNamed(BuildContext context, string routeName) => Of(context).PushNamed(routeName);
+        public static Route PushNamed(BuildContext context, string routeName) =>
+            Of(context).PushNamed(routeName);
 
         /// <summary>Pops the topmost route on its own authority; the caller is taken to own it.</summary>
         public static Task<PopOutcome> Pop(BuildContext context) => Of(context).TopmostRoute.Pop();
 
-        public static Route NewRoot(BuildContext context, Route route) => Of(context).NewRoot(route);
+        public static Route NewRoot(BuildContext context, Route route) =>
+            Of(context).NewRoot(route);
 
-        public static Route NewRootNamed(BuildContext context, string routeName) => Of(context).NewRootNamed(routeName);
+        public static Route NewRootNamed(BuildContext context, string routeName) =>
+            Of(context).NewRootNamed(routeName);
 
-        public static Route Replace(BuildContext context, Route route) => Of(context).Replace(route);
+        public static Route Replace(BuildContext context, Route route) =>
+            Of(context).Replace(route);
 
-        public static Route ReplaceNamed(BuildContext context, string routeName) => Of(context).ReplaceNamed(routeName);
+        public static Route ReplaceNamed(BuildContext context, string routeName) =>
+            Of(context).ReplaceNamed(routeName);
 
         public static Task<PopToOutcome> PopTo(BuildContext context, Route route, object request) =>
             Of(context).RequestPopTo(route, request);

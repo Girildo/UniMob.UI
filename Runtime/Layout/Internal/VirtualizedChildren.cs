@@ -63,8 +63,12 @@ namespace UniMob.UI.Layout.Internal
         // _builtStates in lazy mode, or the owner's eager collection otherwise).
         private readonly Atom<IState[]> _visibleChildren;
 
-        public VirtualizedChildren(Lifetime lifetime, BuildContext itemBuildContext,
-            Func<IndexedWidgetBuilder> itemBuilder, Func<int, IState> resolveEagerIndex)
+        public VirtualizedChildren(
+            Lifetime lifetime,
+            BuildContext itemBuildContext,
+            Func<IndexedWidgetBuilder> itemBuilder,
+            Func<int, IState> resolveEagerIndex
+        )
         {
             _itemBuildContext = itemBuildContext;
             _itemBuilder = itemBuilder;
@@ -80,7 +84,8 @@ namespace UniMob.UI.Layout.Internal
         public IState[] VisibleChildren => _visibleChildren.Value;
 
         /// <summary>Resolves a key seen at least once during building to its index; used by ScrollTo(Key).</summary>
-        public bool TryResolveSeenKey(Key key, out int index) => _seenKeyToIndex.TryGetValue(key, out index);
+        public bool TryResolveSeenKey(Key key, out int index) =>
+            _seenKeyToIndex.TryGetValue(key, out index);
 
         /// <summary>
         ///     Ensures indices in [startIndexInclusive, endIndexExclusive) are built (constructing
@@ -101,7 +106,8 @@ namespace UniMob.UI.Layout.Internal
         {
             var scratch = _visibleIndicesScratch;
             scratch.Clear();
-            for (var i = 0; i < visibleChildren.Count; i++) scratch.Add(visibleChildren[i].ChildIndex);
+            for (var i = 0; i < visibleChildren.Count; i++)
+                scratch.Add(visibleChildren[i].ChildIndex);
 
             // NoWatch: this runs inside the list's own layout computation, so reading _visibleIndices here
             // would subscribe that atom to a value it's about to write -- a self-dependency.
@@ -110,7 +116,8 @@ namespace UniMob.UI.Layout.Internal
                 var current = _visibleIndices.Value;
                 // Unchanged window (a scroll delta that didn't cross an item boundary): skip the write so we
                 // don't invalidate downstream atoms (and allocate a fresh IState[]) for no observable change.
-                if (IndicesEqual(current, scratch)) return;
+                if (IndicesEqual(current, scratch))
+                    return;
 
                 _visibleIndices.Value = scratch;
                 _visibleIndicesScratch = current; // old value is orphaned; reuse it as the next scratch buffer
@@ -130,7 +137,9 @@ namespace UniMob.UI.Layout.Internal
                 // _builtStates is a plain field (untracked here) yet safe: it's only mutated in BuildWindow,
                 // which runs (via RequestBuildWindow) before SetVisibleChildren writes _visibleIndices in the
                 // same pass -- so by the time this recomputes, _builtStates already reflects the current pass.
-                visible[i] = lazy ? _builtStates.GetValueOrDefault(indices[i]) : _resolveEagerIndex(indices[i]);
+                visible[i] = lazy
+                    ? _builtStates.GetValueOrDefault(indices[i])
+                    : _resolveEagerIndex(indices[i]);
             }
 
             return visible;
@@ -176,10 +185,15 @@ namespace UniMob.UI.Layout.Internal
 
                 using (Atom.NoWatch)
                 {
-                    var built = StateUtilities.UpdateChild(_itemBuildContext, _builtStates.GetValueOrDefault(index), widget);
+                    var built = StateUtilities.UpdateChild(
+                        _itemBuildContext,
+                        _builtStates.GetValueOrDefault(index),
+                        widget
+                    );
                     _builtStates[index] = built;
 
-                    if (built.Key != null) _seenKeyToIndex[built.Key] = index;
+                    if (built.Key != null)
+                        _seenKeyToIndex[built.Key] = index;
                 }
             }
 
@@ -202,10 +216,12 @@ namespace UniMob.UI.Layout.Internal
 
         private static bool IndicesEqual(List<int> a, List<int> b)
         {
-            if (a.Count != b.Count) return false;
+            if (a.Count != b.Count)
+                return false;
             for (var i = 0; i < a.Count; i++)
             {
-                if (a[i] != b[i]) return false;
+                if (a[i] != b[i])
+                    return false;
             }
 
             return true;

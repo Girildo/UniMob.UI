@@ -26,7 +26,8 @@ namespace UniMob.UI.Widgets
         public static PopDecision Refuse() => new PopDecision(false, false, null);
 
         /// <summary>The result a pop carries when this decision answered <paramref name="request"/>.</summary>
-        internal PopResult ToResult(object request) => new PopResult(PopCause.Requested, request, HasValue, Value);
+        internal PopResult ToResult(object request) =>
+            new PopResult(PopCause.Requested, request, HasValue, Value);
     }
 
     /// <summary>
@@ -53,7 +54,11 @@ namespace UniMob.UI.Widgets
         public static PopDecision<T> Refuse() => new PopDecision<T>(false, false, default);
 
         public static implicit operator PopDecision(PopDecision<T> decision) =>
-            new PopDecision(decision.IsAllowed, decision.HasValue, decision.HasValue ? (object) decision.Value : null);
+            new PopDecision(
+                decision.IsAllowed,
+                decision.HasValue,
+                decision.HasValue ? (object)decision.Value : null
+            );
     }
 
     /// <summary>
@@ -98,9 +103,11 @@ namespace UniMob.UI.Widgets
         }
 
         /// <summary>A walk that reached its target.</summary>
-        public static PopToOutcome ReachedTarget() => new PopToOutcome(true, null, PopOutcome.Popped);
+        public static PopToOutcome ReachedTarget() =>
+            new PopToOutcome(true, null, PopOutcome.Popped);
 
         /// <summary>A walk that stopped short, at <paramref name="at"/>, because of <paramref name="outcome"/>.</summary>
-        public static PopToOutcome Stopped(Route at, PopOutcome outcome) => new PopToOutcome(false, at, outcome);
+        public static PopToOutcome Stopped(Route at, PopOutcome outcome) =>
+            new PopToOutcome(false, at, outcome);
     }
 }

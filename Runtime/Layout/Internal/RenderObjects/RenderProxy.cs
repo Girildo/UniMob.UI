@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace UniMob.UI.Layout.Internal.RenderObjects
 {
-
     /// <summary>
     /// A generic render object that acts as a proxy for another render object, forwarding layout and rendering
     /// to its child. This is useful for creating wrapper widgets that modify the behavior of their child
@@ -11,7 +10,8 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
     /// </summary>
     public class RenderProxy : SingleChildRenderObject
     {
-        public RenderProxy(ISingleChildLayoutState state) : base(state)
+        public RenderProxy(ISingleChildLayoutState state)
+            : base(state)
         {
             // Intentionally left blank.
         }
@@ -35,6 +35,5 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
         {
             ChildPosition = Vector2.zero;
         }
-
     }
 }

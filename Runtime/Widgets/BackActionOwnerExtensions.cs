@@ -12,11 +12,16 @@ namespace UniMob.UI.Widgets
         ///     it says what it is asking with.
         /// </summary>
         [PublicAPI]
-        public static TBackActionOwner WithPopOnBack<TBackActionOwner>(this TBackActionOwner owner,
-            NavigatorState navigatorState, object request, Func<bool> filter = null)
+        public static TBackActionOwner WithPopOnBack<TBackActionOwner>(
+            this TBackActionOwner owner,
+            NavigatorState navigatorState,
+            object request,
+            Func<bool> filter = null
+        )
             where TBackActionOwner : IBackActionOwner
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
             bool HandleBack()
             {
@@ -24,7 +29,9 @@ namespace UniMob.UI.Widgets
                 {
                     if (navigatorState.NavigationStack.Count > 0)
                     {
-                        ReportIfFaulted(navigatorState.RequestPop(navigatorState.TopmostRoute, request));
+                        ReportIfFaulted(
+                            navigatorState.RequestPop(navigatorState.TopmostRoute, request)
+                        );
                     }
 
                     return true;
@@ -46,8 +53,10 @@ namespace UniMob.UI.Widgets
         private static void ReportIfFaulted(Task request)
         {
             request.ContinueWith(
-                faulted => Zone.Current.HandleUncaughtException(faulted.Exception.GetBaseException()),
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+                faulted =>
+                    Zone.Current.HandleUncaughtException(faulted.Exception.GetBaseException()),
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
+            );
         }
     }
 }

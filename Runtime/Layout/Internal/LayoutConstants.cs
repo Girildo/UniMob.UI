@@ -1,6 +1,5 @@
 namespace UniMob.UI.Layout.Internal
 {
-
     internal static class LayoutConstants
     {
         /// <summary>

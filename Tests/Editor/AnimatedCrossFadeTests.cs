@@ -40,7 +40,10 @@ namespace UniMob.UI.Tests
         public void KeepMounted_KeepsBothLayers_SizesToLargerChild()
         {
             // Both children stay mounted; the ZStack sizes to the max extent of both.
-            var size = TestHarness.MountAndLayout(Make(CrossFadeState.ShowFirst, keepMounted: true), Loose);
+            var size = TestHarness.MountAndLayout(
+                Make(CrossFadeState.ShowFirst, keepMounted: true),
+                Loose
+            );
 
             Assert.AreEqual(new Vector2(80, 90), size);
         }

@@ -52,7 +52,7 @@ namespace UniMob.UI.Layout
 
         public override RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            return new RenderPositionedBox((AlignState) state);
+            return new RenderPositionedBox((AlignState)state);
         }
     }
 

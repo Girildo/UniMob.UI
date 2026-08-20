@@ -10,11 +10,9 @@ namespace UniMob.UI.Internal
         private readonly bool _worldPositionStays;
 
         public PooledViewMapper(Transform parent, bool worldPositionStays = false, bool link = true)
-            : this(() => parent, worldPositionStays, link)
-        {
-        }
+            : this(() => parent, worldPositionStays, link) { }
 
-        public PooledViewMapper(Func<Transform> parentSelector, bool worldPositionStays, bool link) 
+        public PooledViewMapper(Func<Transform> parentSelector, bool worldPositionStays, bool link)
             : base(link)
         {
             _parentSelector = parentSelector;
