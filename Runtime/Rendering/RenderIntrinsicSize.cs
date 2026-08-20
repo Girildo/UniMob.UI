@@ -1,4 +1,3 @@
-using System;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
@@ -16,6 +15,12 @@ namespace UniMob.UI.Rendering
 
         protected override Vector2 PerformSizing(LayoutConstraints constraints)
         {
+            if (_state.Child == null)
+            {
+                ChildSize = Vector2.zero;
+                return constraints.Constrain(Vector2.zero);
+            }
+
             var childConstraints =
                 _state.Axis == Axis.Horizontal
                     ? constraints.Tighten(
@@ -39,16 +44,6 @@ namespace UniMob.UI.Rendering
         protected override void PerformPositioning(Vector2 size)
         {
             ChildPosition = Vector2.zero;
-        }
-
-        protected override float ComputeIntrinsicWidth(float height)
-        {
-            return _state.Child.RenderObject.GetIntrinsicWidth(height);
-        }
-
-        protected override float ComputeIntrinsicHeight(float width)
-        {
-            return _state.Child.RenderObject.GetIntrinsicHeight(width);
         }
     }
 }

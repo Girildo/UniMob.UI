@@ -12,22 +12,15 @@ namespace UniMob.UI.Rendering
     /// </summary>
     internal static class WidgetGeometryTicker
     {
-        private static MutableAtom<uint> _frame;
-        private static WidgetGeometryTickerDriver _driver;
+        private static MutableAtom<uint>? _frame;
+        private static WidgetGeometryTickerDriver? _driver;
 
-        public static MutableAtom<uint> Frame
-        {
-            get
-            {
-                EnsureStarted();
-                return _frame;
-            }
-        }
+        // Minted on first read rather than when the driver starts, so a frame that ticks before
+        // anything observes geometry allocates nothing: Tick's null check is what skips it.
+        public static MutableAtom<uint> Frame => _frame ??= Atom.Value(0u);
 
         public static void EnsureStarted()
         {
-            _frame ??= Atom.Value(0u);
-
             if (_driver != null)
             {
                 return;

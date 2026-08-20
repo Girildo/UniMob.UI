@@ -15,8 +15,10 @@ namespace UniMob.UI.Internal.Views
         [SerializeField]
         private UniMobTextMeshProBehaviour text;
 
-        private void Awake()
+        protected override void Awake()
         {
+            base.Awake();
+
             // Registered once per component, not once per activation: the callback list is append-only
             // and is never cleared, so re-registering would grow it for the life of the view.
             AddActivationCallback(DiscardInheritedGeometry);
@@ -76,7 +78,9 @@ namespace UniMob.UI.Internal.Views
             text.fontSize = State.FontSize;
             text.fontWeight = State.FontWeight;
             text.textStyle = State.Style;
-            text.enableWordWrapping = State.WrappingEnabled;
+            text.textWrappingMode = State.WrappingEnabled
+                ? TextWrappingModes.Normal
+                : TextWrappingModes.NoWrap;
             text.overflowMode = State.OverflowMode;
             text.maxVisibleLines = State.MaxLines;
 

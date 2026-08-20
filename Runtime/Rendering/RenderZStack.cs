@@ -55,9 +55,9 @@ namespace UniMob.UI.Rendering
             for (var i = 0; i < ChildrenLayoutBuffer.Count; i++)
             {
                 var child = _state.Children[i];
-                if (child.InnerViewState is PositionedState pos)
+                if (child.InnerViewState is PositionedState positioned)
                 {
-                    LayoutPositionedChild(i, child, pos.RawWidget as Positioned, size);
+                    LayoutPositionedChild(i, child, (Positioned)positioned.RawWidget, size);
                 }
                 else
                 {

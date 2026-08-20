@@ -85,14 +85,11 @@ namespace UniMob.UI.Rendering
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void EditorInitialize()
         {
-            if (s_textMeshProMeasurers != null)
+            foreach (var pair in s_textMeshProMeasurers)
             {
-                foreach (var pair in s_textMeshProMeasurers)
+                if (pair.Value != null)
                 {
-                    if (pair.Value != null)
-                    {
-                        Object.Destroy(pair.Value.gameObject);
-                    }
+                    Object.Destroy(pair.Value.gameObject);
                 }
             }
 
@@ -213,7 +210,9 @@ namespace UniMob.UI.Rendering
             measurer.fontSize = _state.FontSize;
             measurer.fontWeight = _state.FontWeight;
             measurer.textStyle = _state.Style;
-            measurer.enableWordWrapping = _state.WrappingEnabled;
+            measurer.textWrappingMode = _state.WrappingEnabled
+                ? TextWrappingModes.Normal
+                : TextWrappingModes.NoWrap;
             measurer.overflowMode = _state.OverflowMode;
 
             var maxLines = _state.MaxLines;

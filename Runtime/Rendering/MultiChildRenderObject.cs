@@ -81,7 +81,7 @@ namespace UniMob.UI.Rendering
         }
 
         /// <inheritdoc/>
-        protected override IState ChildAt(int index)
+        protected override IState? ChildAt(int index)
         {
             if (this.Owner is not IMultiChildLayoutState state)
             {

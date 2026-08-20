@@ -30,11 +30,11 @@ namespace UniMob.UI.Rendering
         // observer created while the key is unbound depends on the binding and wakes when
         // InflateWidget writes it. TryGetGlobalGeometry stays untracked, because it is documented
         // cheap and non-reactive and must not add dependencies to whoever calls it.
-        private IViewState View => UntypedCurrentState?.InnerViewState;
+        private IViewState? View => UntypedCurrentState?.InnerViewState;
 
-        private IViewState TrackedView => TrackedCurrentState?.InnerViewState;
+        private IViewState? TrackedView => TrackedCurrentState?.InnerViewState;
 
-        public override bool Equals(Key other) => ReferenceEquals(this, other);
+        public override bool Equals(Key? other) => ReferenceEquals(this, other);
 
         public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
