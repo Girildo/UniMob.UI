@@ -1,4 +1,3 @@
-#nullable enable
 namespace UniMob.UI.Layout
 {
     public interface ISingleChildLayoutWidget : Widget

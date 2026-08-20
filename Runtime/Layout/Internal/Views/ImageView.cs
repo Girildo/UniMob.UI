@@ -1,4 +1,3 @@
-#nullable enable
 using UniMob.UI.Internal;
 using UniMob.UI.Layout;
 using UnityEngine;

@@ -1,4 +1,3 @@
-#nullable enable
 using JetBrains.Annotations;
 using TMPro;
 using UniMob.UI.Diagnostics;

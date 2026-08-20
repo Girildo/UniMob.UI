@@ -1,4 +1,3 @@
-#nullable enable
 using UnityEngine.UI;
 
 namespace UniMob.UI.Layout.Internal.Utilities

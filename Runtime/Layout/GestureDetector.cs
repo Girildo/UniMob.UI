@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using UniMob.UI.Layout.Internal.RenderObjects;
 using UniMob.UI.Layout.Internal.Views;
