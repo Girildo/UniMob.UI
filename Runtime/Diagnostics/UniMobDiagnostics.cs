@@ -48,7 +48,7 @@ namespace UniMob.UI.Diagnostics
 
         private sealed class Scope : IDisposable
         {
-            private IDiagnosticsReporter _previous;
+            private IDiagnosticsReporter? _previous;
 
             public Scope(IDiagnosticsReporter previous) => _previous = previous;
 

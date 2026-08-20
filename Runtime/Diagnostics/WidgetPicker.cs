@@ -59,13 +59,42 @@ namespace UniMob.UI.Diagnostics
         // Violet rather than the amber a fault badge uses, which would read as something being wrong.
         private static readonly Color GeometricBorderColour = new Color(0.80f, 0.55f, 1f, 0.95f);
 
-        private static Overlay _overlay;
-        private static RectTransform _canvasRect;
-        private static RectTransform _scrim;
-        private static RectTransform _fill;
-        private static Image _fillImage;
-        private static RectTransform[] _border;
-        private static Image[] _borderImage;
+        /// <summary>
+        ///     The overlay's pieces, which are built together by <see cref="Arm"/> and destroyed
+        ///     together by <see cref="Disarm"/>. One object rather than seven fields so that having
+        ///     checked for the overlay is having checked for every piece of it.
+        /// </summary>
+        private sealed class Overlaid
+        {
+            public Overlaid(
+                Overlay overlay,
+                RectTransform canvasRect,
+                RectTransform scrim,
+                RectTransform fill,
+                Image fillImage,
+                RectTransform[] border,
+                Image[] borderImage
+            )
+            {
+                Overlay = overlay;
+                CanvasRect = canvasRect;
+                Scrim = scrim;
+                Fill = fill;
+                FillImage = fillImage;
+                Border = border;
+                BorderImage = borderImage;
+            }
+
+            public readonly Overlay Overlay;
+            public readonly RectTransform CanvasRect;
+            public readonly RectTransform Scrim;
+            public readonly RectTransform Fill;
+            public readonly Image FillImage;
+            public readonly RectTransform[] Border;
+            public readonly Image[] BorderImage;
+        }
+
+        private static Overlaid? _overlaid;
 
         /// <summary>
         ///     Whether the overlay is still hunting, as opposed to merely outlining what was found.
@@ -73,15 +102,15 @@ namespace UniMob.UI.Diagnostics
         private static bool _picking;
 
         /// <summary>A captured click, in screen coordinates. Fires for as long as the mode is on.</summary>
-        public static event Action<Vector2> Picked;
+        public static event Action<Vector2>? Picked;
 
         /// <summary>The pointer moved, in screen coordinates.</summary>
-        public static event Action<Vector2> Hovered;
+        public static event Action<Vector2>? Hovered;
 
         /// <summary>The pointer left the app, so whatever it was lighting is no longer the subject.</summary>
-        public static event Action Exited;
+        public static event Action? Exited;
 
-        public static bool IsArmed => _overlay != null;
+        public static bool IsArmed => _overlaid != null;
 
         /// <summary>
         ///     Whether a click would still pick something, as opposed to reaching the app.
@@ -92,7 +121,7 @@ namespace UniMob.UI.Diagnostics
         ///     selecting a row in the window stops lighting anything the moment you use the picker once.
         ///     A browser's element picker behaves exactly this way.
         /// </remarks>
-        public static bool IsPicking => _overlay != null && _picking;
+        public static bool IsPicking => _overlaid != null && _picking;
 
         /// <summary>
         ///     Whether the pointer is over the app, and therefore whether hover owns the highlight.
@@ -140,7 +169,7 @@ namespace UniMob.UI.Diagnostics
 
         public static void Arm()
         {
-            if (_overlay != null)
+            if (_overlaid != null)
             {
                 // Already there, and possibly only outlining a previous pick -- so this is what
                 // re-arming after a pick runs through, not a no-op.
@@ -165,21 +194,21 @@ namespace UniMob.UI.Diagnostics
 
             root.AddComponent<GraphicRaycaster>();
 
-            _canvasRect = (RectTransform)root.transform;
+            var canvasRect = (RectTransform)root.transform;
 
             // Painted in this order, because a later sibling draws over an earlier one: the wash over
             // the whole app, then the mark on the widget, then its outline, then the click surface.
-            _scrim = CreatePiece(root.transform, "Scrim", ScrimColour);
+            var scrim = CreatePiece(root.transform, "Scrim", ScrimColour);
 
-            _fill = CreatePiece(root.transform, "Fill", Fill(BorderColour));
-            _fillImage = _fill.GetComponent<Image>();
+            var fill = CreatePiece(root.transform, "Fill", Fill(BorderColour));
+            var fillImage = fill.GetComponent<Image>();
 
-            _border = new RectTransform[Bands];
-            _borderImage = new Image[Bands];
+            var border = new RectTransform[Bands];
+            var borderImage = new Image[Bands];
             for (var i = 0; i < Bands; i++)
             {
-                _border[i] = CreatePiece(root.transform, "Border", BorderColour);
-                _borderImage[i] = _border[i].GetComponent<Image>();
+                border[i] = CreatePiece(root.transform, "Border", BorderColour);
+                borderImage[i] = border[i].GetComponent<Image>();
             }
 
             // Transparent: an Image raycasts regardless of alpha, and the dim already says that
@@ -191,7 +220,15 @@ namespace UniMob.UI.Diagnostics
             surface.offsetMax = Vector2.zero;
             surface.GetComponent<Image>().raycastTarget = true;
 
-            _overlay = surface.gameObject.AddComponent<Overlay>();
+            _overlaid = new Overlaid(
+                surface.gameObject.AddComponent<Overlay>(),
+                canvasRect,
+                scrim,
+                fill,
+                fillImage,
+                border,
+                borderImage
+            );
 
             StartPicking();
         }
@@ -217,7 +254,8 @@ namespace UniMob.UI.Diagnostics
         /// </remarks>
         public static void StopPicking()
         {
-            if (_overlay == null)
+            var overlaid = _overlaid;
+            if (overlaid == null)
             {
                 return;
             }
@@ -228,12 +266,12 @@ namespace UniMob.UI.Diagnostics
 
             // The wash belongs to the hunt, and would otherwise sit over an app the user has their
             // input back on. What was found keeps its mark and its outline.
-            Place(_scrim, Rect.zero);
+            Place(overlaid.Scrim, Rect.zero);
         }
 
         private static void SetSurfaceCatchesClicks(bool catches)
         {
-            if (_overlay != null && _overlay.TryGetComponent<Image>(out var surface))
+            if (_overlaid != null && _overlaid.Overlay.TryGetComponent<Image>(out var surface))
             {
                 surface.raycastTarget = catches;
             }
@@ -241,20 +279,15 @@ namespace UniMob.UI.Diagnostics
 
         public static void Disarm()
         {
-            if (_overlay == null)
+            var overlaid = _overlaid;
+            if (overlaid == null)
             {
                 return;
             }
 
-            var root = _overlay.transform.parent.gameObject;
+            var root = overlaid.Overlay.transform.parent.gameObject;
 
-            _overlay = null;
-            _canvasRect = null;
-            _scrim = null;
-            _fill = null;
-            _fillImage = null;
-            _border = null;
-            _borderImage = null;
+            _overlaid = null;
             _picking = false;
             IsPointerOverApp = false;
 
@@ -277,7 +310,8 @@ namespace UniMob.UI.Diagnostics
         /// </param>
         public static void SetHighlight(Rect screenRect, bool geometric = false)
         {
-            if (_overlay == null)
+            var overlaid = _overlaid;
+            if (overlaid == null)
             {
                 return;
             }
@@ -285,24 +319,24 @@ namespace UniMob.UI.Diagnostics
             var borderColour = geometric ? GeometricBorderColour : BorderColour;
             for (var i = 0; i < Bands; i++)
             {
-                if (_borderImage[i].color != borderColour)
+                if (overlaid.BorderImage[i].color != borderColour)
                 {
-                    _borderImage[i].color = borderColour;
+                    overlaid.BorderImage[i].color = borderColour;
                 }
             }
 
             var fillColour = Fill(borderColour);
-            if (_fillImage.color != fillColour)
+            if (overlaid.FillImage.color != fillColour)
             {
-                _fillImage.color = fillColour;
+                overlaid.FillImage.color = fillColour;
             }
 
             // Everything below works in the canvas's own units, not in screen pixels. They coincide
             // for an unscaled overlay canvas and stop coinciding the moment anything is not, and a wash
             // that is a few percent short leaves an untinted strip down the edge of the screen.
-            var size = _canvasRect.rect.size;
-            var min = ToCanvas(screenRect.min);
-            var max = ToCanvas(screenRect.max);
+            var size = overlaid.CanvasRect.rect.size;
+            var min = ToCanvas(overlaid.CanvasRect, screenRect.min);
+            var max = ToCanvas(overlaid.CanvasRect, screenRect.max);
 
             var w = size.x;
             var h = size.y;
@@ -314,33 +348,37 @@ namespace UniMob.UI.Diagnostics
 
             // Only while hunting: once something is picked the app is interactive again and a wash over
             // it would be a lie about who owns the input.
-            Place(_scrim, _picking ? new Rect(Vector2.zero, size) : Rect.zero);
-            Place(_fill, Rect.MinMaxRect(left, bottom, right, top));
+            Place(overlaid.Scrim, _picking ? new Rect(Vector2.zero, size) : Rect.zero);
+            Place(overlaid.Fill, Rect.MinMaxRect(left, bottom, right, top));
 
             // Drawn INSIDE the box, because the box is routinely flush with a screen edge and an
             // outside stroke there is simply off-screen -- a full-height drawer loses three of its four
             // sides that way, and a full-screen widget loses all four.
             var t = BorderThickness;
-            Place(_border[0], Rect.MinMaxRect(left, top - t, right, top));
-            Place(_border[1], Rect.MinMaxRect(left, bottom, right, bottom + t));
-            Place(_border[2], Rect.MinMaxRect(left, bottom, left + t, top));
-            Place(_border[3], Rect.MinMaxRect(right - t, bottom, right, top));
+            Place(overlaid.Border[0], Rect.MinMaxRect(left, top - t, right, top));
+            Place(overlaid.Border[1], Rect.MinMaxRect(left, bottom, right, bottom + t));
+            Place(overlaid.Border[2], Rect.MinMaxRect(left, bottom, left + t, top));
+            Place(overlaid.Border[3], Rect.MinMaxRect(right - t, bottom, right, top));
         }
 
         /// <summary>Nothing marked: the wash alone while picking, and nothing at all once it has stopped.</summary>
         public static void ClearHighlight()
         {
-            if (_overlay == null)
+            var overlaid = _overlaid;
+            if (overlaid == null)
             {
                 return;
             }
 
-            Place(_scrim, _picking ? new Rect(Vector2.zero, _canvasRect.rect.size) : Rect.zero);
-            Place(_fill, Rect.zero);
+            Place(
+                overlaid.Scrim,
+                _picking ? new Rect(Vector2.zero, overlaid.CanvasRect.rect.size) : Rect.zero
+            );
+            Place(overlaid.Fill, Rect.zero);
 
             for (var i = 0; i < Bands; i++)
             {
-                Place(_border[i], Rect.zero);
+                Place(overlaid.Border[i], Rect.zero);
             }
         }
 
@@ -349,10 +387,10 @@ namespace UniMob.UI.Diagnostics
             new Color(border.r, border.g, border.b, FillAlpha);
 
         /// <summary>A screen point in canvas units, measured from the canvas's bottom-left corner.</summary>
-        private static Vector2 ToCanvas(Vector2 screenPoint)
+        private static Vector2 ToCanvas(RectTransform canvasRect, Vector2 screenPoint)
         {
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                _canvasRect,
+                canvasRect,
                 screenPoint,
                 null,
                 out var local
@@ -360,7 +398,7 @@ namespace UniMob.UI.Diagnostics
 
             // Local space is measured from the pivot, which sits in the middle. Everything else here
             // places pieces from the bottom-left, so rebase once and be done with it.
-            return local - _canvasRect.rect.min;
+            return local - canvasRect.rect.min;
         }
 
         private static RectTransform CreatePiece(Transform parent, string name, Color colour)

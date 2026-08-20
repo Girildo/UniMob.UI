@@ -137,12 +137,14 @@ namespace UniMob.UI.Diagnostics
             builder.Append("  ").Append(label.PadRight(8)).Append(value).Append('\n');
         }
 
+        // Only reached where Culprit is set; the caller checks before it builds the row.
         private static string Culprit(in LayoutIssue issue)
         {
-            var described = DiagnosticNode.Describe(issue.Culprit);
-            var size = issue.Culprit.RenderObject is null
+            var culprit = issue.Culprit!;
+            var described = DiagnosticNode.Describe(culprit);
+            var size = culprit.RenderObject is null
                 ? string.Empty
-                : $"  {issue.Culprit.RenderObject.PeekSize()}";
+                : $"  {culprit.RenderObject.PeekSize()}";
 
             if (issue.Subject is not IMultiChildLayoutState multiChild)
             {
@@ -183,7 +185,7 @@ namespace UniMob.UI.Diagnostics
         ///         is labelled "measured" for that reason.
         ///     </para>
         /// </remarks>
-        private static string ChildSizes(IState subject)
+        private static string? ChildSizes(IState? subject)
         {
             if (subject is not IMultiChildLayoutState multiChild)
             {

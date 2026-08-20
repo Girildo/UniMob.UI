@@ -35,7 +35,7 @@ namespace UniMob.UI.Diagnostics
         // The culprit is what a reader wants selected -- the child that did not fit, not the row that
         // noticed. Both are build-only often enough that neither is guaranteed to have a GameObject,
         // and a null context is simply an entry that does not select anything.
-        private static Object ContextObject(in LayoutIssue issue)
+        private static Object? ContextObject(in LayoutIssue issue)
         {
             using (Atom.NoWatch)
             {
@@ -43,7 +43,7 @@ namespace UniMob.UI.Diagnostics
             }
         }
 
-        private static Object ViewObject(IState state)
+        private static Object? ViewObject(IState? state)
         {
             try
             {

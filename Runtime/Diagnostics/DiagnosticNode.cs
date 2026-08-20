@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace UniMob.UI.Diagnostics
@@ -137,6 +138,7 @@ namespace UniMob.UI.Diagnostics
         ///     failure a label exists to prevent. <see cref="Sanitize"/> only backstops the pathological
         ///     case.
         /// </remarks>
+        [return: NotNullIfNotNull("value")]
         public static string? Truncate(string? value, int max)
         {
             if (string.IsNullOrEmpty(value) || value.Length <= max || max < 0)
@@ -150,7 +152,7 @@ namespace UniMob.UI.Diagnostics
         // Channels 2 and 3: what the widget, or the state that beat it to it, says about itself.
         private static void AppendLabel(StringBuilder builder, IState state)
         {
-            string label;
+            string? label;
             try
             {
                 label = state.GetDiagnosticInfo();
@@ -177,7 +179,7 @@ namespace UniMob.UI.Diagnostics
         {
             var truncated = Truncate(label, MaxLabelLength);
 
-            StringBuilder cleaned = null;
+            StringBuilder? cleaned = null;
             for (var i = 0; i < truncated.Length; i++)
             {
                 var c = truncated[i];
