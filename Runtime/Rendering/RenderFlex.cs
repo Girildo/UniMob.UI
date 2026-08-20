@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal.Views;
-using UniMob.UI.Widgets;
 using UnityEngine;
 
 namespace UniMob.UI.Rendering
@@ -491,7 +490,7 @@ namespace UniMob.UI.Rendering
         )
         {
             // -- remark: we use InnerViewState because Expanded might be composed inside other Hoc widgets
-            if (child.InnerViewState is FlexibleState flexible)
+            if (child.InnerViewState is IFlexibleState flexible)
             {
                 flex = flexible.Flex;
                 fit = flexible.Fit;

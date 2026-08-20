@@ -35,7 +35,7 @@ namespace UniMob.UI.Widgets
         }
     }
 
-    internal class FlexibleState : SingleChildLayoutState<IFlexible>
+    internal class FlexibleState : SingleChildLayoutState<IFlexible>, IFlexibleState
     {
         public int Flex => Widget.Flex;
         public FlexFit Fit => Widget.Fit;
