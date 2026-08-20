@@ -2,21 +2,21 @@
     "name": "com.codewriter.unimob.ui",
     "displayName": "UniMob.UI",
     "description": "A declarative library for building reactive user interfaces",
-    "version": "0.14.0",
-    "unity": "2019.3",
+    "version": "0.15.0",
+    "unity": "6000.3",
     "license": "MIT",
     "keywords": [
         "unity"
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/codewriter-packages/UniMob.UI.git"
+        "url": "https://github.com/Girildo/UniMob.UI.git"
     },
-    "author": "CodeWriter (https://github.com/orgs/codewriter-packages)",
-    "homepage": "https://github.com/codewriter-packages/UniMob.UI#readme",
+    "author": "Girildo (https://github.com/Girildo)",
+    "homepage": "https://github.com/Girildo/UniMob.UI#readme",
     "dependencies": {
         "com.codewriter.unimob": "2.5.0",
-        "com.unity.addressables": "1.20.3",
-        "com.unity.textmeshpro": "3.0.6"
+        "com.unity.addressables": "2.9.0",
+        "com.unity.textmeshpro": "5.0.0"
     }
 }
