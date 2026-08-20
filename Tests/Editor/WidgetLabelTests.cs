@@ -1,6 +1,8 @@
 using NUnit.Framework;
+using UniMob.UI;
 using UniMob.UI.Diagnostics;
-using UniMob.UI.Layout;
+using UniMob.UI.Rendering;
+using UniMob.UI.Widgets;
 using UnityEngine;
 using Object = UnityEngine.Object;
 

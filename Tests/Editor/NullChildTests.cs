@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using UniMob.UI;
 using UniMob.UI.Internal;
-using UniMob.UI.Layout;
+using UniMob.UI.Rendering;
+using UniMob.UI.Widgets;
 using UnityEngine;
 
 namespace UniMob.UI.Tests

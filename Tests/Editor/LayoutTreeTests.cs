@@ -1,9 +1,10 @@
 using System;
 using NUnit.Framework;
+using UniMob.UI;
 using UniMob.UI.Diagnostics;
-using UniMob.UI.Layout;
-using UniMob.UI.Layout.Internal.RenderObjects;
-using UniMob.UI.Layout.Internal.Views;
+using UniMob.UI.Internal.Views;
+using UniMob.UI.Rendering;
+using UniMob.UI.Widgets;
 using UnityEngine;
 
 namespace UniMob.UI.Tests

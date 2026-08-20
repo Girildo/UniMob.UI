@@ -3,6 +3,7 @@ using System.Collections;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
 using UnityEngine;
 using UnityEngine.TestTools;

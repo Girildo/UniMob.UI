@@ -5,10 +5,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UniMob.UI;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
-using UniMob.UI.Layout;
-using UniMob.UI.Layout.Internal.RenderObjects;
+using UniMob.UI.Rendering;
 using UnityEngine;
 
 namespace UniMob.UI

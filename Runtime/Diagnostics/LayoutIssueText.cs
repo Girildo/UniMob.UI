@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using UniMob.UI.Layout.Internal.Views;
+using UniMob.UI.Internal.Views;
 using UnityEngine;
 
 namespace UniMob.UI.Diagnostics

@@ -1,6 +1,5 @@
 using NUnit.Framework;
-using UniMob.UI.Layout;
-using UniMob.UI.Layout.Internal.RenderObjects;
+using UniMob.UI.Rendering;
 using UnityEngine;
 
 namespace UniMob.UI.Tests

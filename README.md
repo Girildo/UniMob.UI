@@ -159,58 +159,58 @@ private Widget BuildDailyOffer(string offerId)
 
 **Layout**
 
-> **[Row](./Runtime/Layout/Row.cs), [Column](./Runtime/Layout/Column.cs)** -- lay children out along the horizontal or vertical axis.
+> **[Row](./Runtime/Widgets/Row.cs), [Column](./Runtime/Widgets/Column.cs)** -- lay children out along the horizontal or vertical axis.
 >
-> **[ZStack](./Runtime/Layout/ZStack.cs)** -- place children on top of each other in paint order.
+> **[ZStack](./Runtime/Widgets/ZStack.cs)** -- place children on top of each other in paint order.
 >
-> **[Wrap](./Runtime/Layout/Wrap.cs)** -- lay children out in a line that wraps onto the next one when it runs out of room.
+> **[Wrap](./Runtime/Widgets/Wrap.cs)** -- lay children out in a line that wraps onto the next one when it runs out of room.
 >
-> **[Expanded](./Runtime/Layout/Flexible.cs), [Flexible](./Runtime/Layout/Flexible.cs), [Spacer](./Runtime/Layout/Spacer.cs)** -- divide a Row or Column's remaining space between its children.
+> **[Expanded](./Runtime/Widgets/Flexible.cs), [Flexible](./Runtime/Widgets/Flexible.cs), [Spacer](./Runtime/Widgets/Spacer.cs)** -- divide a Row or Column's remaining space between its children.
 >
-> **[Align](./Runtime/Layout/Align.cs), [Positioned](./Runtime/Layout/Positioned.cs), [AnchoredBox](./Runtime/Layout/AnchoredBox.cs)** -- place a child within the space its parent gave it.
+> **[Align](./Runtime/Widgets/Align.cs), [Positioned](./Runtime/Widgets/Positioned.cs), [AnchoredBox](./Runtime/Widgets/AnchoredBox.cs)** -- place a child within the space its parent gave it.
 >
-> **[PaddingBox](./Runtime/Layout/PaddingBox.cs)** -- inset a child.
+> **[PaddingBox](./Runtime/Widgets/PaddingBox.cs)** -- inset a child.
 >
-> **[SizedBox](./Runtime/Layout/SizedBox.cs), [ConstrainedBox](./Runtime/Layout/ConstrainedBox.cs), [AspectRatio](./Runtime/Layout/AspectRatio.cs), [IntrinsicWidth/IntrinsicHeight](./Runtime/Layout/IntrinsicSize.cs)** -- impose a size or a shape on a child.
+> **[SizedBox](./Runtime/Widgets/SizedBox.cs), [ConstrainedBox](./Runtime/Widgets/ConstrainedBox.cs), [AspectRatio](./Runtime/Widgets/AspectRatio.cs), [IntrinsicWidth/IntrinsicHeight](./Runtime/Widgets/IntrinsicSize.cs)** -- impose a size or a shape on a child.
 >
-> **[ConstrainedBuilder](./Runtime/Layout/ConstrainedBuilder.cs)** -- build a subtree from the constraints the parent handed down.
+> **[ConstrainedBuilder](./Runtime/Widgets/ConstrainedBuilder.cs)** -- build a subtree from the constraints the parent handed down.
 >
-> **[Container](./Runtime/Layout/Container.cs)** -- a rectangle with a background colour, a size and alignment.
+> **[Container](./Runtime/Widgets/Container.cs)** -- a rectangle with a background colour, a size and alignment.
 >
 > **[Empty](./Runtime/Widgets/Empty.cs)** -- occupies nothing, whatever the parent offers.
 
 **Scrolling**
 
-> **[ScrollList](./Runtime/Layout/ScrollList.cs), [ScrollGrid](./Runtime/Layout/ScrollGrid.cs)** -- virtualized scrollable list and grid, on either axis.
+> **[ScrollList](./Runtime/Widgets/ScrollList.cs), [ScrollGrid](./Runtime/Widgets/ScrollGrid.cs)** -- virtualized scrollable list and grid, on either axis.
 
 **Painting and input**
 
-> **[Text](./Runtime/Layout/Text.cs)** -- display and style text.
+> **[Text](./Runtime/Widgets/Text.cs)** -- display and style text.
 >
-> **[Image](./Runtime/Layout/Image.cs), [ColoredImageBox](./Runtime/Layout/ColoredImageBox.cs)** -- display a sprite.
+> **[Image](./Runtime/Widgets/Image.cs), [ColoredImageBox](./Runtime/Widgets/ColoredImageBox.cs)** -- display a sprite.
 >
-> **[GestureDetector](./Runtime/Layout/GestureDetector.cs), [Clickable](./Runtime/Layout/Clickable.cs)** -- recognize taps, presses, drags and pointer movement.
+> **[GestureDetector](./Runtime/Widgets/GestureDetector.cs), [Clickable](./Runtime/Widgets/Clickable.cs)** -- recognize taps, presses, drags and pointer movement.
 >
-> **[IgnorePointer](./Runtime/Layout/IgnorePointer.cs)** -- make a subtree invisible to hit testing.
+> **[IgnorePointer](./Runtime/Widgets/IgnorePointer.cs)** -- make a subtree invisible to hit testing.
 >
-> **[Opacity](./Runtime/Layout/Opacity.cs)** -- fade a subtree.
+> **[Opacity](./Runtime/Widgets/Opacity.cs)** -- fade a subtree.
 
 **Animation and navigation**
 
-> **[CompositeTransition](./Runtime/Layout/CompositeTransition.cs)** -- animate a subtree's opacity, position, rotation and scale together.
+> **[CompositeTransition](./Runtime/Widgets/CompositeTransition.cs)** -- animate a subtree's opacity, position, rotation and scale together.
 >
-> **[AnimatedCrossFade](./Runtime/Layout/AnimatedCrossFade.cs)** -- cross-fade between two children.
+> **[AnimatedCrossFade](./Runtime/Widgets/AnimatedCrossFade.cs)** -- cross-fade between two children.
 >
-> **[AnimatedSwitcher](./Runtime/Layout/AnimatedSwitcher.cs)** -- animate a child out and its replacement in.
+> **[AnimatedSwitcher](./Runtime/Widgets/AnimatedSwitcher.cs)** -- animate a child out and its replacement in.
 >
-> **[Tabs](./Runtime/Layout/Tabs.cs)** -- a horizontally scrollable, draggable list of tabs.
+> **[Tabs](./Runtime/Widgets/Tabs.cs)** -- a horizontally scrollable, draggable list of tabs.
 >
-> **[Navigator](./Runtime/Widgets/Navigator.cs)** -- a stack of routes, with push, pop and transitions.
+> **[Navigator](./Runtime/Navigation/Navigator.cs)** -- a stack of routes, with push, pop and transitions.
 >
 > **[Builder](./Runtime/Widgets/Builder.cs)** -- build a subtree inline from a delegate.
 
 Conventions for adding a widget, and the vocabulary the layout system uses, are in
-[Runtime/Layout/README.md](./Runtime/Layout/README.md).
+[Runtime/Layout/README.md](./Runtime/README.md).
 
 ## How to install
 
@@ -228,4 +228,6 @@ UniMob.UI is [MIT licensed](./LICENSE.md).
 
 ## Credits
 
+This fork would not have been possible without the original amazing work of [codewriter-packages](https://github.com/codewriter-packages).
 UniMob.UI inspired by [Flutter](https://github.com/flutter/flutter).
+

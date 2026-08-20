@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
 using UnityEngine.TestTools;
 

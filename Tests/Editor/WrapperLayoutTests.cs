@@ -1,5 +1,6 @@
 using NUnit.Framework;
-using UniMob.UI.Layout;
+using UniMob.UI;
+using UniMob.UI.Rendering;
 using UniMob.UI.Widgets;
 using UnityEngine;
 
@@ -171,7 +172,7 @@ namespace UniMob.UI.Tests
         public void ExpandFillsLooseConstraints_WithoutReadingThem()
         {
             var root = TestHarness.Mount(
-                UniMob.UI.Layout.SizedBox.Expand(new CountingBox { BoxSize = new Vector2(5, 5) })
+                UniMob.UI.Widgets.SizedBox.Expand(new CountingBox { BoxSize = new Vector2(5, 5) })
             );
 
             var size = TestHarness.DriveLayout(root, LayoutConstraints.Loose(200, 100));
@@ -183,7 +184,7 @@ namespace UniMob.UI.Tests
         public void ExpandFillsTightConstraints_WithoutReadingThem()
         {
             var root = TestHarness.Mount(
-                UniMob.UI.Layout.SizedBox.Expand(new CountingBox { BoxSize = new Vector2(5, 5) })
+                UniMob.UI.Widgets.SizedBox.Expand(new CountingBox { BoxSize = new Vector2(5, 5) })
             );
 
             var size = TestHarness.DriveLayout(root, LayoutConstraints.Tight(80, 60));

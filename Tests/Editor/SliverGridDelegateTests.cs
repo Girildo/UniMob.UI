@@ -1,6 +1,6 @@
 using System;
 using NUnit.Framework;
-using UniMob.UI.Layout;
+using UniMob.UI.Rendering;
 
 namespace UniMob.UI.Tests
 {
