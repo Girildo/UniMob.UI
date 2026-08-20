@@ -5,6 +5,13 @@ using UnityEngine;
 
 namespace UniMob
 {
+    // Pins the order two frame drivers already run in. Zone.Update ticks and drains the next-frame
+    // queue, AtomScheduler.Update then actualizes what those invalidated, and the geometry ticker
+    // runs in LateUpdate after both. That order was incidental -- both components sat at the default
+    // order, and AtomScheduler's GameObject is created lazily on first actualize, so a component
+    // registered mid-frame could reorder them. Golden traces encode this latency, so it is pinned
+    // rather than left to registration order.
+    [DefaultExecutionOrder(-1000)]
     internal class Zone : MonoBehaviour
     {
         private readonly List<Action> _tickers = new List<Action>();
