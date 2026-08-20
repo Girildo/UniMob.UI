@@ -8,3 +8,5 @@ using System.Runtime.CompilerServices;
 // Zone is internal, so the fixture that proves the real driver actually drives -- the one thing a
 // fake clock cannot prove about itself -- has to be a friend too.
 [assembly: InternalsVisibleTo("UniMob.UI.Tests.PlayMode")]
+// The package's own EditMode fixtures drive the internal clock directly.
+[assembly: InternalsVisibleTo("UniMob.UI.Tests")]

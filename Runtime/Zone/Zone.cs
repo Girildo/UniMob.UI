@@ -35,6 +35,33 @@ namespace UniMob
         internal static void Install(Zone zone) => Current = zone;
 
         /// <summary>
+        ///     Installs <paramref name="zone"/> until the returned scope is disposed.
+        /// </summary>
+        /// <remarks>
+        ///     Follows <see cref="UniMobDiagnostics.Override"/>'s scope discipline: there is no setter,
+        ///     so "a test left its fake clock installed" is unrepresentable rather than merely
+        ///     discouraged. A leak is bounded anyway -- ZoneDriver reinstalls the real clock whenever
+        ///     play mode starts, and a domain reload clears the slot outright.
+        /// </remarks>
+        internal static IDisposable Override(Zone zone)
+        {
+            if (zone == null)
+            {
+                throw new ArgumentNullException(nameof(zone));
+            }
+
+            var scope = new Scope(Current);
+            Current = zone;
+            return scope;
+        }
+
+        /// <summary>Whether any ticker is registered. Part of having nothing left to do.</summary>
+        protected bool HasActiveTickers => _tickers.Count > 0;
+
+        /// <summary>Whether anything is queued for the next frame.</summary>
+        protected bool NextFrameQueueEmpty => _nextFrame.Count == 0;
+
+        /// <summary>
         ///     Registers <paramref name="ticker"/> to run every frame, given the seconds since the last.
         /// </summary>
         public void AddTicker(Action<float> ticker)
@@ -94,6 +121,25 @@ namespace UniMob
             }
 
             _nextFrameExecuting.Clear();
+        }
+
+        private sealed class Scope : IDisposable
+        {
+            private readonly Zone? _previous;
+            private bool _disposed;
+
+            public Scope(Zone? previous) => _previous = previous;
+
+            public void Dispose()
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+                Current = _previous!;
+            }
         }
     }
 }
