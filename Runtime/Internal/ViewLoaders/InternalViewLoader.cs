@@ -83,8 +83,13 @@ namespace UniMob.UI.Internal.ViewLoaders
 
             if (templatesRootObject == null)
             {
-                templatesRootObject = new GameObject("UniMob Runtime View Templates");
-                Object.DontDestroyOnLoad(templatesRootObject);
+                // HideAndDontSave rather than DontDestroyOnLoad, which throws outside play mode.
+                // Registered views are built from source, so resolving one needs no scene and no
+                // running game -- only this call made it a play-mode-only operation.
+                templatesRootObject = new GameObject("UniMob Runtime View Templates")
+                {
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
             }
 
             var template = factory.Create();

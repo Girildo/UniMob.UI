@@ -58,8 +58,11 @@ namespace UniMob.UI.Rendering
 
                 var go = Object.Instantiate(prefab.gameObject);
                 go.name = "TextMeshPro Measurer -- " + viewRefence;
-                Object.DontDestroyOnLoad(go);
-                //go.hideFlags = HideFlags.HideAndDontSave;
+
+                // HideAndDontSave rather than DontDestroyOnLoad, which throws outside play mode and so
+                // made measuring text a play-mode-only operation. Matches WidgetPicker and
+                // WidgetGeometryTicker, which keep their objects out of the scene the same way.
+                go.hideFlags = HideFlags.HideAndDontSave;
 
                 var behaviour = go.GetComponent<UniMobTextMeshProBehaviour>();
 

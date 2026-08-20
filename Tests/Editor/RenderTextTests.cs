@@ -6,13 +6,9 @@ using UnityEngine;
 
 namespace UniMob.UI.Tests
 {
-    // Coverage for RenderText's TMP-measurement logic -- specifically the lineExtents-vs-advance-width
-    // fix and the MaxLines/WrappingEnabled interactions documented in RenderText.cs, since those are
-    // the parts most likely to silently regress (this exact class of bug was diagnosed and fixed
-    // earlier in the same session that added this test file).
-    //
-    // Must run as a PlayMode test, not EditMode: RenderText's constructor calls
-    // Object.DontDestroyOnLoad on its TMP measurer GameObject, which Unity only permits in Play Mode.
+    // Coverage for RenderText's TMP-measurement logic: the lineExtents-vs-advance-width agreement and
+    // the MaxLines/WrappingEnabled interactions documented in RenderText.cs, which are the parts most
+    // likely to silently regress.
     public class RenderTextTests
     {
         [Test]
