@@ -11,13 +11,16 @@ namespace UniMob.UI
         where TWidget : Widget
     {
         private readonly StateHolder _child;
-        private readonly MutableAtom<TWidget> _widget = Atom.Value(default(TWidget));
+        private readonly MutableAtom<TWidget?> _widget = Atom.Value(default(TWidget));
 
-        protected TWidget Widget => _widget.Value;
+        // Written by Update, which runs before anything can build; the atom starts empty only so
+        // that first write registers as a change.
+        protected TWidget Widget => _widget.Value!;
 
-        public sealed override IViewState InnerViewState => _child.Value.InnerViewState;
+        // Build is declared to return a widget, so the holder always has a state to forward to.
+        public sealed override IViewState InnerViewState => _child.Value!.InnerViewState;
 
-        public IState Child => _child.Value;
+        public IState? Child => _child.Value;
 
         // A higher order state builds a child but paints nothing itself, so it owns a proxy over that
         // child rather than exposing the child's render object. Exposing it would make one render
@@ -39,7 +42,7 @@ namespace UniMob.UI
                 throw new WrongStateTypeException(GetType(), typeof(TWidget), widget.GetType());
             }
 
-            var oldWidget = Widget;
+            var oldWidget = _widget.Value;
 
             _widget.Value = typedWidget;
 

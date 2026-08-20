@@ -48,7 +48,7 @@ namespace UniMob.UI.Widgets
         }
 
         // Fulfill the ISingleChildLayoutState interface
-        public IState Child => _child?.Value;
+        public IState? Child => _child.Value;
 
         // Provide the non-painting layout view reference standard for single child layouts
         public override WidgetViewReference View =>

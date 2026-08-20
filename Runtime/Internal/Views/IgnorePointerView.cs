@@ -15,7 +15,7 @@ namespace UniMob.UI.Internal.Views
 {
     internal class IgnorePointerView : SingleChildLayoutView<IIgnorePointerState>
     {
-        private CanvasGroup _canvasGroup;
+        private CanvasGroup _canvasGroup = null!;
 
         protected override void Awake()
         {

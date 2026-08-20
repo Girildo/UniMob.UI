@@ -149,7 +149,7 @@ namespace UniMob.UI
             return new RectInt((int)area.x, (int)area.y, (int)area.width, (int)area.height);
         }
 
-        public static UniMobDeviceState Of(BuildContext context)
+        public static UniMobDeviceState? Of(BuildContext context)
         {
             return context.AncestorStateOfType<UniMobDeviceState>();
         }

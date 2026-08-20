@@ -95,7 +95,7 @@ namespace UniMob.UI.Internal.Views
     public class GestureDetectorTapReceiver : UIBehaviour, IPointerClickHandler
     {
         public Action<TapDetails>? OnTap;
-        private Canvas canvas;
+        private Canvas canvas = null!;
 
         protected override void Awake()
         {
@@ -108,7 +108,7 @@ namespace UniMob.UI.Internal.Views
         {
             var localPosition = CoordinateUtils.GetLocalPosition(
                 eventData.position,
-                this.transform as RectTransform,
+                (RectTransform)this.transform,
                 canvas.worldCamera
             );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
@@ -119,7 +119,7 @@ namespace UniMob.UI.Internal.Views
                 PointerId = eventData.pointerId,
                 Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
-                Size = (this.transform as RectTransform).rect.size,
+                Size = ((RectTransform)this.transform).rect.size,
             };
         }
     }
@@ -127,7 +127,7 @@ namespace UniMob.UI.Internal.Views
     public class GestureDetectorMoveReceiver : UIBehaviour, IPointerMoveHandler
     {
         public Action<PointerDetails>? OnMove;
-        private Canvas canvas;
+        private Canvas canvas = null!;
 
         protected override void Awake()
         {
@@ -140,7 +140,7 @@ namespace UniMob.UI.Internal.Views
         {
             var localPosition = CoordinateUtils.GetLocalPosition(
                 eventData.position,
-                this.transform as RectTransform,
+                (RectTransform)this.transform,
                 canvas.worldCamera
             );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
@@ -151,7 +151,7 @@ namespace UniMob.UI.Internal.Views
                 PointerId = eventData.pointerId,
                 Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
-                Size = (this.transform as RectTransform).rect.size,
+                Size = ((RectTransform)this.transform).rect.size,
             };
         }
     }
@@ -161,7 +161,7 @@ namespace UniMob.UI.Internal.Views
     {
         public Action<PointerDetails>? OnPointerDownDelegate;
         public Action<PointerDetails>? OnPointerUpDelegate;
-        private Canvas canvas;
+        private Canvas canvas = null!;
 
         protected override void Awake()
         {
@@ -178,7 +178,7 @@ namespace UniMob.UI.Internal.Views
         {
             var localPosition = CoordinateUtils.GetLocalPosition(
                 eventData.position,
-                this.transform as RectTransform,
+                (RectTransform)this.transform,
                 canvas.worldCamera
             );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
@@ -189,7 +189,7 @@ namespace UniMob.UI.Internal.Views
                 PointerId = eventData.pointerId,
                 Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
-                Size = (this.transform as RectTransform).rect.size,
+                Size = ((RectTransform)this.transform).rect.size,
             };
         }
     }
@@ -204,7 +204,7 @@ namespace UniMob.UI.Internal.Views
         public Action<DragDetails>? OnDragBegin;
         public Action<DragDetails>? OnDragEnd;
         public Action<DragDetails>? OnDragUpdate;
-        private Canvas canvas;
+        private Canvas canvas = null!;
 
         protected override void Awake()
         {
@@ -225,7 +225,7 @@ namespace UniMob.UI.Internal.Views
             // Pass the raw screen position directly to both utilities
             var localPosition = CoordinateUtils.GetLocalPosition(
                 eventData.position,
-                this.transform as RectTransform,
+                (RectTransform)this.transform,
                 canvas.worldCamera
             );
             var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
@@ -246,7 +246,7 @@ namespace UniMob.UI.Internal.Views
                 Pressure = eventData.pressure,
                 Timestamp = DateTimeOffset.Now,
 
-                Size = (this.transform as RectTransform).rect.size,
+                Size = ((RectTransform)this.transform).rect.size,
             };
         }
     }
@@ -284,7 +284,7 @@ namespace UniMob.UI.Internal.Views
         /// </summary>
         public static Vector2 GetGlobalPosition(Vector2 screenPos, Canvas canvas)
         {
-            var canvasRect = canvas.transform as RectTransform;
+            var canvasRect = (RectTransform)canvas.transform;
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 canvasRect,
@@ -293,7 +293,7 @@ namespace UniMob.UI.Internal.Views
                 out Vector2 rawLocal
             );
 
-            float x = rawLocal.x + (canvasRect!.pivot.x * canvasRect.rect.width);
+            float x = rawLocal.x + (canvasRect.pivot.x * canvasRect.rect.width);
             float y = (canvasRect.pivot.y * canvasRect.rect.height) - rawLocal.y;
 
             return new Vector2(x, y);

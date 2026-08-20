@@ -14,7 +14,7 @@ namespace UniMob.UI.Internal.Views
     [RequireComponent(typeof(RectTransform), typeof(Button))]
     internal class ClickableView : SingleChildLayoutView<IClickableState>
     {
-        private Button _button;
+        private Button _button = null!;
 
         protected override void Awake()
         {

@@ -52,8 +52,7 @@ namespace UniMob.UI.Internal
                 if (!CanUpdateWidget(oldChild.RawWidget, newWidget))
                     break;
 
-                var newChild = UpdateChild(context, oldChild, newWidget);
-                newChildren[newChildrenTop] = newChild;
+                newChildren[newChildrenTop] = UpdateChild(context, oldChild, newWidget)!;
                 newChildrenTop += 1;
                 oldChildrenTop += 1;
             }
@@ -72,11 +71,10 @@ namespace UniMob.UI.Internal
             }
 
             // Scan the old children in the middle of the list.
-            var haveOldChildren = oldChildrenTop <= oldChildrenBottom;
-            Dictionary<Key, State> oldKeyedChildren = null;
-            if (haveOldChildren)
+            Dictionary<Key, State>? oldKeyedChildren =
+                oldChildrenTop <= oldChildrenBottom ? Pools.KeyToState.Get() : null;
+            if (oldKeyedChildren != null)
             {
-                oldKeyedChildren = Pools.KeyToState.Get();
                 while (oldChildrenTop <= oldChildrenBottom)
                 {
                     var oldChild = oldChildren[oldChildrenTop];
@@ -96,9 +94,9 @@ namespace UniMob.UI.Internal
             // Update the middle of the list.
             while (newChildrenTop <= newChildrenBottom)
             {
-                State oldChild = null;
+                State? oldChild = null;
                 var newWidget = newWidgets[newChildrenTop];
-                if (haveOldChildren)
+                if (oldKeyedChildren != null)
                 {
                     var key = newWidget.Key;
                     if (key != null)
@@ -120,8 +118,9 @@ namespace UniMob.UI.Internal
                     }
                 }
 
-                var newChild = UpdateChild(context, oldChild, newWidget);
-                newChildren[newChildrenTop] = newChild;
+                // Never null: UpdateChild answers null only for a null widget, and the assertion at
+                // the top of this method is what rules those out of a children list.
+                newChildren[newChildrenTop] = UpdateChild(context, oldChild, newWidget)!;
                 newChildrenTop += 1;
             }
 
@@ -137,14 +136,13 @@ namespace UniMob.UI.Internal
             {
                 var oldChild = oldChildren[oldChildrenTop];
                 var newWidget = newWidgets[newChildrenTop];
-                var newChild = UpdateChild(context, oldChild, newWidget);
-                newChildren[newChildrenTop] = newChild;
+                newChildren[newChildrenTop] = UpdateChild(context, oldChild, newWidget)!;
                 newChildrenTop += 1;
                 oldChildrenTop += 1;
             }
 
             // Clean up any of the remaining middle nodes from the old list.
-            if (haveOldChildren && oldKeyedChildren.Count > 0)
+            if (oldKeyedChildren is { Count: > 0 })
             {
                 foreach (var pair in oldKeyedChildren)
                 {
@@ -175,7 +173,11 @@ namespace UniMob.UI.Internal
             child.Dispose();
         }
 
-        public static State UpdateChild(BuildContext context, State? child, Widget? newWidget)
+        /// <summary>
+        /// Reconciles one child slot, returning the state that now occupies it, or <c>null</c> when
+        /// <paramref name="newWidget"/> is null and the slot is left empty.
+        /// </summary>
+        public static State? UpdateChild(BuildContext context, State? child, Widget? newWidget)
         {
             Assert.IsNull(Atom.CurrentScope);
 

@@ -29,9 +29,10 @@ namespace UniMob.UI.Internal.Views
     public abstract class SingleChildLayoutView<TState> : View<TState>
         where TState : class, ISingleChildLayoutState
     {
-        private ViewMapperBase _mapper;
+        private ViewMapperBase _mapper = null!;
 
-        protected IView ChildView { get; private set; }
+        /// <summary>The view rendering the child, or null while this view has no child.</summary>
+        protected IView? ChildView { get; private set; }
 
         protected override void Awake()
         {

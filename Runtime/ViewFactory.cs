@@ -25,7 +25,11 @@ namespace UniMob.UI
     /// </summary>
     public abstract class RegisterViewFactoryAttribute : Attribute
     {
-        public abstract IViewFactory CreateFactory();
+        /// <summary>
+        /// The factory this registration describes, or <c>null</c> when it cannot be built, in which
+        /// case the registration is skipped.
+        /// </summary>
+        public abstract IViewFactory? CreateFactory();
     }
 
     /// <summary>
@@ -42,7 +46,7 @@ namespace UniMob.UI
             FactoryType = factoryType ?? throw new ArgumentNullException(nameof(factoryType));
         }
 
-        public override IViewFactory CreateFactory()
+        public override IViewFactory? CreateFactory()
         {
             return Activator.CreateInstance(FactoryType) as IViewFactory;
         }

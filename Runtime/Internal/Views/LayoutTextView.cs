@@ -13,7 +13,7 @@ namespace UniMob.UI.Internal.Views
     public class LayoutTextView : View<ITextState>
     {
         [SerializeField]
-        private UniMobTextMeshProBehaviour text;
+        private UniMobTextMeshProBehaviour text = null!;
 
         protected override void Awake()
         {

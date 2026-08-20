@@ -15,7 +15,7 @@ namespace UniMob.UI.Internal.Views
 {
     internal class OpacityView : SingleChildLayoutView<IOpacityState>
     {
-        private CanvasGroup _canvasGroup;
+        private CanvasGroup _canvasGroup = null!;
 
         protected override void Awake()
         {
@@ -29,8 +29,6 @@ namespace UniMob.UI.Internal.Views
             base.Render();
 
             _canvasGroup.alpha = State.OpacityValue.Value;
-
-            var childTransform = ChildView.rectTransform;
         }
     }
 

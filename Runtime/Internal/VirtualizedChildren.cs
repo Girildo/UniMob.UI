@@ -190,9 +190,11 @@ namespace UniMob.UI.Internal
                         _builtStates.GetValueOrDefault(index),
                         widget
                     );
-                    _builtStates[index] = built;
+                    // Never null: IndexedWidgetBuilder returns a widget, and UpdateChild answers
+                    // null only for a null one.
+                    _builtStates[index] = built!;
 
-                    if (built.Key != null)
+                    if (built!.Key != null)
                         _seenKeyToIndex[built.Key] = index;
                 }
             }

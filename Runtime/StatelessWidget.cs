@@ -40,8 +40,9 @@ namespace UniMob.UI
         private readonly StateHolder _stateHolder;
         private readonly MutableAtom<StatelessWidget> _widget;
 
-        public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
-        public IState Child => _stateHolder.Value;
+        // Build is declared to return a widget, so the holder always has a state to forward to.
+        public override IViewState InnerViewState => _stateHolder.Value!.InnerViewState;
+        public IState? Child => _stateHolder.Value;
 
         // Owns a proxy over the widget it builds, rather than exposing that widget's own render
         // object. See HocState.CreateOwnRenderObject for why forwarding had to go.

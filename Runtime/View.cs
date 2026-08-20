@@ -30,7 +30,7 @@ namespace UniMob.UI
         private TState _nextState;
 
         private Atom<TState> _doRebind;
-        private Atom<object> _doRender;
+        private Atom<object?> _doRender;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private CustomSampler _renderSampler;
@@ -264,7 +264,8 @@ namespace UniMob.UI
             return _nextState;
         }
 
-        private object DoRender()
+        // Computed for its effect, not its value: nothing reads what it returns.
+        private object? DoRender()
         {
             var currentState = _currentState;
 

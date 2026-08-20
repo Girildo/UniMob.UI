@@ -97,7 +97,7 @@ namespace UniMob.UI
         internal static StateHolder<TState> Create<TWidget, TState>(
             Lifetime lifetime,
             BuildContext context,
-            WidgetBuilder<TWidget> builder
+            WidgetBuilder<TWidget?> builder
         )
             where TWidget : Widget
             where TState : class, IState
@@ -142,7 +142,7 @@ namespace UniMob.UI
         ///         thing that gets called during it.
         ///     </para>
         /// </remarks>
-        public virtual string GetDiagnosticInfo() => RawWidget?.GetDiagnosticInfo();
+        public virtual string? GetDiagnosticInfo() => RawWidget?.GetDiagnosticInfo();
 
         /// <summary>
         ///     What a debugger shows for this state: the node, then the constraints it was laid out
@@ -228,13 +228,19 @@ namespace UniMob.UI
     // ReSharper disable once InconsistentNaming
     public interface StateHolder
     {
-        IState Value { get; }
+        /// <summary>
+        /// The state built from the current widget, or <c>null</c> when the builder answered with no
+        /// widget at all. The holder still exists in that case, and is what disposes the state that
+        /// was there before.
+        /// </summary>
+        IState? Value { get; }
     }
 
     // ReSharper disable once InconsistentNaming
     public interface StateHolder<out TState> : StateHolder
     {
-        new TState Value { get; }
+        /// <inheritdoc cref="StateHolder.Value"/>
+        new TState? Value { get; }
     }
 
     public sealed class StateHolder<TWidget, TState> : StateHolder<TState>
@@ -242,16 +248,16 @@ namespace UniMob.UI
         where TState : class, IState
     {
         private readonly BuildContext _context;
-        private readonly WidgetBuilder<TWidget> _builder;
-        private readonly Atom<TState> _stateAtom;
+        private readonly WidgetBuilder<TWidget?> _builder;
+        private readonly Atom<TState?> _stateAtom;
 
 #if UNIMOB_ENABLE_REBUILD_RATE_LIMITER
         private UniMobRebuildRateLimiter _rebuildRateLimiter;
 #endif
 
-        private State _state;
+        private State? _state;
 
-        public StateHolder(Lifetime lifetime, BuildContext context, WidgetBuilder<TWidget> builder)
+        public StateHolder(Lifetime lifetime, BuildContext context, WidgetBuilder<TWidget?> builder)
         {
             _context = context;
             _builder = builder;
@@ -268,10 +274,10 @@ namespace UniMob.UI
             lifetime.Register(DeactivateState);
         }
 
-        IState StateHolder.Value => _stateAtom.Value;
-        TState StateHolder<TState>.Value => _stateAtom.Value;
+        IState? StateHolder.Value => _stateAtom.Value;
+        TState? StateHolder<TState>.Value => _stateAtom.Value;
 
-        private TState ComputeState()
+        private TState? ComputeState()
         {
             var newWidget = _builder(_context);
 

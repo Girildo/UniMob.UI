@@ -120,7 +120,7 @@ namespace UniMob.UI.Widgets
         public override WidgetViewReference View =>
             WidgetViewReference.Registered("UniMob.SingleChildLayoutView");
 
-        public IState Child => this.child.Value;
+        public IState? Child => this.child.Value;
 
         /// <summary>
         /// Whether both boxes have been measured. Reading the two geometry atoms here -- inside the

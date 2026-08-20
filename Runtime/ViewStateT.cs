@@ -12,9 +12,11 @@ namespace UniMob.UI
     {
         private Dictionary<string, StateHolder> _renderChildCache;
 
-        private readonly MutableAtom<TWidget> _widget = Atom.Value(default(TWidget));
+        private readonly MutableAtom<TWidget?> _widget = Atom.Value(default(TWidget));
 
-        protected TWidget Widget => _widget.Value;
+        // Written by Update, which runs before anything can build; the atom starts empty only so
+        // that first write registers as a change.
+        protected TWidget Widget => _widget.Value!;
 
         internal override void Update(Widget widget)
         {
@@ -23,7 +25,7 @@ namespace UniMob.UI
                 throw new WrongStateTypeException(GetType(), typeof(TWidget), widget.GetType());
             }
 
-            var oldWidget = Widget;
+            var oldWidget = _widget.Value;
 
             _widget.Value = typedWidget;
 
@@ -40,7 +42,7 @@ namespace UniMob.UI
             Assert.IsNull(Atom.CurrentScope);
         }
 
-        protected IState RenderChild(
+        protected IState? RenderChild(
             WidgetBuilder<Widget> builder,
             [CallerMemberName] string cacheKey = ""
         )
@@ -122,7 +124,7 @@ namespace UniMob.UI
             );
         }
 
-        protected StateHolder CreateChild(WidgetBuilder<Widget> builder)
+        protected StateHolder CreateChild(WidgetBuilder<Widget?> builder)
         {
             return Create<Widget, IState>(StateLifetime, new BuildContext(this, Context), builder);
         }

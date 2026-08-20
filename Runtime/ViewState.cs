@@ -114,7 +114,7 @@ namespace UniMob.UI
             return TryGetGlobalGeometry(out var geometry) ? geometry : WidgetGeometry.Empty;
         }
 
-        private static Canvas ResolveRootCanvas(IView view)
+        private static Canvas? ResolveRootCanvas(IView view)
         {
             var rt = view?.rectTransform;
             if (rt == null)

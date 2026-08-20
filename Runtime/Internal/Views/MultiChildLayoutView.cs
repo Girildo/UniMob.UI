@@ -36,7 +36,7 @@ namespace UniMob.UI.Internal.Views
 
     public class MultiChildLayoutView : View<IMultiChildLayoutState>
     {
-        private ViewMapperBase _mapper;
+        private ViewMapperBase _mapper = null!;
 
         protected override void Awake()
         {

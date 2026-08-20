@@ -13,7 +13,7 @@ namespace UniMob.UI.Internal.Views
     [RequireComponent(typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image))]
     internal class ColoredImageBoxView : SingleChildLayoutView<IColoredImageBoxState>
     {
-        private UnityEngine.UI.Image _backgroundImage;
+        private UnityEngine.UI.Image _backgroundImage = null!;
 
         protected override void Awake()
         {

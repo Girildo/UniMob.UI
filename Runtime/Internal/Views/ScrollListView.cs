@@ -11,22 +11,21 @@ namespace UniMob.UI.Internal.Views
     internal class ScrollListView : View<IScrollingListState>
     {
         [SerializeField]
-        private ScrollRect scrollRect;
+        private ScrollRect scrollRect = null!;
 
         [SerializeField]
-        private RectTransform contentRoot;
+        private RectTransform contentRoot = null!;
 
         [SerializeField]
-        private RectMask2D rectMask;
+        private RectMask2D rectMask = null!;
         private bool _isUpdatingFromController;
 
-        private ViewMapperBase _mapper;
-        private RectTransform _rectTransform;
+        private ViewMapperBase _mapper = null!;
+        private RectTransform _rectTransform = null!;
 
         protected override void Awake()
         {
             base.Awake();
-            _mapper = new PooledViewMapper(contentRoot);
             _rectTransform = (RectTransform)transform;
 
             if (scrollRect == null)
@@ -35,6 +34,10 @@ namespace UniMob.UI.Internal.Views
                 contentRoot = scrollRect.content;
             if (rectMask == null)
                 TryGetComponent(out rectMask);
+
+            // After contentRoot is resolved, not before: the mapper captures the transform it is
+            // given, so building it first parented every child to whatever the prefab left null.
+            _mapper = new PooledViewMapper(contentRoot);
 
             if (scrollRect.horizontal && scrollRect.vertical)
                 throw new InvalidOperationException(

@@ -14,7 +14,7 @@ namespace UniMob.UI.Internal.Views
 {
     internal class CompositeTransitionView : SingleChildLayoutView<ICompositeTransitionState>
     {
-        private CanvasGroup _canvasGroup;
+        private CanvasGroup _canvasGroup = null!;
 
         protected override void Awake()
         {
@@ -30,6 +30,11 @@ namespace UniMob.UI.Internal.Views
             base.Render();
 
             _canvasGroup.alpha = State.Opacity.Value;
+
+            if (ChildView == null)
+            {
+                return;
+            }
 
             var childTransform = ChildView.rectTransform;
             childTransform.localScale = State.Scale.Value;
