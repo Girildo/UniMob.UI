@@ -16,7 +16,7 @@ namespace UniMob.UI.Layout
 
     public class Expanded : SingleChildLayoutWidget, IFlexible
     {
-        public int Flex { get; set; } = 1;
+        public int Flex { get; init; } = 1;
 
         public FlexFit Fit => FlexFit.Tight;
 
@@ -30,8 +30,8 @@ namespace UniMob.UI.Layout
 
     public class Flexible : SingleChildLayoutWidget, IFlexible
     {
-        public int Flex { get; set; } = 1;
-        public FlexFit Fit { get; set; } = FlexFit.Loose;
+        public int Flex { get; init; } = 1;
+        public FlexFit Fit { get; init; } = FlexFit.Loose;
 
         public override State CreateState() => new FlexibleState();
 

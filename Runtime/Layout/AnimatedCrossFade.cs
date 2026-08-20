@@ -10,13 +10,13 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class AnimatedCrossFade : StatefulWidget
     {
-        public Widget FirstChild { get; set; } = SizedBox.Shrink();
-        public Widget SecondChild { get; set; } = SizedBox.Shrink();
-        public CrossFadeState CrossFadeState { get; set; } = CrossFadeState.ShowFirst;
-        public float Duration { get; set; } = 0f;
-        public float? ReverseDuration { get; set; } = null;
-        public Alignment Alignment { get; set; } = Alignment.Center;
-        public bool KeepMounted { get; set; } = false;
+        public Widget FirstChild { get; init; } = SizedBox.Shrink();
+        public Widget SecondChild { get; init; } = SizedBox.Shrink();
+        public CrossFadeState CrossFadeState { get; init; } = CrossFadeState.ShowFirst;
+        public float Duration { get; init; } = 0f;
+        public float? ReverseDuration { get; init; } = null;
+        public Alignment Alignment { get; init; } = Alignment.Center;
+        public bool KeepMounted { get; init; } = false;
 
         public override State CreateState() => new AnimatedCrossFadeState();
 

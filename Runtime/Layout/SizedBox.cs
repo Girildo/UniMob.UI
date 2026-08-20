@@ -7,8 +7,8 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class SizedBox : SingleChildLayoutWidget
     {
-        public float? Width { get; set; }
-        public float? Height { get; set; }
+        public float? Width { get; init; }
+        public float? Height { get; init; }
 
         public SizedBox() { }
 

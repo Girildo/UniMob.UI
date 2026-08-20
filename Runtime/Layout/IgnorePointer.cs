@@ -9,7 +9,7 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class IgnorePointer : SingleChildLayoutWidget
     {
-        public bool Ignoring { get; set; }
+        public bool Ignoring { get; init; }
 
         public override State CreateState() => new IgnorePointerState();
 

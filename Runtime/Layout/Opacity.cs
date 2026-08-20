@@ -6,11 +6,11 @@ namespace UniMob.UI.Layout
 {
     public class Opacity : SingleChildLayoutWidget
     {
-        public IAnimation<float> OpacityValue { get; set; } = new ConstAnimation<float>(1f);
-        public IAnimation<Vector2> Position { get; set; } =
+        public IAnimation<float> OpacityValue { get; init; } = new ConstAnimation<float>(1f);
+        public IAnimation<Vector2> Position { get; init; } =
             new ConstAnimation<Vector2>(Vector2.zero);
-        public IAnimation<Vector3> Scale { get; set; } = new ConstAnimation<Vector3>(Vector3.one);
-        public IAnimation<Quaternion> Rotation { get; set; } =
+        public IAnimation<Vector3> Scale { get; init; } = new ConstAnimation<Vector3>(Vector3.one);
+        public IAnimation<Quaternion> Rotation { get; init; } =
             new ConstAnimation<Quaternion>(Quaternion.identity);
 
         public override State CreateState() => new OpacityState();

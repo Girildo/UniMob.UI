@@ -15,7 +15,7 @@ namespace UniMob.UI.Layout
 
     public class ConstrainedBuilder : SingleChildLayoutWidget
     {
-        public ConstrainedBuilderDelegate<Widget> Builder { get; set; }
+        public ConstrainedBuilderDelegate<Widget> Builder { get; init; }
 
         public override State CreateState() => new ConstrainedBuilderState();
 

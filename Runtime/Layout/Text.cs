@@ -20,10 +20,10 @@ namespace UniMob.UI.Layout
 
     public class Text : StatefulWidget
     {
-        public WidgetViewReference? ViewReference { get; set; }
+        public WidgetViewReference? ViewReference { get; init; }
 
-        public string Value { get; set; } = string.Empty;
-        public Color? Color { get; set; }
+        public string Value { get; init; } = string.Empty;
+        public Color? Color { get; init; }
 
         /// <summary>
         ///     Animates the text's colour, overriding <see cref="Color"/> while set.
@@ -35,24 +35,24 @@ namespace UniMob.UI.Layout
         ///     the leaf that owns the graphic, which is this widget. It is sampled in the view's render scope,
         ///     so a tick repaints without rebuilding or re-laying out anything.
         /// </remarks>
-        public IAnimation<Color>? AnimatedColor { get; set; }
-        public int? FontSize { get; set; }
-        public string? StyleName { get; set; }
+        public IAnimation<Color>? AnimatedColor { get; init; }
+        public int? FontSize { get; init; }
+        public string? StyleName { get; init; }
 
-        public FontWeight? FontWeight { get; set; }
-        public HorizontalTextAlignment? HorizontalTextAlignment { get; set; }
-        public bool? WrappingEnabled { get; set; }
-        public TextOverflowModes? OverflowMode { get; set; }
+        public FontWeight? FontWeight { get; init; }
+        public HorizontalTextAlignment? HorizontalTextAlignment { get; init; }
+        public bool? WrappingEnabled { get; init; }
+        public TextOverflowModes? OverflowMode { get; init; }
 
-        public TMP_StyleSheet? StyleSheet { get; set; }
+        public TMP_StyleSheet? StyleSheet { get; init; }
 
-        public int? MaxLines { get; set; }
+        public int? MaxLines { get; init; }
 
         /// <summary>
         ///     Forces the text to a fixed square size. Useful for icons or fixed-size text elements.
         ///     If not set, the text will size itself based on its content.
         /// </summary>
-        public float? FixedSize { get; set; }
+        public float? FixedSize { get; init; }
 
         public override State CreateState()
         {

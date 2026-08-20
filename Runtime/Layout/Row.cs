@@ -5,12 +5,12 @@ namespace UniMob.UI.Layout
 {
     public class Row : StatefulWidget, IMultiChildLayoutWidget
     {
-        public List<Widget> Children { get; set; } = new List<Widget>();
-        public CrossAxisAlignment CrossAxisAlignment { get; set; }
-        public MainAxisAlignment MainAxisAlignment { get; set; }
-        public AxisSize MainAxisSize { get; set; } = AxisSize.Min;
+        public List<Widget> Children { get; init; } = new List<Widget>();
+        public CrossAxisAlignment CrossAxisAlignment { get; init; }
+        public MainAxisAlignment MainAxisAlignment { get; init; }
+        public AxisSize MainAxisSize { get; init; } = AxisSize.Min;
 
-        public float Spacing { get; set; }
+        public float Spacing { get; init; }
 
         public override State CreateState() => new RowState();
 

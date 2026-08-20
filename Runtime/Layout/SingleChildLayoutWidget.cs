@@ -2,7 +2,7 @@ namespace UniMob.UI.Layout
 {
     public interface ISingleChildLayoutWidget : Widget
     {
-        Widget? Child { get; set; }
+        Widget? Child { get; init; }
     }
 
     /// <summary>
@@ -10,7 +10,7 @@ namespace UniMob.UI.Layout
     /// </summary>
     public abstract class SingleChildLayoutWidget : StatefulWidget, ISingleChildLayoutWidget
     {
-        public Widget? Child { get; set; }
+        public Widget? Child { get; init; }
     }
 
     /// <summary>

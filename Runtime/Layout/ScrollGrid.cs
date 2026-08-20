@@ -16,65 +16,65 @@ namespace UniMob.UI.Layout
         /// <summary>
         ///     Eagerly-built children. Mutually exclusive with <see cref="ItemBuilder" />/<see cref="ItemCount" />.
         /// </summary>
-        public List<Widget> Children { get; set; } = new();
+        public List<Widget> Children { get; init; } = new();
 
         /// <summary>
         ///     Builds the widget for the item at <c>index</c> on demand, only for items near the viewport.
         ///     Requires <see cref="ItemCount" />, and is mutually exclusive with <see cref="Children" />.
         /// </summary>
-        public IndexedWidgetBuilder ItemBuilder { get; set; }
+        public IndexedWidgetBuilder ItemBuilder { get; init; }
 
         /// <summary>The total number of items when using <see cref="ItemBuilder" />.</summary>
-        public int? ItemCount { get; set; }
+        public int? ItemCount { get; init; }
 
         /// <summary>
         ///     Resolves a <see cref="Key" /> to its item index for <c>ScrollTo(Key)</c> under
         ///     <see cref="ItemBuilder" />. If not provided, <c>ScrollTo(Key)</c> only resolves keys of items
         ///     that have been built at least once.
         /// </summary>
-        public Func<Key, int?> KeyToIndexResolver { get; set; }
+        public Func<Key, int?> KeyToIndexResolver { get; init; }
 
         /// <summary>Fixed number of columns (cross axis). Mutually exclusive with <see cref="MaxCrossAxisExtent" />.</summary>
-        public int? CrossAxisCount { get; set; }
+        public int? CrossAxisCount { get; init; }
 
         /// <summary>
         ///     Fits as many columns as possible so each cell is at most this wide (cross axis). Mutually
         ///     exclusive with <see cref="CrossAxisCount" />.
         /// </summary>
-        public float? MaxCrossAxisExtent { get; set; }
+        public float? MaxCrossAxisExtent { get; init; }
 
         /// <summary>
         ///     Ratio of a cell's cross-axis extent to its main-axis extent. Sets a fixed cell size (exact
         ///     positions, no measuring). Mutually exclusive with <see cref="MainAxisExtent" />. If neither is
         ///     set, rows are measured (each row as tall as its tallest child).
         /// </summary>
-        public float? ChildAspectRatio { get; set; }
+        public float? ChildAspectRatio { get; init; }
 
         /// <summary>
         ///     Fixed cell extent along the scroll axis. Mutually exclusive with <see cref="ChildAspectRatio" />.
         ///     If neither is set, rows are measured.
         /// </summary>
-        public float? MainAxisExtent { get; set; }
+        public float? MainAxisExtent { get; init; }
 
         /// <summary>Gap between rows along the scroll axis.</summary>
-        public float MainAxisSpacing { get; set; } = 0;
+        public float MainAxisSpacing { get; init; } = 0;
 
         /// <summary>Gap between columns along the cross axis.</summary>
-        public float CrossAxisSpacing { get; set; } = 0;
+        public float CrossAxisSpacing { get; init; } = 0;
 
         /// <summary>Padding around the grid content.</summary>
-        public RectPadding Padding { get; set; }
+        public RectPadding Padding { get; init; }
 
-        public Axis Axis { get; set; } = Axis.Vertical;
-        public ScrollController ScrollController { get; set; }
-        public bool UseMask { get; set; } = true;
-        public MovementType MovementType { get; set; } = MovementType.Elastic;
+        public Axis Axis { get; init; } = Axis.Vertical;
+        public ScrollController ScrollController { get; init; }
+        public bool UseMask { get; init; } = true;
+        public MovementType MovementType { get; init; } = MovementType.Elastic;
 
         /// <summary>
         ///     The size, in pixels, of the (bidirectional) cache extent for virtualization. Auto-derived from
         ///     the viewport size when not set.
         /// </summary>
-        public float? VirtualizationCacheExtent { get; set; }
+        public float? VirtualizationCacheExtent { get; init; }
 
         public override State CreateState()
         {

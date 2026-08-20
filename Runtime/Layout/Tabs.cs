@@ -29,7 +29,7 @@ namespace UniMob.UI.Layout
         public TabController TabController { get; }
 
         /// <summary>One page each, in tab order.</summary>
-        public List<Widget> Children { get; set; } = new();
+        public List<Widget> Children { get; init; } = new();
 
         public override State CreateState() => new TabsState();
 

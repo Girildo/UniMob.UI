@@ -23,7 +23,7 @@ namespace UniMob.UI.Layout
     /// </remarks>
     public class Align : SingleChildLayoutWidget
     {
-        public Alignment Alignment { get; set; } = Alignment.Center;
+        public Alignment Alignment { get; init; } = Alignment.Center;
 
         /// <summary>
         /// If set, this widget's width is the child's width multiplied by this factor.
@@ -34,7 +34,7 @@ namespace UniMob.UI.Layout
         /// rather than the no-op multiply it reads as. A hugging axis has no space left over, so
         /// <see cref="Alignment"/> stops moving the child horizontally once this is set.
         /// </remarks>
-        public float? WidthFactor { get; set; }
+        public float? WidthFactor { get; init; }
 
         /// <summary>
         /// If set, this widget's height is the child's height multiplied by this factor.
@@ -43,7 +43,7 @@ namespace UniMob.UI.Layout
         /// The vertical mirror of <see cref="WidthFactor"/>, including the switch from filling to
         /// hugging and the effect that has on <see cref="Alignment"/>.
         /// </remarks>
-        public float? HeightFactor { get; set; }
+        public float? HeightFactor { get; init; }
 
         public override State CreateState()
         {

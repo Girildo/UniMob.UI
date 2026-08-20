@@ -11,7 +11,7 @@ namespace UniMob.UI.Layout
         /// <summary>
         /// The ratio of width to height (e.g. 16f / 9f).
         /// </summary>
-        public float Ratio { get; set; }
+        public float Ratio { get; init; }
 
         public override State CreateState() => new AspectRatioState();
 

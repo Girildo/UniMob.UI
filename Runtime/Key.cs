@@ -14,7 +14,8 @@ namespace UniMob.UI
 
         public static bool operator ==(Key? a, Key? b) => a?.Equals(b) ?? ReferenceEquals(b, null);
 
-        public static bool operator !=(Key? a, Key? b) => !a?.Equals(b) ?? !ReferenceEquals(b, null);
+        public static bool operator !=(Key? a, Key? b) =>
+            !a?.Equals(b) ?? !ReferenceEquals(b, null);
     }
 
     internal sealed class ObjectKey : Key, IEquatable<ObjectKey>

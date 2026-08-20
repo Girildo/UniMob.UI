@@ -6,8 +6,8 @@ namespace UniMob.UI.Layout
 {
     public class ZStack : StatefulWidget, IMultiChildLayoutWidget
     {
-        public List<Widget> Children { get; set; } = new List<Widget>();
-        public Alignment Alignment { get; set; } = Alignment.Center;
+        public List<Widget> Children { get; init; } = new List<Widget>();
+        public Alignment Alignment { get; init; } = Alignment.Center;
 
         public override State CreateState() => new ZStackState();
 

@@ -13,39 +13,39 @@ namespace UniMob.UI.Layout
 
     public class Wrap : StatefulWidget, IMultiChildLayoutWidget
     {
-        public List<Widget> Children { get; set; } = new List<Widget>();
+        public List<Widget> Children { get; init; } = new List<Widget>();
 
         /// <summary>
         /// Direction of a run.
         /// If horizontal, children will be placed in a row and wrap to the next line when they exceed the available width.
         /// If vertical, children will be placed in a column and wrap to the next column when they exceed the available height.
         /// </summary>
-        public Axis Direction { get; set; } = Axis.Horizontal;
+        public Axis Direction { get; init; } = Axis.Horizontal;
 
         /// <summary>
         /// The spacing between children in the main axis.
         /// </summary>
-        public float Spacing { get; set; } = 8f;
+        public float Spacing { get; init; } = 8f;
 
         /// <summary>
         /// The spacing between runs in the cross axis.
         /// </summary>
-        public float RunSpacing { get; set; } = 8f;
+        public float RunSpacing { get; init; } = 8f;
 
         /// <summary>
         /// How the children within a run should be placed in the main axis.
         /// </summary>
-        public MainAxisAlignment Alignment { get; set; } = MainAxisAlignment.Start;
+        public MainAxisAlignment Alignment { get; init; } = MainAxisAlignment.Start;
 
         /// <summary>
         /// How the children within a run should be aligned relative to each other in the cross axis.
         /// </summary>
-        public CrossAxisAlignment CrossAxisAlignment { get; set; } = CrossAxisAlignment.Start;
+        public CrossAxisAlignment CrossAxisAlignment { get; init; } = CrossAxisAlignment.Start;
 
         /// <summary>
         ///  How the runs themselves should be placed in the cross axis.
         /// </summary>
-        public MainAxisAlignment RunAlignment { get; set; } = MainAxisAlignment.Start;
+        public MainAxisAlignment RunAlignment { get; init; } = MainAxisAlignment.Start;
 
         public override State CreateState() => new WrapState();
 

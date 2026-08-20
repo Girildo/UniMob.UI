@@ -11,11 +11,11 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class CompositeTransition : SingleChildLayoutWidget
     {
-        public IAnimation<float> Opacity { get; set; } = new ConstAnimation<float>(1f);
-        public IAnimation<Vector2> Position { get; set; } =
+        public IAnimation<float> Opacity { get; init; } = new ConstAnimation<float>(1f);
+        public IAnimation<Vector2> Position { get; init; } =
             new ConstAnimation<Vector2>(Vector2.zero);
-        public IAnimation<Vector3> Scale { get; set; } = new ConstAnimation<Vector3>(Vector3.one);
-        public IAnimation<Quaternion> Rotation { get; set; } =
+        public IAnimation<Vector3> Scale { get; init; } = new ConstAnimation<Vector3>(Vector3.one);
+        public IAnimation<Quaternion> Rotation { get; init; } =
             new ConstAnimation<Quaternion>(Quaternion.identity);
 
         public override State CreateState() => new CompositeTransitionState();

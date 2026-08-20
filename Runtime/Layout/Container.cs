@@ -7,12 +7,12 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class Container : StatefulWidget
     {
-        public Widget Child { get; set; } = SizedBox.Shrink();
-        public Color? BackgroundColor { get; set; } = Color.clear;
-        public Sprite? BackgroundImage { get; set; } = null;
-        public Alignment? Alignment { get; set; } = null;
-        public float? Width { get; set; }
-        public float? Height { get; set; }
+        public Widget Child { get; init; } = SizedBox.Shrink();
+        public Color? BackgroundColor { get; init; } = Color.clear;
+        public Sprite? BackgroundImage { get; init; } = null;
+        public Alignment? Alignment { get; init; } = null;
+        public float? Width { get; init; }
+        public float? Height { get; init; }
 
         public Container(Widget? child = null, float? width = null, float? height = null)
         {

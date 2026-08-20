@@ -31,20 +31,20 @@ namespace UniMob.UI.Layout
         /// The key attached to the widget being anchored to. Without one there is nowhere to put the
         /// child, so nothing is drawn at all.
         /// </summary>
-        public WidgetGeometryKey? Anchor { get; set; }
+        public WidgetGeometryKey? Anchor { get; init; }
 
         /// <summary>Which point of the anchor's box the child is placed at.</summary>
-        public Alignment TargetAnchor { get; set; } = Alignment.BottomLeft;
+        public Alignment TargetAnchor { get; init; } = Alignment.BottomLeft;
 
         /// <summary>
         /// Which point of the CHILD meets <see cref="TargetAnchor"/>. Defaults to its top-left, so a
         /// menu hangs below-right of the point; a callout opening to one side wants an edge midpoint
         /// instead, which is why this is not simply the opposite of the target.
         /// </summary>
-        public Alignment ChildAnchor { get; set; } = Alignment.TopLeft;
+        public Alignment ChildAnchor { get; init; } = Alignment.TopLeft;
 
         /// <summary>Nudge applied after anchoring, in logical pixels (x right, y down).</summary>
-        public Vector2 Offset { get; set; }
+        public Vector2 Offset { get; init; }
 
         /// <summary>
         /// Lets the placement flip to the opposite side of this axis -- mirroring
@@ -62,7 +62,7 @@ namespace UniMob.UI.Layout
         /// slides it inside: a cramped screen should not also make the direction unpredictable.
         /// </para>
         /// </remarks>
-        public Axis? FlipToFit { get; set; }
+        public Axis? FlipToFit { get; init; }
 
         /// <summary>
         /// Keeps the child inside this widget's own box when the anchor sits close enough to an edge
@@ -73,13 +73,13 @@ namespace UniMob.UI.Layout
         /// caller did not choose, so the caller cannot know whether the result fits. A tall callout
         /// hung off a small icon near the screen edge is the normal case, not the exotic one.
         /// </remarks>
-        public float? KeepInsidePadding { get; set; } = 36f;
+        public float? KeepInsidePadding { get; init; } = 36f;
 
         /// <summary>
         /// Gives the child the anchor's measured width — how a dropdown menu lines up with the field
         /// that opened it, without either of them naming a number.
         /// </summary>
-        public bool MatchAnchorWidth { get; set; }
+        public bool MatchAnchorWidth { get; init; }
 
         public override State CreateState() => new AnchoredBoxState();
 

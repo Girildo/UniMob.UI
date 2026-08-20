@@ -8,8 +8,8 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class Clickable : SingleChildLayoutWidget
     {
-        public bool Interactable { get; set; } = true;
-        public Action? OnClick { get; set; }
+        public bool Interactable { get; init; } = true;
+        public Action? OnClick { get; init; }
 
         public override State CreateState() => new ClickableState();
 

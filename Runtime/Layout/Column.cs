@@ -5,13 +5,13 @@ namespace UniMob.UI.Layout
 {
     public class Column : StatefulWidget, IMultiChildLayoutWidget
     {
-        public List<Widget> Children { get; set; } = new();
-        public CrossAxisAlignment CrossAxisAlignment { get; set; }
-        public MainAxisAlignment MainAxisAlignment { get; set; }
+        public List<Widget> Children { get; init; } = new();
+        public CrossAxisAlignment CrossAxisAlignment { get; init; }
+        public MainAxisAlignment MainAxisAlignment { get; init; }
 
-        public AxisSize MainAxisSize { get; set; } = AxisSize.Min;
+        public AxisSize MainAxisSize { get; init; } = AxisSize.Min;
 
-        public float Spacing { get; set; } = 0f;
+        public float Spacing { get; init; } = 0f;
 
         public override State CreateState() => new ColumnState();
 

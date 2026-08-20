@@ -7,7 +7,7 @@ namespace UniMob.UI.Layout
     /// occupies relative to other widgets in the same layout.</remarks>
     public class Spacer : StatefulWidget
     {
-        public int Flex { get; set; } = 1;
+        public int Flex { get; init; } = 1;
 
         public override State CreateState() => new SpacerState();
     }

@@ -9,9 +9,9 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class ColoredImageBox : SingleChildLayoutWidget
     {
-        public Color Color { get; set; } = Color.clear;
+        public Color Color { get; init; } = Color.clear;
 
-        public Sprite? Image { get; set; } = null;
+        public Sprite? Image { get; init; } = null;
 
         public override State CreateState() => new ColoredImageBoxState();
 

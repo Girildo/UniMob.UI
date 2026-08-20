@@ -15,51 +15,51 @@ namespace UniMob.UI.Layout
         /// <summary>
         ///     Eagerly-built children. Mutually exclusive with <see cref="ItemBuilder"/>/<see cref="ItemCount"/>.
         /// </summary>
-        public List<Widget> Children { get; set; } = new();
+        public List<Widget> Children { get; init; } = new();
 
         /// <summary>
         ///     Builds the widget for the item at <c>index</c> on demand, only for items near the viewport.
         ///     Requires <see cref="ItemCount"/> to be set, and is mutually exclusive with <see cref="Children"/>.
         /// </summary>
-        public IndexedWidgetBuilder ItemBuilder { get; set; }
+        public IndexedWidgetBuilder ItemBuilder { get; init; }
 
         /// <summary>
         ///     The total number of items when using <see cref="ItemBuilder"/>.
         /// </summary>
-        public int? ItemCount { get; set; }
+        public int? ItemCount { get; init; }
 
         /// <summary>
         ///     When set, every item is assumed to have exactly this size along the scrolling axis. This lets the
         ///     list compute exact positions/total size without measuring or estimating -- the recommended option
         ///     for uniformly-sized items. Only meaningful together with <see cref="ItemBuilder"/>.
         /// </summary>
-        public float? ItemExtent { get; set; }
+        public float? ItemExtent { get; init; }
 
         /// <summary>
         ///     Resolves a <see cref="Key"/> to its item index for <c>ScrollTo(Key)</c> under <see cref="ItemBuilder"/>,
         ///     where not every item is necessarily built yet. Returns <c>null</c> if the key is unresolvable.
         ///     If not provided, <c>ScrollTo(Key)</c> only resolves against items that have been built at least once.
         /// </summary>
-        public Func<Key, int?> KeyToIndexResolver { get; set; }
+        public Func<Key, int?> KeyToIndexResolver { get; init; }
 
-        public Axis Axis { get; set; } = Axis.Vertical;
-        public ScrollController ScrollController { get; set; }
+        public Axis Axis { get; init; } = Axis.Vertical;
+        public ScrollController ScrollController { get; init; }
 
-        public float Spacing { get; set; } = 0;
+        public float Spacing { get; init; } = 0;
 
-        public bool UseMask { get; set; } = true;
+        public bool UseMask { get; init; } = true;
 
         /// <summary>
         /// Defines how the scroll content behaves when the user scrolls.
         /// <see cref="MovementType"/> for more details."/>
         /// </summary>
-        public MovementType MovementType { get; set; } = MovementType.Elastic;
+        public MovementType MovementType { get; init; } = MovementType.Elastic;
 
         /// <summary>
         ///     The size, in pixels, of the (bidirectional) cache extent for virtualization.
         ///     <para>If the value is not set, the cache extent will be determined automatically based on the viewport size.</para>
         /// </summary>
-        public float? VirtualizationCacheExtent { get; set; }
+        public float? VirtualizationCacheExtent { get; init; }
 
         public override State CreateState()
         {

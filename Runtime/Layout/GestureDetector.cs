@@ -55,11 +55,11 @@ namespace UniMob.UI.Layout
     public class GestureDetector : SingleChildLayoutWidget
     {
         // Gestures
-        public Action<TapDetails>? OnTap { get; set; }
-        public Action<PointerDetails>? OnPointerDown { get; set; }
-        public Action<PointerDetails>? OnPointerUp { get; set; }
-        public Action<PointerDetails>? OnPointerMove { get; set; }
-        public Action<DragDetails>? OnDragUpdate { get; set; }
+        public Action<TapDetails>? OnTap { get; init; }
+        public Action<PointerDetails>? OnPointerDown { get; init; }
+        public Action<PointerDetails>? OnPointerUp { get; init; }
+        public Action<PointerDetails>? OnPointerMove { get; init; }
+        public Action<DragDetails>? OnDragUpdate { get; init; }
 
         public override State CreateState() => new GestureDetectorState();
 

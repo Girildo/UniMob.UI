@@ -13,14 +13,14 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class AnimatedSwitcher : StatefulWidget
     {
-        public Widget Child { get; set; }
-        public float Duration { get; set; }
-        public float ReverseDuration { get; set; }
-        public AnimatedSwitcherTransitionMode TransitionMode { get; set; } =
+        public Widget Child { get; init; }
+        public float Duration { get; init; }
+        public float ReverseDuration { get; init; }
+        public AnimatedSwitcherTransitionMode TransitionMode { get; init; } =
             AnimatedSwitcherTransitionMode.Parallel;
-        public AnimatedSwitcherTransitionBuilder TransitionBuilder { get; set; } =
+        public AnimatedSwitcherTransitionBuilder TransitionBuilder { get; init; } =
             DefaultTransitionBuilder;
-        public AnimatedSwitcherLayoutBuilder LayoutBuilder { get; set; } = DefaultLayoutBuilder;
+        public AnimatedSwitcherLayoutBuilder LayoutBuilder { get; init; } = DefaultLayoutBuilder;
 
         public override State CreateState() => new AnimatedSwitcherState();
 

@@ -44,10 +44,10 @@ namespace UniMob.UI.Layout
 
     public class Image : StatefulWidget
     {
-        public Texture? Texture { get; set; }
-        public Color Color { get; set; } = Color.white;
-        public ImageFit Fit { get; set; } = ImageFit.Contain;
-        public Alignment Alignment { get; set; } = Alignment.Center;
+        public Texture? Texture { get; init; }
+        public Color Color { get; init; } = Color.white;
+        public ImageFit Fit { get; init; } = ImageFit.Contain;
+        public Alignment Alignment { get; init; } = Alignment.Center;
 
         public override State CreateState() => new ImageState();
 

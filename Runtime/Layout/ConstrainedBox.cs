@@ -5,7 +5,7 @@ namespace UniMob.UI.Layout
 {
     public class ConstrainedBox : SingleChildLayoutWidget
     {
-        public LayoutConstraints BoxConstraints { get; set; }
+        public LayoutConstraints BoxConstraints { get; init; }
 
         public override State CreateState()
         {

@@ -9,12 +9,12 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class Positioned : SingleChildLayoutWidget
     {
-        public float? Left { get; set; }
-        public float? Top { get; set; }
-        public float? Right { get; set; }
-        public float? Bottom { get; set; }
-        public float? Width { get; set; }
-        public float? Height { get; set; }
+        public float? Left { get; init; }
+        public float? Top { get; init; }
+        public float? Right { get; init; }
+        public float? Bottom { get; init; }
+        public float? Width { get; init; }
+        public float? Height { get; init; }
 
         public override State CreateState() => new PositionedState();
 
