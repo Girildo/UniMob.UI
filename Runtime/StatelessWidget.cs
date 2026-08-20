@@ -47,7 +47,6 @@ namespace UniMob.UI
         private readonly MutableAtom<StatelessWidget> _widget = Atom.Value(default(StatelessWidget));
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
-        public override WidgetSize Size => _stateHolder.Value.Size;
         public IState Child => _stateHolder.Value;
 
         // Owns a proxy over the widget it builds, rather than exposing that widget's own render

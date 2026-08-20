@@ -22,7 +22,6 @@ namespace UniMob.UI.Tests
         public virtual RenderObject RenderObject => throw new NotImplementedException();
         public virtual BuildContext Context => throw new NotImplementedException();
         public virtual IViewState InnerViewState => throw new NotImplementedException();
-        public virtual WidgetSize Size => throw new NotImplementedException();
 
         public virtual string GetDiagnosticInfo() => null;
 

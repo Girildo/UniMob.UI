@@ -29,7 +29,6 @@ namespace UniMob.UI
 
         public abstract IViewState InnerViewState { get; }
 
-        public abstract WidgetSize Size { get; }
 
         public Key Key => RawWidget.Key;
 

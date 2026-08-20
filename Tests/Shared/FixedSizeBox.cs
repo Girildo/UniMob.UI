@@ -32,10 +32,9 @@ namespace UniMob.UI.Tests
         public Vector2 BoxSize => Widget.Size;
 
         // Never actually dereferenced in tests: FixedSizeBox is only ever mounted headlessly via
-        // TestHarness.Mount (never attached to a real View/Canvas), and RenderFixedSizeBox isn't
-        // RenderLegacy, so ViewState.CalculateSize()'s prefab-loading branch never runs either.
-        // Any WidgetViewReference works here -- this one just happens to point at a resource that
-        // does exist, in case a future change makes it load-bearing.
+        // TestHarness.Mount, never attached to a real View/Canvas. Any WidgetViewReference works
+        // here -- this one just happens to point at a resource that does exist, in case a future
+        // change makes it load-bearing.
         public override WidgetViewReference View =>
             WidgetViewReference.Resource("Layout/UniMob.Text");
     }

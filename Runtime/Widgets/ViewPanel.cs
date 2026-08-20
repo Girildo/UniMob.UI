@@ -70,22 +70,23 @@ namespace UniMob.UI.Widgets
 
                 var childView = render.RenderItem(child);
 
+                // Top-left anchored at the origin, the same placement SingleChildLayoutView applies to
+                // its child: every render object reports geometry in a top-left, y-down frame.
+                var rt = childView.rectTransform;
+                var stretchX = float.IsInfinity(finalSize.x);
+                var stretchY = float.IsInfinity(finalSize.y);
 
-                LayoutData layout;
-                layout.Size = finalSize;
-                if (State.RenderObject is RenderLegacy)
-                {
-                    layout.Alignment = Alignment.Center;
-                    layout.Corner = Alignment.Center;
-                }
-                else
-                {
-                    layout.Alignment = Alignment.TopLeft;
-                    layout.Corner = Alignment.TopLeft;
-                }
-                layout.CornerPosition = Vector2.zero;
-                ViewLayoutUtility.SetLayout(childView.rectTransform, layout);
+                // An infinite axis means "fill the panel", which a RectTransform expresses by spanning
+                // its anchors rather than by a size -- and a sizeDelta of infinity would be a NaN rect.
+                var sizeDelta = new Vector2(stretchX ? 0f : finalSize.x, stretchY ? 0f : finalSize.y);
 
+                rt.anchorMin = new Vector2(0f, stretchY ? 0f : 1f);
+                rt.anchorMax = new Vector2(stretchX ? 1f : 0f, 1f);
+                rt.sizeDelta = sizeDelta;
+                rt.anchoredPosition = new Vector2(
+                    sizeDelta.x * rt.pivot.x,
+                    -sizeDelta.y * (1f - rt.pivot.y)
+                );
             }
         }
 

@@ -460,18 +460,6 @@ namespace UniMob.UI.Layout.Internal.RenderObjects
                 return true;
             }
 
-            // Legacy widgets are considered flexible if they have infinite constraints in the main axis
-            if (child.RenderObject is RenderLegacy)
-            {
-                var legacySize = child.Size;
-                if (isHorizontal ? float.IsInfinity(legacySize.MaxWidth) : float.IsInfinity(legacySize.MaxHeight))
-                {
-                    flex = 1;
-                    fit = FlexFit.Tight;
-                    return true;
-                }
-            }
-
             flex = 0;
             fit = FlexFit.Tight;
             return false;

@@ -21,8 +21,6 @@ namespace UniMob.UI
 
         IViewState InnerViewState { get; }
 
-        WidgetSize Size { get; }
-
         Lifetime StateLifetime { get; }
 
         // Layout is reached through RenderObject, not through here. A state is an element: it owns a

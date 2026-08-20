@@ -3,6 +3,10 @@ using UniMob.UI.Layout.Internal.Views;
 
 namespace UniMob.UI.Layout
 {
+    /// <summary>
+    /// Makes its subtree invisible to hit testing while <see cref="Ignoring"/> is set: pointer events
+    /// pass through it to whatever is behind.
+    /// </summary>
     public class IgnorePointer : SingleChildLayoutWidget
     {
         public bool Ignoring { get; set; }

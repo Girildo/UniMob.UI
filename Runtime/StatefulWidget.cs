@@ -37,11 +37,6 @@ namespace UniMob.UI
         /// </remarks>
         public virtual RenderObject CreateRenderObject(BuildContext context, IState state)
         {
-            if (state is IViewState viewState)
-            {
-                return new RenderLegacy(viewState);
-            }
-
             throw new NotSupportedException(
                 $"{GetType().Name} has no view to render and no render object of its own. A state "
                     + "that builds rather than paints must own a proxy over its child (see "

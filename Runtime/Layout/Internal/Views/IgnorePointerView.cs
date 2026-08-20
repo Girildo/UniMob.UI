@@ -22,7 +22,9 @@ namespace UniMob.UI.Layout.Internal.Views
         {
             base.Render();
 
-            _canvasGroup.interactable = !this.State.Ignoring;
+            // blocksRaycasts, not interactable: interactable is only consulted by Selectable, so a
+            // GestureDetector subtree (raw pointer handlers on a UIBehaviour) would keep firing.
+            _canvasGroup.blocksRaycasts = !this.State.Ignoring;
         }
     }
 

@@ -1,11 +1,6 @@
-# UniMob.UI modern layout layer — conventions
+# UniMob.UI layout layer — conventions
 
-UniMob.UI has **two coexisting layout systems**, migrated one widget at a time:
-
-- **Legacy** — `Runtime/Widgets/`, namespace `UniMob.UI.Widgets`. Bottom-up sizing via `ViewState<T>.CalculateSize() : WidgetSize`.
-- **Modern** — `Runtime/Layout/`, namespace `UniMob.UI.Layout`. Flutter-style: the parent passes `LayoutConstraints` down, the child returns a size up, and a pure-C# `RenderObject` does the math.
-
-This document governs the **modern layer only**. Every new modern widget must follow it. The legacy layer is frozen and untouched; the two are told apart by namespace (`using UniMob.UI.Layout` vs `using UniMob.UI.Widgets`).
+Layout is Flutter-style: the parent passes `LayoutConstraints` down, the child returns a size up, and a pure-C# `RenderObject` does the math. Every widget follows this document.
 
 ## Namespaces
 
@@ -115,8 +110,7 @@ namespace UniMob.UI.Layout
 
 Not every widget needs a render object. A widget defined purely in terms of other widgets uses `HocState<TWidget>` and returns a composed subtree from `Build(context)` — no render object, no view. The child builds lazily, so any `AnimationController` is created in `InitState()` (ready before the first `Build`) and reacted to in `DidUpdateWidget(old)`.
 
-- **Composition** — build from modern widgets: `Container` → `Align`/`ColoredImageBox`/`SizedBox`; `AnimatedCrossFade` → a `ZStack` of two `CompositeTransition`s.
-- **Facade over legacy** — when a legacy widget's behaviour lives in a Unity-prefab, interactive view that isn't worth reimplementing yet (`AnimatedSwitcher`, `Tabs`), wrap the legacy widget in an `HocState`; it renders under modern parents via the `RenderLegacy` bridge. Keep the public surface modern (no `WidgetSize` in the API).
+- **Composition** — build from other widgets: `Container` → `Align`/`ColoredImageBox`/`SizedBox`; `AnimatedCrossFade` → a `ZStack` of two `CompositeTransition`s.
 
 ## Vocabulary
 
@@ -268,10 +262,3 @@ Each report is emitted **once per render object per fault**, and re-arms when th
 Severity is derived from the code, not chosen at the site: overflow warns, everything else errors. `Remedy` goes the other way and stays per-site, because the same code has genuinely different fixes in a flex, an anchored box and a pan surface.
 
 To capture reports instead of logging them — in a test, or to route them into an application logger — install a reporter with `UniMobDiagnostics.Override(...)`, which restores the previous one when its scope is disposed.
-
-## Known cruft (tracked, not yet removed)
-
-These predate the conventions and are left in place for now (deletion is a later, separate pass):
-
-- `Internal/SingleChildLayoutState.cs` — an empty non-generic `SingleChildLayoutState` class that shadows the real generic `SingleChildLayoutState<T>` base; dead.
-- `Expanded.cs` — an orphan stub with a commented-out class; the real `Expanded` lives in `Flexible.cs`.

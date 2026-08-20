@@ -18,7 +18,6 @@ namespace UniMob.UI
 
         protected TWidget Widget => _widget.Value;
 
-        public sealed override WidgetSize Size => InnerViewState.Size;
 
         public sealed override IViewState InnerViewState => _child.Value.InnerViewState;
 

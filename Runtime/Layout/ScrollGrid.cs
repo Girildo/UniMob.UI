@@ -199,13 +199,6 @@ namespace UniMob.UI.Layout
 
         public override WidgetViewReference View => WidgetViewReference.Resource("Layout/UniMob.ScrollList");
 
-        // A scroll grid is a viewport: it fills the space its parent gives it and scrolls its content,
-        // rather than shrink-wrapping to that content. In the new layout system PerformSizing already
-        // returns constraints.Largest; this override makes the grid fill *legacy* parents too (which size
-        // children via WidgetSize), matching ScrollGridFlow. Without it the legacy bridge would derive the
-        // size from the render object's intrinsics -- 0 on the cross axis -- and the grid would collapse.
-        public override WidgetSize CalculateSize() => WidgetSize.Stretched;
-
         void ISliverGridState.SetVisibleChildren(List<IndexedLayoutData> visibleChildren)
             => _virtualized.SetVisibleChildren(visibleChildren);
 
