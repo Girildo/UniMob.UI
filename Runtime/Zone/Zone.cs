@@ -1,61 +1,91 @@
 using System;
 using System.Collections.Generic;
 using UniMob.UI.Diagnostics;
-using UnityEngine;
 
 namespace UniMob
 {
-    // Pins the order two frame drivers already run in. Zone.Update ticks and drains the next-frame
-    // queue, AtomScheduler.Update then actualizes what those invalidated, and the geometry ticker
-    // runs in LateUpdate after both. That order was incidental -- both components sat at the default
-    // order, and AtomScheduler's GameObject is created lazily on first actualize, so a component
-    // registered mid-frame could reorder them. Golden traces encode this latency, so it is pinned
-    // rather than left to registration order.
-    [DefaultExecutionOrder(-1000)]
-    internal class Zone : MonoBehaviour
+    /// <summary>
+    ///     The frame clock: a set of tickers, and a queue of callbacks to run on the next frame.
+    /// </summary>
+    /// <remarks>
+    ///     Not Dart's error-interception zone, despite the name. Reporting a caught exception belongs to
+    ///     <see cref="UniMobError"/>, which needs no clock.
+    ///     <para>
+    ///         The hierarchy is closed: the constructor is internal, so the type can be named and derived
+    ///         from inside this package and its friends, and nowhere else. It is public only because a
+    ///         public fake clock cannot derive from an internal base.
+    ///     </para>
+    ///     <para>
+    ///         The two phases are separate methods rather than one <c>Update</c> so that a fake can run
+    ///         the other frame drivers between them, in the order the real player loop runs them.
+    ///     </para>
+    /// </remarks>
+    public abstract class Zone
     {
-        private readonly List<Action> _tickers = new List<Action>();
+        private readonly List<Action<float>> _tickers = new List<Action<float>>();
 
         private List<Action> _nextFrame = new List<Action>();
         private List<Action> _nextFrameExecuting = new List<Action>();
 
-        // Assigned by Init below, which the runtime calls before any scene loads.
-        public static Zone Current { get; set; } = null!;
+        internal Zone() { }
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        internal static void Init()
+        // Assigned by ZoneDriver.Init, which the runtime calls before any scene loads.
+        internal static Zone Current { get; private set; } = null!;
+
+        internal static void Install(Zone zone) => Current = zone;
+
+        /// <summary>
+        ///     Registers <paramref name="ticker"/> to run every frame, given the seconds since the last.
+        /// </summary>
+        public void AddTicker(Action<float> ticker)
         {
-            var go = new GameObject(nameof(Zone));
-            var zone = go.AddComponent<Zone>();
-            DontDestroyOnLoad(go);
-            DontDestroyOnLoad(zone);
-
-            Current = zone;
+            _tickers.Add(ticker);
         }
 
-        private void Update()
+        public void RemoveTicker(Action<float> ticker)
         {
+            _tickers.Remove(ticker);
+        }
+
+        /// <summary>Runs <paramref name="callback"/> once, on the frame after this one.</summary>
+        public void NextFrame(Action callback)
+        {
+            _nextFrame.Add(callback);
+        }
+
+        /// <summary>Phase one of a frame: every ticker runs, given <paramref name="deltaTime"/>.</summary>
+        protected void RunTickers(float deltaTime)
+        {
+            // Backwards, because a ticker is entitled to remove itself while running.
             for (var i = _tickers.Count - 1; i >= 0; i--)
             {
                 try
                 {
-                    _tickers[i].Invoke();
+                    _tickers[i].Invoke(deltaTime);
                 }
                 catch (Exception ex)
                 {
                     UniMobError.Report(new UniMobFault(ex, "Ticker"));
                 }
             }
+        }
 
+        /// <summary>Phase two of a frame: everything queued by <see cref="NextFrame"/> runs.</summary>
+        /// <remarks>
+        ///     The queue is swapped before it is drained, so a callback that queues another does not
+        ///     extend the frame it is running on.
+        /// </remarks>
+        protected void DrainNextFrame()
+        {
             var toSwap = _nextFrame;
             _nextFrame = _nextFrameExecuting;
             _nextFrameExecuting = toSwap;
 
-            foreach (var action in _nextFrameExecuting)
+            foreach (var callback in _nextFrameExecuting)
             {
                 try
                 {
-                    action.Invoke();
+                    callback.Invoke();
                 }
                 catch (Exception ex)
                 {
@@ -64,21 +94,6 @@ namespace UniMob
             }
 
             _nextFrameExecuting.Clear();
-        }
-
-        public void AddTicker(Action action)
-        {
-            _tickers.Add(action);
-        }
-
-        public void RemoveTicker(Action action)
-        {
-            _tickers.Remove(action);
-        }
-
-        public void NextFrame(Action action)
-        {
-            _nextFrame.Add(action);
         }
     }
 }

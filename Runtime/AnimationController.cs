@@ -5,7 +5,11 @@ namespace UniMob.UI
 
     public class AnimationController : IAnimation<float>, ILifetimeScope
     {
-        private float _prevDeltaTime;
+        // Negative means "not ticked yet": the first tick smooths its own delta against itself, so a
+        // constant delta advances by exactly that delta rather than by a blend with a stale seed.
+        private float _prevDeltaTime = NotTickedYet;
+
+        private const float NotTickedYet = -1f;
 
         [Atom]
         public float Duration { get; set; }
@@ -121,7 +125,7 @@ namespace UniMob.UI
 
         private void AddAnimationTicker()
         {
-            _prevDeltaTime = Time.unscaledDeltaTime;
+            _prevDeltaTime = NotTickedYet;
 
             Zone.Current.RemoveTicker(Tick);
             Zone.Current.AddTicker(Tick);
@@ -132,7 +136,7 @@ namespace UniMob.UI
             Zone.Current.RemoveTicker(Tick);
         }
 
-        private void Tick()
+        private void Tick(float deltaTime)
         {
             if (Lifetime.IsDisposed)
             {
@@ -140,9 +144,9 @@ namespace UniMob.UI
                 return;
             }
 
-            var nextDeltaTime = Time.unscaledDeltaTime;
-            var dt = Mathf.Min(nextDeltaTime * 0.8f + _prevDeltaTime * 0.2f, 1 / 5f);
-            _prevDeltaTime = nextDeltaTime;
+            var previous = _prevDeltaTime < 0f ? deltaTime : _prevDeltaTime;
+            var dt = Mathf.Min(deltaTime * 0.8f + previous * 0.2f, 1 / 5f);
+            _prevDeltaTime = deltaTime;
 
             switch (Direction)
             {

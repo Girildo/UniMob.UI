@@ -72,7 +72,7 @@ namespace UniMob.UI
             Zone.Current.RemoveTicker(Tick);
         }
 
-        private void Tick()
+        private void Tick(float deltaTime)
         {
             if (Lifetime.IsDisposed)
             {
@@ -80,7 +80,7 @@ namespace UniMob.UI
                 return;
             }
 
-            _elapsed += Time.unscaledDeltaTime;
+            _elapsed += deltaTime;
 
             Value = Mathf.Lerp(_prevValue, Index, _elapsed / Duration);
 

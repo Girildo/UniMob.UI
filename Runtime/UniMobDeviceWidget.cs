@@ -57,7 +57,8 @@ namespace UniMob.UI
             base.Dispose();
         }
 
-        private void Tick()
+        // The delta is unused: this ticker polls Screen, which changes on its own schedule.
+        private void Tick(float deltaTime)
         {
             if (GetScale() is var scale && Scale != scale)
             {

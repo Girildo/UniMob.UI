@@ -55,7 +55,7 @@ namespace UniMob.UI.Tests
                 }
             );
 
-            void Ticker() => log.Add(("tick", Time.frameCount));
+            void Ticker(float deltaTime) => log.Add(("tick", Time.frameCount));
 
             var dirtier = new GameObject(nameof(LateDirtier)).AddComponent<LateDirtier>();
             Zone.Current.AddTicker(Ticker);
