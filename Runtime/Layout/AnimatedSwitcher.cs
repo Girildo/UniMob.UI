@@ -13,7 +13,7 @@ namespace UniMob.UI.Layout
     /// </summary>
     public class AnimatedSwitcher : StatefulWidget
     {
-        public Widget Child { get; init; }
+        public Widget? Child { get; init; }
         public float Duration { get; init; }
         public float ReverseDuration { get; init; }
         public AnimatedSwitcherTransitionMode TransitionMode { get; init; } =

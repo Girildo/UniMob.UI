@@ -15,7 +15,11 @@ namespace UniMob.UI.Layout
 
     public class ConstrainedBuilder : SingleChildLayoutWidget
     {
-        public ConstrainedBuilderDelegate<Widget> Builder { get; init; }
+        /// <summary>
+        /// Builds the child from the constraints this widget is given. Without one there is no
+        /// child, which is the same thing as building nothing.
+        /// </summary>
+        public ConstrainedBuilderDelegate<Widget>? Builder { get; init; }
 
         public override State CreateState() => new ConstrainedBuilderState();
 

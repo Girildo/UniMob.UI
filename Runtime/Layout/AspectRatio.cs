@@ -9,9 +9,9 @@ namespace UniMob.UI.Layout
     public class AspectRatio : SingleChildLayoutWidget
     {
         /// <summary>
-        /// The ratio of width to height (e.g. 16f / 9f).
+        /// The ratio of width to height (e.g. 16f / 9f). Defaults to a square.
         /// </summary>
-        public float Ratio { get; init; }
+        public float Ratio { get; init; } = 1f;
 
         public override State CreateState() => new AspectRatioState();
 

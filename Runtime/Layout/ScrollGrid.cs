@@ -22,7 +22,7 @@ namespace UniMob.UI.Layout
         ///     Builds the widget for the item at <c>index</c> on demand, only for items near the viewport.
         ///     Requires <see cref="ItemCount" />, and is mutually exclusive with <see cref="Children" />.
         /// </summary>
-        public IndexedWidgetBuilder ItemBuilder { get; init; }
+        public IndexedWidgetBuilder? ItemBuilder { get; init; }
 
         /// <summary>The total number of items when using <see cref="ItemBuilder" />.</summary>
         public int? ItemCount { get; init; }
@@ -32,7 +32,7 @@ namespace UniMob.UI.Layout
         ///     <see cref="ItemBuilder" />. If not provided, <c>ScrollTo(Key)</c> only resolves keys of items
         ///     that have been built at least once.
         /// </summary>
-        public Func<Key, int?> KeyToIndexResolver { get; init; }
+        public Func<Key, int?>? KeyToIndexResolver { get; init; }
 
         /// <summary>Fixed number of columns (cross axis). Mutually exclusive with <see cref="MaxCrossAxisExtent" />.</summary>
         public int? CrossAxisCount { get; init; }
@@ -66,7 +66,7 @@ namespace UniMob.UI.Layout
         public RectPadding Padding { get; init; }
 
         public Axis Axis { get; init; } = Axis.Vertical;
-        public ScrollController ScrollController { get; init; }
+        public ScrollController? ScrollController { get; init; }
         public bool UseMask { get; init; } = true;
         public MovementType MovementType { get; init; } = MovementType.Elastic;
 

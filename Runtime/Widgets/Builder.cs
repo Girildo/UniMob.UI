@@ -11,7 +11,7 @@ namespace UniMob.UI.Widgets
 
         public WidgetBuilder<Widget> Build { get; }
 
-        public Action OnDispose { get; init; }
+        public Action? OnDispose { get; init; }
 
         public override State CreateState() => new BuilderState();
     }

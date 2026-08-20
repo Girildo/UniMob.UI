@@ -21,7 +21,7 @@ namespace UniMob.UI.Layout
         ///     Builds the widget for the item at <c>index</c> on demand, only for items near the viewport.
         ///     Requires <see cref="ItemCount"/> to be set, and is mutually exclusive with <see cref="Children"/>.
         /// </summary>
-        public IndexedWidgetBuilder ItemBuilder { get; init; }
+        public IndexedWidgetBuilder? ItemBuilder { get; init; }
 
         /// <summary>
         ///     The total number of items when using <see cref="ItemBuilder"/>.
@@ -40,10 +40,10 @@ namespace UniMob.UI.Layout
         ///     where not every item is necessarily built yet. Returns <c>null</c> if the key is unresolvable.
         ///     If not provided, <c>ScrollTo(Key)</c> only resolves against items that have been built at least once.
         /// </summary>
-        public Func<Key, int?> KeyToIndexResolver { get; init; }
+        public Func<Key, int?>? KeyToIndexResolver { get; init; }
 
         public Axis Axis { get; init; } = Axis.Vertical;
-        public ScrollController ScrollController { get; init; }
+        public ScrollController? ScrollController { get; init; }
 
         public float Spacing { get; init; } = 0;
 
