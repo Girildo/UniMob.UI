@@ -2,17 +2,17 @@ namespace UniMob.UI
 {
     public class BuildContext
     {
-        public IState State { get; }
+        public IState? State { get; }
 
-        public BuildContext Parent { get; protected set; }
+        public BuildContext? Parent { get; protected set; }
 
-        public BuildContext(IState state, BuildContext parent)
+        public BuildContext(IState? state, BuildContext? parent)
         {
             State = state;
             Parent = parent;
         }
 
-        public TState AncestorStateOfType<TState>()
+        public TState? AncestorStateOfType<TState>()
             where TState : IState
         {
             var ancestor = this;
@@ -30,12 +30,12 @@ namespace UniMob.UI
             return default;
         }
 
-        public TState RootAncestorStateOfType<TState>()
+        public TState? RootAncestorStateOfType<TState>()
             where TState : IState
         {
             var ancestor = this;
 
-            TState root = default;
+            TState? root = default;
             while (ancestor != null)
             {
                 if (ancestor.State is TState state)
@@ -69,10 +69,10 @@ namespace UniMob.UI
 
     public class MutableBuildContext : BuildContext
     {
-        public MutableBuildContext(IState state, BuildContext parent)
+        public MutableBuildContext(IState? state, BuildContext? parent)
             : base(state, parent) { }
 
-        public void SetParent(BuildContext parent)
+        public void SetParent(BuildContext? parent)
         {
             Parent = parent;
         }

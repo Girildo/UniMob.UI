@@ -9,7 +9,7 @@ namespace UniMob.UI
     /// </summary>
     public abstract class StatelessWidget : Widget
     {
-        private Type _type;
+        private Type? _type;
 
         public Type Type => _type ?? (_type = GetType());
 
@@ -38,9 +38,7 @@ namespace UniMob.UI
     internal sealed class StatelessElement : State, ISingleChildLayoutState
     {
         private readonly StateHolder _stateHolder;
-        private readonly MutableAtom<StatelessWidget> _widget = Atom.Value(
-            default(StatelessWidget)
-        );
+        private readonly MutableAtom<StatelessWidget> _widget;
 
         public override IViewState InnerViewState => _stateHolder.Value.InnerViewState;
         public IState Child => _stateHolder.Value;
@@ -51,7 +49,7 @@ namespace UniMob.UI
 
         public StatelessElement(StatelessWidget widget)
         {
-            _widget.Value = widget;
+            _widget = Atom.Value(widget);
             _stateHolder = Create<Widget, IState>(
                 StateLifetime,
                 new BuildContext(this, Context),

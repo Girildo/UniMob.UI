@@ -5,13 +5,13 @@ namespace UniMob.UI
 {
     public abstract class StatefulWidget : Widget
     {
-        private Type _type;
+        private Type? _type;
 
         public Type Type => _type ?? (_type = GetType());
 
         public Key? Key { get; set; }
 
-        public virtual State CreateState(StateProvider provider)
+        public virtual State? CreateState(StateProvider provider)
         {
             return provider.Of(this);
         }

@@ -8,10 +8,10 @@ namespace UniMob.UI
     {
         Type Type { get; }
 
-        Key Key { get; }
+        Key? Key { get; }
 
-        State CreateState(StateProvider provider);
-        State CreateState();
+        State? CreateState(StateProvider provider);
+        State? CreateState();
 
         /// <summary>
         /// Creates the lightweight RenderObject responsible for layout calculations.
