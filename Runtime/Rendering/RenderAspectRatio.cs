@@ -23,13 +23,13 @@ namespace UniMob.UI.Rendering
         // Mimicks the behavior of Flutter's AspectRatio widget, which sizes itself to a specific aspect ratio,
         // trying to infer height from width if possible, but falling back to inferring width from height if width is unconstrained.
         // If the constraints are tight, we must respect them and cannot satisfy the aspect ratio.
-        // See: https://github.com/flutter/flutter/blob/main/packages/flutter/lib/src/rendering/proxy_box.dart#L450
+        // See: https://github.com/flutter/flutter/blob/09a3f858b7a67f78a36ebfd717160cebc3c79ac1/packages/flutter/lib/src/rendering/proxy_box.dart#L522
         private Vector2 ApplyAspectRatio(LayoutConstraints constraints)
         {
             // If constraints are already tight, we must respect them and cannot satisfy the aspect ratio.
-            if (constraints.HasTightHeight && constraints.HasTightWidth)
+            if (constraints.IsTight)
             {
-                return constraints.Constrain(Vector2.zero);
+                return constraints.Smallest;
             }
 
             var width = constraints.MaxWidth;
