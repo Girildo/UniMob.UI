@@ -5,20 +5,13 @@ using UniMob.UI.Diagnostics;
 namespace UniMob
 {
     /// <summary>
-    ///     The frame clock: a set of tickers, and a queue of callbacks to run on the next frame.
+    ///     The frame clock: a set of tickers, and a queue of callbacks to run on the next frame. Not
+    ///     Dart's error-interception zone, despite the name -- see CONTEXT.md.
     /// </summary>
     /// <remarks>
-    ///     Not Dart's error-interception zone, despite the name. Reporting a caught exception belongs to
-    ///     <see cref="UniMobError"/>, which needs no clock.
-    ///     <para>
-    ///         The hierarchy is closed: the constructor is internal, so the type can be named and derived
-    ///         from inside this package and its friends, and nowhere else. It is public only because a
-    ///         public fake clock cannot derive from an internal base.
-    ///     </para>
-    ///     <para>
-    ///         The two phases are separate methods rather than one <c>Update</c> so that a fake can run
-    ///         the other frame drivers between them, in the order the real player loop runs them.
-    ///     </para>
+    ///     The hierarchy is closed. The constructor is internal, so the type can be derived from inside
+    ///     this package and its friends and nowhere else; it is public only because a public fake clock
+    ///     cannot derive from an internal base.
     /// </remarks>
     public abstract class Zone
     {
@@ -35,14 +28,9 @@ namespace UniMob
         internal static void Install(Zone zone) => Current = zone;
 
         /// <summary>
-        ///     Installs <paramref name="zone"/> until the returned scope is disposed.
+        ///     Installs <paramref name="zone"/> until the returned scope is disposed. There is no
+        ///     setter, so a fake clock cannot outlive the scope that installed it.
         /// </summary>
-        /// <remarks>
-        ///     Follows <see cref="UniMobDiagnostics.Override"/>'s scope discipline: there is no setter,
-        ///     so "a test left its fake clock installed" is unrepresentable rather than merely
-        ///     discouraged. A leak is bounded anyway -- ZoneDriver reinstalls the real clock whenever
-        ///     play mode starts, and a domain reload clears the slot outright.
-        /// </remarks>
         internal static IDisposable Override(Zone zone)
         {
             if (zone == null)
@@ -98,12 +86,9 @@ namespace UniMob
         }
 
         /// <summary>Phase two of a frame: everything queued by <see cref="NextFrame"/> runs.</summary>
-        /// <remarks>
-        ///     The queue is swapped before it is drained, so a callback that queues another does not
-        ///     extend the frame it is running on.
-        /// </remarks>
         protected void DrainNextFrame()
         {
+            // Swapped before draining, so a callback that queues another does not extend this frame.
             var toSwap = _nextFrame;
             _nextFrame = _nextFrameExecuting;
             _nextFrameExecuting = toSwap;

@@ -7,20 +7,16 @@ namespace UniMob.UI.Diagnostics
     ///     entry selects it when clicked.
     /// </summary>
     /// <remarks>
-    ///     <see cref="Debug.LogException(System.Exception, Object)"/> and not a composed
-    ///     <see cref="Debug.LogError(object)"/>: the entry keeps <see cref="LogType.Exception"/> and the
-    ///     thrown type's own message, which is what a console reader recognises and what
-    ///     <c>LogAssert.Expect</c> matches on. Naming <see cref="UniMobFault.Phase"/> here would mean
-    ///     wrapping the exception, which replaces both.
-    ///     <para>
-    ///         The phase is not lost, only unformatted: it reaches any reporter installed through
-    ///         <see cref="UniMobError.Override"/>, which is where a structured sink reads it.
-    ///     </para>
+    ///     The entry keeps <see cref="LogType.Exception"/> and the thrown type's own message. The phase
+    ///     is not formatted here; it reaches any reporter installed through
+    ///     <see cref="UniMobError.Override"/>.
     /// </remarks>
     public sealed class UnityConsoleErrorReporter : IErrorReporter
     {
         public void Report(in UniMobFault fault)
         {
+            // LogException, not a composed LogError: naming the phase would mean wrapping the
+            // exception, which replaces both the type shown and the stack trace it carries.
             Debug.LogException(fault.Exception, ContextObject(fault.Subject));
         }
 

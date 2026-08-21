@@ -15,14 +15,8 @@ namespace UniMob
     /// <summary>
     ///     Connects the zone to Unity's player loop. The only part of the clock that needs a scene.
     /// </summary>
-    /// <remarks>
-    ///     The execution order pins a sequence the drivers already ran in: the zone ticks and drains,
-    ///     <c>AtomScheduler</c> then actualizes what those invalidated, and the geometry ticker runs in
-    ///     <c>LateUpdate</c> after both. That order was incidental -- both Update-phase components sat at
-    ///     the default order, and AtomScheduler's GameObject is created lazily on first actualize, so a
-    ///     component registered mid-frame could reorder them. Golden traces encode the latency it
-    ///     produces, so it is pinned rather than left to registration order.
-    /// </remarks>
+    // Pins the zone ahead of AtomScheduler, which both sat at the default order. The navigator's
+    // golden traces encode the resulting latency, so this is not cosmetic. See CONTEXT.md.
     [DefaultExecutionOrder(-1000)]
     internal sealed class ZoneDriver : MonoBehaviour
     {

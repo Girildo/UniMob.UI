@@ -9,18 +9,8 @@ namespace UniMob.UI.Tests
 {
     /// <summary>
     ///     A frame clock a test drives by hand, so a test that needs frames does not need a player loop.
+    ///     Installed and captured for the length of a <c>using</c> block. See CONTEXT.md.
     /// </summary>
-    /// <remarks>
-    ///     An ambient static clock is a testability smell, blessed deliberately: threading the zone
-    ///     through <c>BuildContext</c> goes viral through every widget, and Flutter's
-    ///     <c>SchedulerBinding.instance</c> is the same ambient singleton swapped the same way.
-    ///     <para>
-    ///         <see cref="Install"/> restores the previous clock on dispose, so a fixture cannot leave
-    ///         its fake behind. Faults are captured for the same span, through
-    ///         <see cref="UniMobError.Override"/> rather than through a method on the clock -- reporting
-    ///         an exception has nothing to do with keeping time.
-    ///     </para>
-    /// </remarks>
     public sealed class TestZone : Zone, IDisposable
     {
         public const float DefaultDeltaTime = 1f / 60f;
@@ -51,15 +41,9 @@ namespace UniMob.UI.Tests
         public IReadOnlyList<UniMobFault> Faults => _errors;
 
         /// <summary>
-        ///     Whether there is nothing left to do: no ticker running, nothing queued for the next
-        ///     frame, and no atom queued for actualization.
+        ///     Whether nothing is left to do: no ticker registered, nothing queued for the next frame,
+        ///     no continuation waiting, and no atom queued for actualization.
         /// </summary>
-        /// <remarks>
-        ///     A direct question, where counting quiet frames only ever inferred the answer. The
-        ///     inference could be wrong in both directions -- it passed with work still queued whenever
-        ///     a deferral chain paused for longer than the count, and it paid for its own frames every
-        ///     time it was right.
-        /// </remarks>
         public bool IsSettled =>
             !HasActiveTickers
             && NextFrameQueueEmpty
@@ -67,20 +51,12 @@ namespace UniMob.UI.Tests
             && !AtomScheduler.HasPendingWork;
 
         /// <summary>
-        ///     Runs one whole frame, in the order the real player loop runs its drivers.
+        ///     Runs one whole frame, in the order the player loop runs its drivers. See CONTEXT.md.
         /// </summary>
-        /// <remarks>
-        ///     The order is measured, not documented: the zone ticks and drains, the scheduler then
-        ///     actualizes what those invalidated, and the geometry ticker runs last because its driver
-        ///     is a <c>LateUpdate</c>. <c>ZoneDriverTests</c> holds that against the real loop.
-        ///     <para>
-        ///         Asynchronous continuations run between the two, where the player loop runs them:
-        ///         <c>ScriptRunDelayedTasks</c> follows every <c>Update</c> and precedes every
-        ///         <c>LateUpdate</c>.
-        ///     </para>
-        /// </remarks>
         public void Pump(float deltaTime = DefaultDeltaTime)
         {
+            // This order is measured, and ZoneDriverTests holds it against the real player loop.
+            // Reordering it moves the navigator's golden traces.
             RunTickers(deltaTime);
             DrainNextFrame();
             AtomScheduler.Sync();
@@ -113,22 +89,13 @@ namespace UniMob.UI.Tests
         /// <summary>
         ///     Pumps until nothing is left to do, or fails at <paramref name="maxFrames"/>.
         /// </summary>
-        /// <param name="onFrame">
-        ///     Run after each frame. For a caller that has to do a frame's other work itself: the
-        ///     navigator must reconcile its child state tree every frame or a popped route is never
-        ///     disposed and the trace quietly omits it.
-        /// </param>
-        /// <param name="pending">
-        ///     Outstanding work this clock cannot see, which also has to finish. The navigator counts
-        ///     handlers entered but not left; without it, silence ends a pop while its exit animation is
-        ///     still running.
-        /// </param>
-        /// <param name="diagnostic">What to print if the deadline is reached.</param>
-        /// <remarks>
-        ///     <paramref name="maxFrames"/> is a deadline so a broken system fails loudly instead of
-        ///     hanging. Reaching it is a finding, not a flake: something entered a handler it never
-        ///     left, or kept working indefinitely.
-        /// </remarks>
+        /// <param name="onFrame">Run after each frame, for work a caller owns itself.</param>
+        /// <param name="pending">Outstanding work this clock cannot see, which also has to finish.</param>
+        /// <param name="diagnostic">What to report if the deadline is reached.</param>
+        /// <exception cref="TimeoutException">
+        ///     Nothing settled within <paramref name="maxFrames"/>. A finding, not a flake: something
+        ///     entered a handler it never left.
+        /// </exception>
         public void Settle(
             int maxFrames = 300,
             Action? onFrame = null,

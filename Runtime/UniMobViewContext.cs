@@ -19,11 +19,8 @@ namespace UniMob.UI
 
         /// <summary>Where a widget's view comes from.</summary>
         /// <remarks>
-        ///     Built on first use rather than only from the runtime hook below, so that asking for a view
-        ///     works outside play mode. The default loaders read prefabs and registered factories and
-        ///     need no scene, but the hook alone never runs in EditMode, which made measuring a text
-        ///     widget -- the one render object that resolves its view during construction -- a
-        ///     play-mode-only operation.
+        ///     Built on first use, so resolving a view works outside play mode. The runtime hook below
+        ///     only ever runs when play mode starts.
         /// </remarks>
         public static IViewLoader Loader
         {

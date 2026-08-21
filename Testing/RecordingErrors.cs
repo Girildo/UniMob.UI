@@ -10,14 +10,9 @@ namespace UniMob.UI.Tests
     ///     fault reported inside it.
     /// </summary>
     /// <remarks>
-    ///     The counterpart to <see cref="RecordingReporter"/>, and separate for the same reason the two
-    ///     sinks are separate: a layout issue is a protocol violation the layout system recovered from,
-    ///     and a fault is an exception nothing recovered from.
-    ///     <para>
-    ///         What it replaces is <c>LogAssert.ignoreFailingMessages</c>, which suppresses every message
-    ///         including the ones a regression produces -- a fixture that expects one fault and silences
-    ///         the console cannot tell that it got three. Assert on this instead.
-    ///     </para>
+    ///     The counterpart to <see cref="RecordingReporter"/>. Assert on this rather than reaching for
+    ///     <c>LogAssert.ignoreFailingMessages</c>, which also suppresses the messages a regression
+    ///     produces.
     /// </remarks>
     public sealed class RecordingErrors : IErrorReporter, IDisposable, IReadOnlyList<UniMobFault>
     {

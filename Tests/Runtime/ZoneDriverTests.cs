@@ -11,12 +11,8 @@ namespace UniMob.UI.Tests
     ///     Pins the order Unity runs the three frame drivers in, against the real player loop.
     /// </summary>
     /// <remarks>
-    ///     A fake clock is sequenced to match this, so something has to establish what "this" is. The
-    ///     order was incidental before <see cref="DefaultExecutionOrderAttribute"/> was applied to the
-    ///     zone: both Update-phase components sat at the default order, and the scheduler's GameObject
-    ///     is created lazily on first actualize, so the first frames of a run could disagree with the
-    ///     rest of it. Golden traces encode the resulting latency, which is why it is pinned and then
-    ///     asserted rather than assumed.
+    ///     The fake clock is sequenced to match this, so something has to establish what "this" is
+    ///     against the real loop. See CONTEXT.md.
     /// </remarks>
     public class ZoneDriverTests
     {

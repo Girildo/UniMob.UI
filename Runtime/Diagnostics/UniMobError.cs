@@ -7,14 +7,8 @@ namespace UniMob.UI.Diagnostics
     ///     The one place an exception caught on a caller's behalf is handed to whoever is listening.
     /// </summary>
     /// <remarks>
-    ///     There is no setter. <see cref="Override"/> restores the previous reporter when its scope is
-    ///     disposed, which makes "a test left its fake installed" unrepresentable rather than merely
-    ///     discouraged. A host that wants a permanent sink calls Override at startup and never disposes.
-    ///     <para>
-    ///         Separate from <see cref="UniMobDiagnostics"/> because the two report different things to
-    ///         different audiences: a layout issue is a protocol violation the layout system recovered
-    ///         from, and a fault is an exception nothing recovered from.
-    ///     </para>
+    ///     There is no setter: <see cref="Override"/> restores the previous reporter when its scope is
+    ///     disposed. A host wanting a permanent sink calls it at startup and never disposes.
     /// </remarks>
     public static class UniMobError
     {
