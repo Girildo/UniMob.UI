@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UniMob.Core;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Rendering;
@@ -26,10 +27,14 @@ namespace UniMob.UI.Tests
 
         private readonly IDisposable _zoneScope;
         private readonly RecordingErrors _errors;
+        private readonly PumpedSynchronizationContext _continuations = new();
+        private readonly SynchronizationContext? _previousContext;
 
         private TestZone()
         {
             _errors = RecordingErrors.Capture();
+            _previousContext = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(_continuations);
             _zoneScope = Override(this);
         }
 
@@ -56,7 +61,10 @@ namespace UniMob.UI.Tests
         ///     time it was right.
         /// </remarks>
         public bool IsSettled =>
-            !HasActiveTickers && NextFrameQueueEmpty && !AtomScheduler.HasPendingWork;
+            !HasActiveTickers
+            && NextFrameQueueEmpty
+            && _continuations.IsEmpty
+            && !AtomScheduler.HasPendingWork;
 
         /// <summary>
         ///     Runs one whole frame, in the order the real player loop runs its drivers.
@@ -65,12 +73,18 @@ namespace UniMob.UI.Tests
         ///     The order is measured, not documented: the zone ticks and drains, the scheduler then
         ///     actualizes what those invalidated, and the geometry ticker runs last because its driver
         ///     is a <c>LateUpdate</c>. <c>ZoneDriverTests</c> holds that against the real loop.
+        ///     <para>
+        ///         Asynchronous continuations run between the two, where the player loop runs them:
+        ///         <c>ScriptRunDelayedTasks</c> follows every <c>Update</c> and precedes every
+        ///         <c>LateUpdate</c>.
+        ///     </para>
         /// </remarks>
         public void Pump(float deltaTime = DefaultDeltaTime)
         {
             RunTickers(deltaTime);
             DrainNextFrame();
             AtomScheduler.Sync();
+            _continuations.Drain();
             WidgetGeometryTicker.Tick();
 
             Elapsed += deltaTime;
@@ -142,6 +156,7 @@ namespace UniMob.UI.Tests
 
         public void Dispose()
         {
+            SynchronizationContext.SetSynchronizationContext(_previousContext);
             _zoneScope.Dispose();
             _errors.Dispose();
         }

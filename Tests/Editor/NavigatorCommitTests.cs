@@ -1,8 +1,6 @@
-using System.Collections;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -28,17 +26,16 @@ namespace UniMob.UI.Tests
     ///         made safe by ordering instead, not by committing.
     ///     </para>
     /// </remarks>
-    public class NavigatorCommitTests
+    public class NavigatorCommitTests : NavigatorFixture
     {
-        [UnityTest]
-        public IEnumerator Pop_WhenDestroyFailsAsynchronously_StillRemovesTheRoute()
+        [Test]
+        public void Pop_WhenDestroyFailsAsynchronously_StillRemovesTheRoute()
         {
             // The failing destroy reaches ProcessCommandsLoop, which logs it. That is the point of the
             // fixture, not an accident of it.
-            LogAssert.ignoreFailingMessages = true;
 
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var failing = host.Create(
                 "B",
@@ -46,10 +43,10 @@ namespace UniMob.UI.Tests
                 RouteFlavour.ThrowsAsyncOnDestroy
             );
             host.Navigator.Push(failing);
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.TopmostRoute.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.DoesNotContain(
                 host.Navigator.NavigationStack,
@@ -62,25 +59,25 @@ namespace UniMob.UI.Tests
                 failing.ScreenState,
                 "the machine had already committed to Destroyed before the handler ran"
             );
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
-        [UnityTest]
-        public IEnumerator Pop_WhenDestroyFailsAsynchronously_LeavesNoFinishedRouteOnTheStack()
+        [Test]
+        public void Pop_WhenDestroyFailsAsynchronously_LeavesNoFinishedRouteOnTheStack()
         {
-            LogAssert.ignoreFailingMessages = true;
-
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.Push(
                 host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy)
             );
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.TopmostRoute.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             AssertNoFinishedRouteOnTheStack(host);
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
         /// <summary>
@@ -92,18 +89,16 @@ namespace UniMob.UI.Tests
         ///     a throw aborted its remaining iterations. RequestPopTo issues one pop per route, each committed
         ///     on its own, and a committed pop reports Popped whatever its transition did on the way.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator PopTo_WhenADestroyFailsAsynchronously_CarriesOnPastTheFailedRoute()
+        [Test]
+        public void PopTo_WhenADestroyFailsAsynchronously_CarriesOnPastTheFailedRoute()
         {
-            LogAssert.ignoreFailingMessages = true;
-
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var root = host.Navigator.TopmostRoute;
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             var failing = host.Create(
                 "C",
@@ -111,10 +106,10 @@ namespace UniMob.UI.Tests
                 RouteFlavour.ThrowsAsyncOnDestroy
             );
             host.Navigator.Push(failing);
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.RequestPopTo(root, "test");
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.DoesNotContain(
                 host.Navigator.NavigationStack,
@@ -128,6 +123,7 @@ namespace UniMob.UI.Tests
             );
 
             AssertNoFinishedRouteOnTheStack(host);
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
         /// <summary>
@@ -143,20 +139,18 @@ namespace UniMob.UI.Tests
         ///     case. This fixture is the pair of
         ///     <see cref="Pop_WhenDestroyFailsAsynchronously_StillRemovesTheRoute"/>; the two must agree.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator Destroy_FailingSynchronously_IsReportedLikeAnAsynchronousFailure()
+        [Test]
+        public void Destroy_FailingSynchronously_IsReportedLikeAnAsynchronousFailure()
         {
-            LogAssert.ignoreFailingMessages = true;
-
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var failing = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsOnDestroy);
             host.Navigator.Push(failing);
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.TopmostRoute.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.DoesNotContain(
                 host.Navigator.NavigationStack,
@@ -165,6 +159,7 @@ namespace UniMob.UI.Tests
             );
             Assert.AreEqual(1, host.Navigator.NavigationStack.Count);
             AssertNoFinishedRouteOnTheStack(host);
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
         private static void AssertNoFinishedRouteOnTheStack(NavigatorHost host)

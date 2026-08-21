@@ -4,6 +4,7 @@ namespace UniMob.UI.Navigation
     using System.Collections;
     using System.Collections.Generic;
     using System.Threading.Tasks;
+    using UniMob.UI.Diagnostics;
     using UniMob.UI.Internal.Views;
     using UniMob.UI.Widgets;
     using UnityEngine;
@@ -506,7 +507,7 @@ namespace UniMob.UI.Navigation
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                UniMobError.Report(new UniMobFault(e, "CommandLoop"));
             }
             finally
             {
@@ -882,7 +883,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "NotifyWillPush"));
                     }
                 }
             }
@@ -904,7 +905,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "NotifyDidPush"));
                     }
                 }
             }
@@ -926,7 +927,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "NotifyWillPop"));
                     }
                 }
             }
@@ -944,7 +945,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "NotifyDidPop"));
                     }
                 }
             }
@@ -966,7 +967,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "NotifyWillReplace"));
                     }
                 }
             }
@@ -988,7 +989,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "NotifyDidReplace"));
                     }
                 }
             }

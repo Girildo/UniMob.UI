@@ -1,9 +1,9 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
@@ -23,10 +23,10 @@ namespace UniMob.UI.Tests
     ///         PlayMode only, for the reason given on <see cref="NavigatorHost"/>.
     ///     </para>
     /// </remarks>
-    public class NavigatorObserverTests
+    public class NavigatorObserverTests : NavigatorFixture
     {
-        [UnityTest]
-        public IEnumerator Mount_AnnouncesTheInitialRouteAsAPushOntoNothing()
+        [Test]
+        public void Mount_AnnouncesTheInitialRouteAsAPushOntoNothing()
         {
             var observer = new RecordingObserver();
 
@@ -36,7 +36,7 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(A, null)", "DidPush(A, null)" },
@@ -46,8 +46,8 @@ namespace UniMob.UI.Tests
             );
         }
 
-        [UnityTest]
-        public IEnumerator Push_AnnouncesTheRouteItCovers()
+        [Test]
+        public void Push_AnnouncesTheRouteItCovers()
         {
             var observer = new RecordingObserver();
 
@@ -57,17 +57,17 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
             observer.Calls.Clear();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(new[] { "WillPush(B, A)", "DidPush(B, A)" }, observer.Calls);
         }
 
-        [UnityTest]
-        public IEnumerator Pop_AnnouncesTheRouteItReveals()
+        [Test]
+        public void Pop_AnnouncesTheRouteItReveals()
         {
             var observer = new RecordingObserver();
 
@@ -77,14 +77,14 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
             observer.Calls.Clear();
 
             host.Navigator.TopmostRoute.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(new[] { "WillPop(B, A)", "DidPop(B, A)" }, observer.Calls);
         }
@@ -93,8 +93,8 @@ namespace UniMob.UI.Tests
         ///     A PopTo is one operation that removes several routes, and each removal is announced with
         ///     the route it would reveal rather than with the eventual destination.
         /// </summary>
-        [UnityTest]
-        public IEnumerator PopTo_AnnouncesEachRemovalWithTheRouteBeneathIt()
+        [Test]
+        public void PopTo_AnnouncesEachRemovalWithTheRouteBeneathIt()
         {
             var observer = new RecordingObserver();
 
@@ -104,19 +104,19 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
 
             var root = host.Navigator.TopmostRoute;
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.Push(host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
             observer.Calls.Clear();
 
             host.Navigator.RequestPopTo(root, "test");
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPop(C, B)", "DidPop(C, B)", "WillPop(B, A)", "DidPop(B, A)" },
@@ -124,8 +124,8 @@ namespace UniMob.UI.Tests
             );
         }
 
-        [UnityTest]
-        public IEnumerator Replace_AnnouncesBothRoutes()
+        [Test]
+        public void Replace_AnnouncesBothRoutes()
         {
             var observer = new RecordingObserver();
 
@@ -135,11 +135,11 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
             observer.Calls.Clear();
 
             host.Navigator.Replace(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillReplace(B, A)", "DidReplace(B, A)" },
@@ -158,8 +158,8 @@ namespace UniMob.UI.Tests
         ///     <c>PopInternal</c>, so it announces nothing on its way -- the navigator is being ended
         ///     wholesale there, which is what a route's own lifecycle channel reports.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator Replace_OnAnEmptyNavigator_AnnouncesAPush()
+        [Test]
+        public void Replace_OnAnEmptyNavigator_AnnouncesAPush()
         {
             var observer = new RecordingObserver();
 
@@ -169,10 +169,10 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
 
             _ = host.Navigator.ApplyScreenEvent(ScreenEvent.Destroy);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.AreEqual(
                 0,
@@ -182,7 +182,7 @@ namespace UniMob.UI.Tests
             observer.Calls.Clear();
 
             host.Navigator.Replace(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, null)", "DidPush(B, null)" },
@@ -193,11 +193,10 @@ namespace UniMob.UI.Tests
         /// <summary>
         ///     A pop commits even when the route's exit transition fails, so its Will is still matched.
         /// </summary>
-        [UnityTest]
-        public IEnumerator Pop_WhenTheTransitionFails_StillAnnouncesTheCommit()
+        [Test]
+        public void Pop_WhenTheTransitionFails_StillAnnouncesTheCommit()
         {
             // The failing destroy reaches ProcessCommandsLoop, which logs it.
-            LogAssert.ignoreFailingMessages = true;
 
             var observer = new RecordingObserver();
 
@@ -207,32 +206,32 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 observer
             );
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.Push(
                 host.Create("B", RouteModalType.Fullscreen, RouteFlavour.ThrowsAsyncOnDestroy)
             );
-            yield return host.Settle();
+            host.Settle();
             observer.Calls.Clear();
 
             host.Navigator.TopmostRoute.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPop(B, A)", "DidPop(B, A)" },
                 observer.Calls,
                 "the removal commits against a failed transition, so the notification does too"
             );
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
         /// <summary>
         ///     One observer throwing must not stop the navigator, nor deprive the others of the callback.
         /// </summary>
-        [UnityTest]
-        public IEnumerator AThrowingObserver_NeitherStopsNavigationNorSilencesTheOthers()
+        [Test]
+        public void AThrowingObserver_NeitherStopsNavigationNorSilencesTheOthers()
         {
             // Every contained observer exception is logged, which is the behaviour under test.
-            LogAssert.ignoreFailingMessages = true;
 
             var throwing = new ThrowingObserver();
             var listening = new RecordingObserver();
@@ -244,14 +243,14 @@ namespace UniMob.UI.Tests
                 throwing,
                 listening
             );
-            yield return host.Settle();
+            host.Settle();
             listening.Calls.Clear();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.TopmostRoute.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             Assert.AreEqual(
                 1,
@@ -265,14 +264,15 @@ namespace UniMob.UI.Tests
                 listening.Calls,
                 "an observer earlier in the list throwing must not cost a later one its callbacks"
             );
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
         /// <summary>
         ///     An observer that unregisters itself mid-operation does not corrupt the dispatch it is
         ///     inside, because dispatch walks the snapshot the operation began with.
         /// </summary>
-        [UnityTest]
-        public IEnumerator AnObserverRemovedMidOperation_StillHearsThatOperationOut()
+        [Test]
+        public void AnObserverRemovedMidOperation_StillHearsThatOperationOut()
         {
             var listening = new RecordingObserver();
             NavigatorHost host = null;
@@ -294,11 +294,11 @@ namespace UniMob.UI.Tests
                 removing,
                 listening
             );
-            yield return host.Settle();
+            host.Settle();
             listening.Calls.Clear();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, A)", "DidPush(B, A)" },
@@ -312,8 +312,8 @@ namespace UniMob.UI.Tests
         ///     Observers come from whichever widget is current, so a rebuild that supplies a different set
         ///     takes effect from the next operation.
         /// </summary>
-        [UnityTest]
-        public IEnumerator ObserversFromARebuiltWidget_ReplaceTheOnesItWasMountedWith()
+        [Test]
+        public void ObserversFromARebuiltWidget_ReplaceTheOnesItWasMountedWith()
         {
             var mounted = new RecordingObserver();
             var rebuilt = new RecordingObserver();
@@ -324,13 +324,13 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 mounted
             );
-            yield return host.Settle();
+            host.Settle();
 
             host.Rebuild(rebuilt);
             mounted.Calls.Clear();
 
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(
                 new[] { "WillPush(B, A)", "DidPush(B, A)" },
@@ -353,8 +353,8 @@ namespace UniMob.UI.Tests
         ///     loop is what makes it safe -- <c>ApplyCommands</c> only starts a loop when none is running,
         ///     so a command raised from inside one joins its queue.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator PushingFromInsideACallback_IsQueuedBehindTheOperationThatCausedIt()
+        [Test]
+        public void PushingFromInsideACallback_IsQueuedBehindTheOperationThatCausedIt()
         {
             NavigatorHost host = null;
 
@@ -369,12 +369,12 @@ namespace UniMob.UI.Tests
             });
 
             host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain, pushing);
-            yield return host.Settle();
+            host.Settle();
             host.End();
 
             host.Begin("push B, whose DidPush pushes C");
             host.Navigator.Push(host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
             host.End();
 
             host.AssertTrace(
@@ -433,11 +433,15 @@ namespace UniMob.UI.Tests
         ///         read anything.
         ///     </para>
         /// </remarks>
-        [UnityTest]
-        public IEnumerator AnObserverReadingRouteState_DoesNotMakeTheCallerDependOnIt()
+        [Test]
+        public void AnObserverReadingRouteState_DoesNotMakeTheCallerDependOnIt()
         {
             // Both the reaction's push and the later ones invalidate atoms while a watched scope is
-            // active, which UniMob reports. See the remarks: that is the premise, not a side effect.
+            // active, which the core reports on Unity's log. See the remarks: that is the premise, not
+            // a side effect. How many it reports depends on how many pushes the reaction provokes, so
+            // the messages are ignored for the length of this test rather than expected one by one --
+            // and restored afterwards, which the original did not do, so it silenced every later test.
+            var previouslyIgnoring = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
 
             var host = NavigatorHost.Mount(
@@ -446,7 +450,7 @@ namespace UniMob.UI.Tests
                 RouteFlavour.Plain,
                 new StateReadingObserver()
             );
-            yield return host.Settle();
+            host.Settle();
 
             var runs = 0;
             var unrelated = Atom.Value(0);
@@ -473,7 +477,7 @@ namespace UniMob.UI.Tests
                     }
                 );
 
-                yield return host.Settle();
+                host.Settle();
 
                 Assert.AreEqual(
                     1,
@@ -484,7 +488,7 @@ namespace UniMob.UI.Tests
                 host.Navigator.Push(
                     host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
                 );
-                yield return host.Settle();
+                host.Settle();
 
                 Assert.AreEqual(
                     1,
@@ -494,7 +498,7 @@ namespace UniMob.UI.Tests
                 );
 
                 host.Rebuild();
-                yield return host.Settle();
+                host.Settle();
 
                 Assert.AreEqual(
                     1,
@@ -505,7 +509,14 @@ namespace UniMob.UI.Tests
             finally
             {
                 lifetime.Dispose();
+                LogAssert.ignoreFailingMessages = previouslyIgnoring;
             }
+
+            Assert.That(
+                Zone.Faults,
+                Is.Empty,
+                "the invalidation is a log message from the core, not a fault escaping a callback"
+            );
         }
 
         /// <summary>

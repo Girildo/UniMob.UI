@@ -414,22 +414,23 @@ namespace UniMob.UI.Tests
     }
 
     /// <summary>
+    ///     Installs a clock for the length of a test. Every navigator fixture needs one, because a route
+    ///     defers its completions through the zone.
+    /// </summary>
+    public abstract class NavigatorFixture
+    {
+        protected TestZone Zone { get; private set; } = null!;
+
+        [SetUp]
+        public void InstallZone() => Zone = TestZone.Install();
+
+        [TearDown]
+        public void RemoveZone() => Zone.Dispose();
+    }
+
+    /// <summary>
     ///     Mounts a real <see cref="Navigator"/> and drives it a frame at a time, recording what happens.
     /// </summary>
-    /// <remarks>
-    ///     PlayMode only. <c>Route.Initialize</c>/<c>Dispose</c>/<c>OnDestroy</c> all defer through
-    ///     <c>Zone.Current.NextFrame</c>, and Zone sets <c>Current</c> from a
-    ///     <c>[RuntimeInitializeOnLoadMethod]</c> that only runs in play mode, so an EditMode fixture would
-    ///     null-reference before asserting anything.
-    ///     <para>
-    ///         <see cref="Settle"/> must reconcile the child state tree on every frame, not just pump
-    ///         them. Routes are disposed through <c>Builder.OnDispose</c>, which only fires when the
-    ///         navigator's child states are re-reconciled and the departed route's widget is deactivated.
-    ///         Nothing does that unless something reads <c>NavigatorState.Screens</c>, which is what a real
-    ///         frame's render pass would do. Without it a popped route is never disposed and the trace
-    ///         quietly omits it.
-    ///     </para>
-    /// </remarks>
     public sealed class NavigatorHost
     {
         /// <summary>
@@ -438,19 +439,18 @@ namespace UniMob.UI.Tests
         /// </summary>
         public const float AnimatedDuration = 0.25f;
 
-        private const int QuietFramesRequired = 3;
-        private const int MaxFrames = 300;
-
         private readonly string _rootKey;
         private readonly Dictionary<string, Func<Route>> _routes;
         private readonly TracingObserver _recorder;
+        private readonly TestZone _zone;
 
         private NavigatorHost(
             NavigatorTrace trace,
             NavigatorState navigator,
             string rootKey,
             Dictionary<string, Func<Route>> routes,
-            TracingObserver recorder
+            TracingObserver recorder,
+            TestZone zone
         )
         {
             Trace = trace;
@@ -458,6 +458,7 @@ namespace UniMob.UI.Tests
             _rootKey = rootKey;
             _routes = routes;
             _recorder = recorder;
+            _zone = zone;
         }
 
         public NavigatorTrace Trace { get; }
@@ -478,6 +479,14 @@ namespace UniMob.UI.Tests
             params INavigatorObserver[] observers
         )
         {
+            var zone =
+                Zone.Current as TestZone
+                ?? throw new InvalidOperationException(
+                    "A navigator defers through the zone, so mount one from a fixture that derives "
+                        + nameof(NavigatorFixture)
+                        + " and installs a clock."
+                );
+
             var trace = new NavigatorTrace();
             trace.Command("mount " + rootKey);
 
@@ -490,7 +499,7 @@ namespace UniMob.UI.Tests
             var widget = CreateWidget(rootKey, routes, recorder, observers);
 
             var state = (NavigatorState)TestHarness.Mount(widget);
-            return new NavigatorHost(trace, state, rootKey, routes, recorder);
+            return new NavigatorHost(trace, state, rootKey, routes, recorder, zone);
         }
 
         /// <summary>
@@ -579,46 +588,22 @@ namespace UniMob.UI.Tests
         }
 
         /// <summary>
-        ///     Pumps frames until the trace stops growing, so a fixture never has to guess a frame count.
+        ///     Pumps until the navigator has nothing left to do.
         /// </summary>
         /// <remarks>
-        ///     Quiescence is measured in consecutive silent frames rather than a single one, because the
-        ///     lifecycle legitimately goes quiet for a frame mid-sequence: a completion scheduled through
-        ///     <c>Zone.NextFrame</c> lands on the following frame, and the work it unblocks lands on the
-        ///     one after that.
+        ///     Reconciles on every frame, not just pumps. Routes are disposed through
+        ///     <c>Builder.OnDispose</c>, which only fires when the navigator's child states are
+        ///     re-reconciled and the departed route's widget is deactivated, and nothing does that
+        ///     unless something reads <c>NavigatorState.Screens</c>. Without it a popped route is never
+        ///     disposed and the trace quietly omits it.
         /// </remarks>
-        public IEnumerator Settle()
+        public void Settle()
         {
-            var quiet = 0;
-
-            for (var frame = 0; frame < MaxFrames; frame++)
-            {
-                var before = Trace.Count;
-
-                yield return null;
-
-                Reconcile();
-
-                quiet = Trace.Count == before ? quiet + 1 : 0;
-
-                // Both conditions are required. Pending alone would pass before an operation has even
-                // started, and silence alone ends a pop while its exit animation is still running.
-                if (quiet >= QuietFramesRequired && Trace.Pending == 0)
-                {
-                    yield break;
-                }
-            }
-
-            // Reaching the cap is a finding, not a flake: something entered a handler it never left, or
-            // kept the navigator busy indefinitely. Say so rather than letting the fixture assert against
-            // a half-recorded trace and fail somewhere less informative.
-            Assert.Fail(
-                "Navigator did not settle within "
-                    + MaxFrames
-                    + " frames (pending handlers: "
-                    + Trace.Pending
-                    + ").\n\n--- trace so far ---\n"
-                    + Trace
+            _zone.Settle(
+                onFrame: Reconcile,
+                pending: () => Trace.Pending > 0,
+                diagnostic: () =>
+                    "pending handlers: " + Trace.Pending + "\n\n--- trace so far ---\n" + Trace
             );
         }
 
@@ -647,17 +632,10 @@ namespace UniMob.UI.Tests
         ///     child states no longer exist to be read.
         /// </summary>
         /// <remarks>
-        ///     Zone is a DontDestroyOnLoad behaviour independent of the state tree, so callbacks queued
-        ///     through <c>Zone.NextFrame</c> during disposal still run after the navigator is gone. That is
-        ///     precisely what completing a route's PopTask at teardown depends on.
+        ///     The clock is independent of the state tree, so callbacks queued during disposal still run
+        ///     after the navigator is gone. Completing a route's PopTask at teardown depends on it.
         /// </remarks>
-        public IEnumerator PumpFrames(int count)
-        {
-            for (var frame = 0; frame < count; frame++)
-            {
-                yield return null;
-            }
-        }
+        public void PumpFrames(int count) => _zone.PumpFrames(count);
 
         /// <summary>
         ///     Asserts the whole recorded trace, reporting a mismatch as a line-by-line diff plus the

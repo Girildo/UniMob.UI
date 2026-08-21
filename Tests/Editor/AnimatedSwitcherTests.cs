@@ -7,12 +7,20 @@ using UnityEngine;
 
 namespace UniMob.UI.Tests
 {
-    // Must run as a PlayMode test, not EditMode: AnimatedSwitcher drives AnimationControllers, and
-    // every start/stop goes through Zone.Current, which is only created by a RuntimeInitializeOnLoad
-    // hook that EditMode never runs.
     public class AnimatedSwitcherTests
     {
         private static readonly LayoutConstraints Loose = LayoutConstraints.Loose(1000, 1000);
+
+        // AnimatedSwitcher starts and stops AnimationControllers, and every one of those registers a
+        // ticker with the ambient clock. These assertions are about what the switcher does at the
+        // moment of a swap, so the clock is installed but never pumped.
+        private TestZone _zone = null!;
+
+        [SetUp]
+        public void SetUp() => _zone = TestZone.Install();
+
+        [TearDown]
+        public void TearDown() => _zone.Dispose();
 
         private static FixedSizeBox Box(string key, float width, float height) =>
             new FixedSizeBox { Key = Key.Of(key), Size = new Vector2(width, height) };

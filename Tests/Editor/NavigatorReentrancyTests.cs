@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -31,19 +29,19 @@ namespace UniMob.UI.Tests
     ///         from the observer side, where a callback is the thing doing the navigating.
     ///     </para>
     /// </remarks>
-    public class NavigatorReentrancyTests
+    public class NavigatorReentrancyTests : NavigatorFixture
     {
-        [UnityTest]
-        public IEnumerator PushingFromOnInitialize_IsQueuedBehindThePushThatCausedIt()
+        [Test]
+        public void PushingFromOnInitialize_IsQueuedBehindThePushThatCausedIt()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var inner = host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain);
             var outer = new PushingOnInitializeRoute("B", () => host.Navigator.Push(inner));
 
             host.Navigator.Push(outer);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.AreEqual(3, host.Navigator.NavigationStack.Count);
             Assert.AreEqual(
@@ -62,11 +60,11 @@ namespace UniMob.UI.Tests
         /// <summary>
         ///     Two routes queued from inside one initialization still arrive in the order they were issued.
         /// </summary>
-        [UnityTest]
-        public IEnumerator SeveralPushesFromOnInitialize_ArriveInTheOrderTheyWereIssued()
+        [Test]
+        public void SeveralPushesFromOnInitialize_ArriveInTheOrderTheyWereIssued()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var first = host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain);
             var second = host.Create("D", RouteModalType.Fullscreen, RouteFlavour.Plain);
@@ -81,7 +79,7 @@ namespace UniMob.UI.Tests
             );
 
             host.Navigator.Push(outer);
-            yield return host.Settle();
+            host.Settle();
 
             CollectionAssert.AreEqual(new[] { "D", "C", "B", "A" }, Keys(host));
         }

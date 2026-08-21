@@ -1,8 +1,6 @@
-using System.Collections;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -15,25 +13,25 @@ namespace UniMob.UI.Tests
     ///     state machine was abandoned wherever it stood, so <c>OnDestroy</c> never ran and
     ///     <c>PopTask</c> never completed. Anything awaiting one waited forever.
     /// </remarks>
-    public class RouteTeardownTests
+    public class RouteTeardownTests : NavigatorFixture
     {
-        [UnityTest]
-        public IEnumerator Unmount_CompletesPopTaskForEveryLiveRoute()
+        [Test]
+        public void Unmount_CompletesPopTaskForEveryLiveRoute()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var root = host.Navigator.TopmostRoute;
             var pushed = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain);
 
             host.Navigator.Push(pushed);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.IsFalse(root.PopTask.IsCompleted, "the root has not been popped");
             Assert.IsFalse(pushed.PopTask.IsCompleted, "the pushed route has not been popped");
 
             host.Unmount();
-            yield return host.PumpFrames(3);
+            host.PumpFrames(3);
 
             Assert.IsTrue(root.PopTask.IsCompleted, "unmount must answer the root's awaiters");
             Assert.IsTrue(
@@ -52,19 +50,19 @@ namespace UniMob.UI.Tests
         ///     <c>Atom.When</c> is then cancelled by disposal and its <c>OnDestroy</c> never resumes, so
         ///     nothing else would ever complete the task.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator Unmount_WhileAnExitAnimationIsRunning_StillCompletesPopTask()
+        [Test]
+        public void Unmount_WhileAnExitAnimationIsRunning_StillCompletesPopTask()
         {
             // Deliberately does not suppress log assertions. Disposal cancels the pending Atom.When, and
             // that cancellation used to reach the console as a red exception on every unmount landing
             // mid-transition. This fixture passing is the evidence that it no longer does: Unity fails a
             // test on any unexpected logged exception.
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var animated = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage);
             host.Navigator.Push(animated);
-            yield return host.Settle();
+            host.Settle();
 
             // Runs synchronously as far as the animation gate inside OnDestroy, and parks there.
             host.Navigator.TopmostRoute.Pop();
@@ -80,7 +78,7 @@ namespace UniMob.UI.Tests
             );
 
             host.Unmount();
-            yield return host.PumpFrames(3);
+            host.PumpFrames(3);
 
             Assert.IsTrue(
                 animated.PopTask.IsCompleted,
@@ -92,23 +90,23 @@ namespace UniMob.UI.Tests
         ///     Teardown ends every route without chaining through the pause step that starts an exit
         ///     animation, so no route is left waiting for one.
         /// </summary>
-        [UnityTest]
-        public IEnumerator Unmount_EndsRoutesWithoutRunningTheExitAnimation()
+        [Test]
+        public void Unmount_EndsRoutesWithoutRunningTheExitAnimation()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
             host.End();
 
             host.Begin("push B animated");
             host.Navigator.Push(
                 host.Create("B", RouteModalType.Fullscreen, RouteFlavour.AnimatedPage)
             );
-            yield return host.Settle();
+            host.Settle();
             host.End();
 
             host.Begin("unmount");
             host.Unmount();
-            yield return host.PumpFrames(3);
+            host.PumpFrames(3);
 
             // No OnDestroy of any kind: teardown goes straight to Destroyed, so there is no exit
             // animation to start and nothing to wait for. Disposal follows in widget order, which is the
@@ -149,8 +147,8 @@ namespace UniMob.UI.Tests
         ///     the second completion would throw from inside a Zone callback, where nothing is positioned
         ///     to handle it.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator Teardown_AfterAnOrdinaryDestroy_IsANoOp()
+        [Test]
+        public void Teardown_AfterAnOrdinaryDestroy_IsANoOp()
         {
             var trace = new NavigatorTrace();
             var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
@@ -158,13 +156,13 @@ namespace UniMob.UI.Tests
             route.ApplyScreenEvent(ScreenEvent.Create);
             route.ApplyScreenEvent(ScreenEvent.Destroy);
 
-            yield return null;
+            Zone.Pump();
 
             Assert.IsTrue(route.PopTask.IsCompleted, "an ordinary destroy completes the pop");
 
             route.ApplyScreenEvent(ScreenEvent.Teardown);
 
-            yield return null;
+            Zone.Pump();
 
             Assert.AreEqual(ScreenState.Destroyed, route.ScreenState);
             Assert.IsTrue(route.PopTask.IsCompleted);

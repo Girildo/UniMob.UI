@@ -1,9 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -15,7 +13,7 @@ namespace UniMob.UI.Tests
     ///     Characterization, in the sense of <see cref="NavigatorBaselineTests"/>: it asserts what the
     ///     atoms report today, including where that is less than a reader would expect.
     /// </remarks>
-    public class NavigatorSignalProbeTests
+    public class NavigatorSignalProbeTests : NavigatorFixture
     {
         /// <summary>
         ///     <see cref="NavigatorState.NavigationStack"/> and <see cref="NavigatorState.TopmostRoute"/> both
@@ -37,11 +35,11 @@ namespace UniMob.UI.Tests
         ///         moves the stack several times reports only where it ended up.
         ///     </para>
         /// </remarks>
-        [UnityTest]
-        public IEnumerator TheAtomsReportTheNetResult_NotWhatHappened()
+        [Test]
+        public void TheAtomsReportTheNetResult_NotWhatHappened()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var stackRuns = 0;
             var seenTopmost = new List<string>();
@@ -63,7 +61,7 @@ namespace UniMob.UI.Tests
                 host.Navigator.Push(
                     host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain)
                 );
-                yield return host.Settle();
+                host.Settle();
 
                 // Pushed and popped within one frame. A whole route was created, focused, destroyed and
                 // disposed here.
@@ -71,18 +69,18 @@ namespace UniMob.UI.Tests
                     host.Create("T", RouteModalType.Fullscreen, RouteFlavour.Plain)
                 );
                 host.Navigator.TopmostRoute.Pop();
-                yield return host.Settle();
+                host.Settle();
 
                 host.Navigator.Push(
                     host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
                 );
-                yield return host.Settle();
+                host.Settle();
 
                 // PopTo(null) + Replace as one batch: C and B are destroyed and A is replaced.
                 host.Navigator.NewRoot(
                     host.Create("D", RouteModalType.Fullscreen, RouteFlavour.Plain)
                 );
-                yield return host.Settle();
+                host.Settle();
             }
             finally
             {

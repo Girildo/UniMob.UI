@@ -4,6 +4,7 @@ namespace UniMob.UI.Navigation
 {
     using System;
     using System.Threading.Tasks;
+    using UniMob.UI.Diagnostics;
     using UnityEngine;
 
     public abstract class Route : IBackActionOwner
@@ -268,7 +269,7 @@ namespace UniMob.UI.Navigation
                     }
                     catch (Exception e)
                     {
-                        Debug.LogException(e);
+                        UniMobError.Report(new UniMobFault(e, "ScreenEventApplied"));
                     }
                 }
             }

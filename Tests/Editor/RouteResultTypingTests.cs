@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
-using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
 {
@@ -35,23 +33,23 @@ namespace UniMob.UI.Tests
     ///     T by construction, whether the route popped itself or answered a request, and every other way
     ///     of leaving reports "no value" plus who caused it.
     /// </summary>
-    public class RouteResultTypingTests
+    public class RouteResultTypingTests : NavigatorFixture
     {
         private static Task<PopDecision<int>> AllowWith(int value) =>
             Task.FromResult(PopDecision<int>.Allow(value));
 
-        [UnityTest]
-        public IEnumerator PopWithValue_CompletesTheTypedResult_AndTheUntypedOne()
+        [Test]
+        public void PopWithValue_CompletesTheTypedResult_AndTheUntypedOne()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>("D", RouteModalType.Popup, _ => AllowWith(0));
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             var outcome = route.Pop(42);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.AreEqual(PopOutcome.Popped, outcome.Result);
 
@@ -69,18 +67,18 @@ namespace UniMob.UI.Tests
             );
         }
 
-        [UnityTest]
-        public IEnumerator PopWithoutValue_ReportsNoValue()
+        [Test]
+        public void PopWithoutValue_ReportsNoValue()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>("D", RouteModalType.Popup, _ => AllowWith(0));
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             route.Pop();
-            yield return host.Settle();
+            host.Settle();
 
             Assert.IsFalse(
                 route.Result.Result.HasValue,
@@ -90,19 +88,19 @@ namespace UniMob.UI.Tests
             Assert.IsNull(route.Result.Result.Request);
         }
 
-        [UnityTest]
-        public IEnumerator RequestPop_WhenTheDecisionSuppliesAValue_TheResultCarriesItAndTheRequest()
+        [Test]
+        public void RequestPop_WhenTheDecisionSuppliesAValue_TheResultCarriesItAndTheRequest()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>("D", RouteModalType.Popup, _ => AllowWith(7));
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             var request = new object();
             var outcome = host.Navigator.RequestPop(route, request);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.AreEqual(PopOutcome.Popped, outcome.Result);
             Assert.IsTrue(route.Result.Result.HasValue);
@@ -115,11 +113,11 @@ namespace UniMob.UI.Tests
             );
         }
 
-        [UnityTest]
-        public IEnumerator RequestPop_WhenTheDecisionAllowsWithoutAValue_TheResultHasNone()
+        [Test]
+        public void RequestPop_WhenTheDecisionAllowsWithoutAValue_TheResultHasNone()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>(
                 "D",
@@ -127,20 +125,20 @@ namespace UniMob.UI.Tests
                 _ => Task.FromResult(PopDecision<int>.Allow())
             );
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.RequestPop(route, "why");
-            yield return host.Settle();
+            host.Settle();
 
             Assert.IsFalse(route.Result.Result.HasValue);
             Assert.AreEqual("why", route.Result.Result.Request);
         }
 
-        [UnityTest]
-        public IEnumerator RequestPop_WhenTheDecisionRefuses_TheResultStaysPending()
+        [Test]
+        public void RequestPop_WhenTheDecisionRefuses_TheResultStaysPending()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>(
                 "D",
@@ -148,27 +146,27 @@ namespace UniMob.UI.Tests
                 _ => Task.FromResult(PopDecision<int>.Refuse())
             );
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             var outcome = host.Navigator.RequestPop(route, "why");
-            yield return host.Settle();
+            host.Settle();
 
             Assert.AreEqual(PopOutcome.Refused, outcome.Result);
             Assert.IsFalse(route.Result.IsCompleted);
         }
 
-        [UnityTest]
-        public IEnumerator UnAskedReplace_CompletesTheTypedResultWithNoValueAndTheTeardownMarker()
+        [Test]
+        public void UnAskedReplace_CompletesTheTypedResultWithNoValueAndTheTeardownMarker()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>("D", RouteModalType.Popup, _ => AllowWith(1));
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             host.Navigator.Replace(host.Create("E", RouteModalType.Popup, RouteFlavour.Plain));
-            yield return host.Settle();
+            host.Settle();
 
             Assert.IsTrue(route.Result.IsCompleted);
             Assert.IsFalse(route.Result.Result.HasValue);
@@ -179,11 +177,11 @@ namespace UniMob.UI.Tests
             );
         }
 
-        [UnityTest]
-        public IEnumerator PopWithNullOnAReferenceTypedRoute_IsAValue()
+        [Test]
+        public void PopWithNullOnAReferenceTypedRoute_IsAValue()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<string>(
                 "D",
@@ -191,10 +189,10 @@ namespace UniMob.UI.Tests
                 _ => Task.FromResult(PopDecision<string>.Allow())
             );
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             route.Pop(null);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.IsTrue(
                 route.Result.Result.HasValue,
@@ -213,15 +211,15 @@ namespace UniMob.UI.Tests
         ///     <c>Result</c> was still pending. Both completers now defer their continuations, which is what
         ///     this pins from both sides.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator AwaitingEitherResult_FindsTheOtherAlreadyComplete()
+        [Test]
+        public void AwaitingEitherResult_FindsTheOtherAlreadyComplete()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var route = new DecidingRoute<int>("D", RouteModalType.Popup, _ => AllowWith(0));
             host.Navigator.Push(route);
-            yield return host.Settle();
+            host.Settle();
 
             var typedWasCompleteWhenUntypedResumed = false;
             var untypedWasCompleteWhenTypedResumed = false;
@@ -242,7 +240,7 @@ namespace UniMob.UI.Tests
             var typedAwaiter = AwaitTyped();
 
             route.Pop(42);
-            yield return host.Settle();
+            host.Settle();
 
             Assert.IsTrue(untypedAwaiter.IsCompleted, "the PopTask awaiter resumed");
             Assert.IsTrue(typedAwaiter.IsCompleted, "the Result awaiter resumed");

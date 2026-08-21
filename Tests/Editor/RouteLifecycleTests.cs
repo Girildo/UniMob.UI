@@ -1,9 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UniMob.UI.Navigation;
 using UniMob.UI.Widgets;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace UniMob.UI.Tests
@@ -23,7 +24,7 @@ namespace UniMob.UI.Tests
     ///         play mode.
     ///     </para>
     /// </remarks>
-    public class RouteLifecycleTests
+    public class RouteLifecycleTests : NavigatorFixture
     {
         /// <summary>
         ///     A reaction over <see cref="Route.ScreenState"/> follows a route through being pushed,
@@ -35,11 +36,11 @@ namespace UniMob.UI.Tests
         ///     any consumer gets, which is why the fixture asserts at that granularity rather than
         ///     inspecting the atom directly.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator ScreenState_IsFollowedByAReaction_ThroughAFullCycle()
+        [Test]
+        public void ScreenState_IsFollowedByAReaction_ThroughAFullCycle()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var watched = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain);
             var seen = new List<ScreenState>();
@@ -54,18 +55,18 @@ namespace UniMob.UI.Tests
                 );
 
                 host.Navigator.Push(watched);
-                yield return host.Settle();
+                host.Settle();
 
                 host.Navigator.Push(
                     host.Create("C", RouteModalType.Fullscreen, RouteFlavour.Plain)
                 );
-                yield return host.Settle();
+                host.Settle();
 
                 host.Navigator.TopmostRoute.Pop();
-                yield return host.Settle();
+                host.Settle();
 
                 host.Navigator.TopmostRoute.Pop();
-                yield return host.Settle();
+                host.Settle();
             }
             finally
             {
@@ -97,8 +98,8 @@ namespace UniMob.UI.Tests
         ///     event, after both had already run, with the state they ended at. Pairing each event with
         ///     the state read from inside the callback is what states the difference.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator ScreenEventApplied_ReportsAChainedEventOncePerTransition()
+        [Test]
+        public void ScreenEventApplied_ReportsAChainedEventOncePerTransition()
         {
             var trace = new NavigatorTrace();
             var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
@@ -110,7 +111,7 @@ namespace UniMob.UI.Tests
             route.ApplyScreenEvent(ScreenEvent.Create);
             route.ApplyScreenEvent(ScreenEvent.Focus);
 
-            yield return null;
+            Zone.Pump();
 
             CollectionAssert.AreEqual(
                 new[] { "Create -> Created", "Focus -> Resumed", "Focus -> Focused" },
@@ -129,8 +130,8 @@ namespace UniMob.UI.Tests
         ///     The two endings are told apart by the event, which is the whole reason the event channel
         ///     exists beside the state one.
         /// </summary>
-        [UnityTest]
-        public IEnumerator DestroyAndTeardown_ReachTheSameStateAndReportDifferentCauses()
+        [Test]
+        public void DestroyAndTeardown_ReachTheSameStateAndReportDifferentCauses()
         {
             var trace = new NavigatorTrace();
 
@@ -149,7 +150,7 @@ namespace UniMob.UI.Tests
             tornDown.ApplyScreenEvent(ScreenEvent.Create);
             tornDown.ApplyScreenEvent(ScreenEvent.Teardown);
 
-            yield return null;
+            Zone.Pump();
 
             Assert.AreEqual(ScreenState.Destroyed, removed.ScreenState);
             Assert.AreEqual(
@@ -177,17 +178,17 @@ namespace UniMob.UI.Tests
         ///     Deliberately not on <see cref="INavigatorObserver"/>: teardown is per-route and reaches
         ///     every route at once, so it belongs on the channel that is already per-route.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator Unmount_ReportsTeardownOnEveryLiveRoute()
+        [Test]
+        public void Unmount_ReportsTeardownOnEveryLiveRoute()
         {
             var host = NavigatorHost.Mount("A", RouteModalType.Fullscreen, RouteFlavour.Plain);
-            yield return host.Settle();
+            host.Settle();
 
             var root = host.Navigator.TopmostRoute;
             var pushed = host.Create("B", RouteModalType.Fullscreen, RouteFlavour.Plain);
 
             host.Navigator.Push(pushed);
-            yield return host.Settle();
+            host.Settle();
 
             var endings = new List<string>();
 
@@ -195,7 +196,7 @@ namespace UniMob.UI.Tests
             pushed.ScreenEventApplied += screenEvent => Record(endings, "B", screenEvent);
 
             host.Unmount();
-            yield return host.PumpFrames(3);
+            host.PumpFrames(3);
 
             CollectionAssert.AreEqual(
                 new[] { "B Teardown", "A Teardown" },
@@ -213,11 +214,9 @@ namespace UniMob.UI.Tests
         ///     the machine and abort a navigation half way, which is a much larger consequence than the
         ///     equivalent on the observer channel. Same treatment either way.
         /// </remarks>
-        [UnityTest]
-        public IEnumerator ScreenEventApplied_ContainsASubscriberThatThrows()
+        [Test]
+        public void ScreenEventApplied_ContainsASubscriberThatThrows()
         {
-            LogAssert.ignoreFailingMessages = true;
-
             var trace = new NavigatorTrace();
             var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
             var heard = new List<ScreenEvent>();
@@ -229,7 +228,7 @@ namespace UniMob.UI.Tests
             route.ApplyScreenEvent(ScreenEvent.Create);
             route.ApplyScreenEvent(ScreenEvent.Destroy);
 
-            yield return null;
+            Zone.Pump();
 
             Assert.AreEqual(
                 ScreenState.Destroyed,
@@ -243,6 +242,7 @@ namespace UniMob.UI.Tests
                 heard,
                 "the subscriber after the failing one still heard both"
             );
+            Assert.That(Zone.Faults, Is.Not.Empty, "the failure is reported rather than swallowed");
         }
 
         /// <summary>
@@ -262,12 +262,11 @@ namespace UniMob.UI.Tests
         ///         the loud failure is not a reason to also allow a silent one.
         ///     </para>
         /// </remarks>
-        [UnityTest]
-        public IEnumerator ScreenEventApplied_DoesNotLeakTheRoutesStateIntoTheCaller()
+        [Test]
+        public void ScreenEventApplied_DoesNotLeakTheRoutesStateIntoTheCaller()
         {
             // The transition driven from inside the reaction writes ScreenState while a watched scope is
             // active, which UniMob reports. See the remarks: that is the premise, not a side effect.
-            LogAssert.ignoreFailingMessages = true;
 
             var trace = new NavigatorTrace();
             var route = new TracingRoute(trace, "R", RouteModalType.Fullscreen);
@@ -299,8 +298,8 @@ namespace UniMob.UI.Tests
                     }
                 );
 
-                yield return null;
-                yield return null;
+                Zone.Pump();
+                Zone.Pump();
 
                 Assert.AreEqual(
                     1,
@@ -310,8 +309,8 @@ namespace UniMob.UI.Tests
 
                 route.ApplyScreenEvent(ScreenEvent.Destroy);
 
-                yield return null;
-                yield return null;
+                Zone.Pump();
+                Zone.Pump();
 
                 Assert.AreEqual(
                     1,
@@ -323,6 +322,19 @@ namespace UniMob.UI.Tests
             {
                 lifetime.Dispose();
             }
+            // The core reports this invalidation itself, on Unity's log rather than as a fault. Expected
+            // by its message rather than silenced with ignoreFailingMessages, which would hide any other
+            // message the test started producing.
+            LogAssert.Expect(
+                LogType.Error,
+                new Regex("Invalidation of atom .* in watched scope .* is dangerous")
+            );
+
+            Assert.That(
+                Zone.Faults,
+                Is.Empty,
+                "the invalidation is a log message, not a fault escaping a callback"
+            );
         }
 
         private static void Record(List<string> endings, string key, ScreenEvent screenEvent)
