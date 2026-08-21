@@ -8,6 +8,15 @@ namespace UniMob.UI.Widgets
     public class GestureDetector : SingleChildLayoutWidget
     {
         // Gestures
+
+        /// <summary>
+        /// Called when this detector is tapped, with where the tap landed.
+        /// </summary>
+        /// <remarks>
+        /// Handling a tap also takes the pointer PRESS, so a tap here never presses an ancestor
+        /// button and arrives whichever input module the app installs. Nesting is still not a way to
+        /// share a gesture: the innermost handler takes it and the widget above receives nothing.
+        /// </remarks>
         public Action<TapDetails>? OnTap { get; init; }
         public Action<PointerDetails>? OnPointerDown { get; init; }
         public Action<PointerDetails>? OnPointerUp { get; init; }

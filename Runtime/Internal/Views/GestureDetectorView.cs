@@ -18,6 +18,17 @@ namespace UniMob.UI.Internal.Views
 {
     internal class GestureDetectorView : SingleChildLayoutView<IGestureDetectorState>
     {
+        /// <summary>
+        /// Whether this detector takes the pointer press, and not only what it was asked for. A tap
+        /// handler does, because a tap is the end of a press: leaving the press to be claimed by
+        /// whatever sits above -- a button wrapping this detector -- presses that ancestor for a
+        /// gesture that is not its own, and costs the tap outright under an input module that
+        /// requires one object to own both ends. A drag-only detector claims nothing, so the button
+        /// above it keeps working.
+        /// </summary>
+        internal static bool HandlesPress(IGestureDetectorState state) =>
+            state.OnTap != null || state.OnPointerDown != null || state.OnPointerUp != null;
+
         protected override void Activate()
         {
             base.Activate();
@@ -51,7 +62,7 @@ namespace UniMob.UI.Internal.Views
             }
 
             // 2. Manage PRESS (Down/Up)
-            if (State.OnPointerDown != null || State.OnPointerUp != null)
+            if (HandlesPress(State))
             {
                 if (_pressReceiver == null)
                     _pressReceiver = gameObject.AddComponent<GestureDetectorPressReceiver>();
@@ -92,26 +103,86 @@ namespace UniMob.UI.Internal.Views
         }
     }
 
-    public class GestureDetectorTapReceiver : UIBehaviour, IPointerClickHandler
+    /// <summary>
+    /// What every gesture receiver needs: the canvas its screen points are measured against.
+    /// </summary>
+    public abstract class GestureDetectorReceiver : UIBehaviour
+    {
+        private Canvas? canvas;
+
+        /// <summary>
+        /// Resolved when a gesture arrives rather than when the component is created. A view is
+        /// pooled and reparented, so the canvas above a receiver at construction is not always the
+        /// canvas above it at the tap, and at construction there may be none at all.
+        /// </summary>
+        protected Canvas? Canvas =>
+            this.canvas != null ? this.canvas : this.canvas = this.GetComponentInParent<Canvas>();
+
+        protected override void OnTransformParentChanged()
+        {
+            base.OnTransformParentChanged();
+            this.canvas = null;
+        }
+
+        protected override void OnCanvasHierarchyChanged()
+        {
+            base.OnCanvasHierarchyChanged();
+            this.canvas = null;
+        }
+
+        /// <summary>
+        /// The two points a gesture carries: inside this receiver's own box, and in the canvas. Both
+        /// read zero when there is no canvas to measure against -- which a pointer event should not
+        /// be able to arrive without, so it is reported rather than costing the gesture.
+        /// </summary>
+        protected (Vector2 Local, Vector2 Global) PointsOf(Vector2 screenPoint)
+        {
+            var resolved = this.Canvas;
+            if (resolved == null)
+            {
+                this.ReportMissingCanvas();
+                return (Vector2.zero, Vector2.zero);
+            }
+
+            return (
+                CoordinateUtils.GetLocalPosition(
+                    screenPoint,
+                    (RectTransform)this.transform,
+                    resolved.worldCamera
+                ),
+                CoordinateUtils.GetGlobalPosition(screenPoint, resolved)
+            );
+        }
+
+        /// <summary>Pointer movement in canvas units; zero without a canvas, as <see cref="PointsOf"/>.</summary>
+        protected Vector2 LogicalDeltaOf(Vector2 screenDelta)
+        {
+            var resolved = this.Canvas;
+            if (resolved == null)
+            {
+                this.ReportMissingCanvas();
+                return Vector2.zero;
+            }
+
+            return CoordinateUtils.GetLogicalDelta(screenDelta, resolved);
+        }
+
+        private void ReportMissingCanvas() =>
+            Debug.LogError(
+                $"'{this.name}' received a gesture with no Canvas above it; its position reads as zero.",
+                this
+            );
+    }
+
+    public class GestureDetectorTapReceiver : GestureDetectorReceiver, IPointerClickHandler
     {
         public Action<TapDetails>? OnTap;
-        private Canvas canvas = null!;
-
-        protected override void Awake()
-        {
-            canvas = this.GetComponentInParent<Canvas>();
-        }
 
         public void OnPointerClick(PointerEventData eventData) => OnTap?.Invoke(Convert(eventData));
 
         private TapDetails Convert(PointerEventData eventData)
         {
-            var localPosition = CoordinateUtils.GetLocalPosition(
-                eventData.position,
-                (RectTransform)this.transform,
-                canvas.worldCamera
-            );
-            var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
+            var (localPosition, globalPosition) = this.PointsOf(eventData.position);
             return new TapDetails
             {
                 LocalPosition = localPosition,
@@ -124,26 +195,15 @@ namespace UniMob.UI.Internal.Views
         }
     }
 
-    public class GestureDetectorMoveReceiver : UIBehaviour, IPointerMoveHandler
+    public class GestureDetectorMoveReceiver : GestureDetectorReceiver, IPointerMoveHandler
     {
         public Action<PointerDetails>? OnMove;
-        private Canvas canvas = null!;
-
-        protected override void Awake()
-        {
-            canvas = this.GetComponentInParent<Canvas>();
-        }
 
         public void OnPointerMove(PointerEventData eventData) => OnMove?.Invoke(Convert(eventData));
 
         private PointerDetails Convert(PointerEventData eventData)
         {
-            var localPosition = CoordinateUtils.GetLocalPosition(
-                eventData.position,
-                (RectTransform)this.transform,
-                canvas.worldCamera
-            );
-            var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
+            var (localPosition, globalPosition) = this.PointsOf(eventData.position);
             return new PointerDetails
             {
                 LocalPosition = localPosition,
@@ -157,16 +217,13 @@ namespace UniMob.UI.Internal.Views
     }
 
     // --- PRESS RECEIVER ---
-    public class GestureDetectorPressReceiver : UIBehaviour, IPointerDownHandler, IPointerUpHandler
+    public class GestureDetectorPressReceiver
+        : GestureDetectorReceiver,
+            IPointerDownHandler,
+            IPointerUpHandler
     {
         public Action<PointerDetails>? OnPointerDownDelegate;
         public Action<PointerDetails>? OnPointerUpDelegate;
-        private Canvas canvas = null!;
-
-        protected override void Awake()
-        {
-            this.canvas = this.GetComponentInParent<Canvas>();
-        }
 
         public void OnPointerDown(PointerEventData eventData) =>
             OnPointerDownDelegate?.Invoke(Convert(eventData));
@@ -176,12 +233,7 @@ namespace UniMob.UI.Internal.Views
 
         private PointerDetails Convert(PointerEventData eventData)
         {
-            var localPosition = CoordinateUtils.GetLocalPosition(
-                eventData.position,
-                (RectTransform)this.transform,
-                canvas.worldCamera
-            );
-            var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
+            var (localPosition, globalPosition) = this.PointsOf(eventData.position);
             return new PointerDetails
             {
                 LocalPosition = localPosition,
@@ -196,7 +248,7 @@ namespace UniMob.UI.Internal.Views
 
     // --- DRAG RECEIVER ---
     public class GestureDetectorDragReceiver
-        : UIBehaviour,
+        : GestureDetectorReceiver,
             IBeginDragHandler,
             IDragHandler,
             IEndDragHandler
@@ -204,12 +256,6 @@ namespace UniMob.UI.Internal.Views
         public Action<DragDetails>? OnDragBegin;
         public Action<DragDetails>? OnDragEnd;
         public Action<DragDetails>? OnDragUpdate;
-        private Canvas canvas = null!;
-
-        protected override void Awake()
-        {
-            this.canvas = this.GetComponentInParent<Canvas>();
-        }
 
         // Unity requires Begin/End to exist for IDragHandler to play nicely with ScrollRects
         public void OnBeginDrag(PointerEventData eventData) =>
@@ -222,15 +268,9 @@ namespace UniMob.UI.Internal.Views
         private DragDetails Convert(PointerEventData eventData)
         {
             // 1. Calculate the points
-            // Pass the raw screen position directly to both utilities
-            var localPosition = CoordinateUtils.GetLocalPosition(
-                eventData.position,
-                (RectTransform)this.transform,
-                canvas.worldCamera
-            );
-            var globalPosition = CoordinateUtils.GetGlobalPosition(eventData.position, canvas);
+            var (localPosition, globalPosition) = this.PointsOf(eventData.position);
             // 2. Calculate the deltas
-            var logicalDelta = CoordinateUtils.GetLogicalDelta(eventData.delta, canvas);
+            var logicalDelta = this.LogicalDeltaOf(eventData.delta);
 
             return new DragDetails
             {
