@@ -67,7 +67,9 @@ namespace UniMob.UI.Internal.ViewLoaders
                 return null;
             }
 
-            if (_cache.TryGetValue(name, out var view))
+            // Checked for a destroyed object, not just a cache hit: handing back a view whose
+            // GameObject has gone fails silently and forever, because nothing rebuilds it.
+            if (_cache.TryGetValue(name, out var view) && view is Object alive && alive != null)
             {
                 return view;
             }
@@ -83,13 +85,18 @@ namespace UniMob.UI.Internal.ViewLoaders
 
             if (templatesRootObject == null)
             {
-                // HideAndDontSave rather than DontDestroyOnLoad, which throws outside play mode.
-                // Registered views are built from source, so resolving one needs no scene and no
-                // running game -- only this call made it a play-mode-only operation.
                 templatesRootObject = new GameObject("UniMob Runtime View Templates")
                 {
                     hideFlags = HideFlags.HideAndDontSave,
                 };
+
+                // Both, as WidgetGeometryTicker does: the flags keep it out of the scene and the
+                // hierarchy, and DontDestroyOnLoad moves it out of the active scene so a scene load
+                // cannot take the templates with it. Guarded because it throws outside play mode.
+                if (Application.isPlaying)
+                {
+                    Object.DontDestroyOnLoad(templatesRootObject);
+                }
             }
 
             var template = factory.Create();
@@ -97,7 +104,7 @@ namespace UniMob.UI.Internal.ViewLoaders
 
             view = template.GetComponent<IView>();
 
-            _cache.Add(name, view);
+            _cache[name] = view;
 
             return view;
         }
