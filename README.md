@@ -61,7 +61,7 @@ exception rather than a default.
 
 ```csharp
 using UniMob.UI;
-using UniMob.UI.Layout.Internal.RenderObjects;
+using UniMob.UI.Rendering;
 
 public class CounterWidget : StatefulWidget
 {
@@ -87,7 +87,8 @@ using UniMob.UI;
 
 public class CounterState : ViewState<CounterWidget>, ICounterState
 {
-    // Where to load the view from; supports a direct prefab link, Resources and Addressables.
+    // Where the view comes from: a direct prefab link, Resources, Addressables, or a view
+    // registered in source with WidgetViewReference.Registered(name).
     public override WidgetViewReference View => WidgetViewReference.Resource("Prefabs/Counter View");
 
     [Atom] public int Counter { get; private set; }
@@ -209,8 +210,27 @@ private Widget BuildDailyOffer(string offerId)
 >
 > **[Builder](./Runtime/Widgets/Builder.cs)** -- build a subtree inline from a delegate.
 
-Conventions for adding a widget, and the vocabulary the layout system uses, are in
-[Runtime/Layout/README.md](./Runtime/README.md).
+Conventions for adding a widget are in [Runtime/README.md](./Runtime/README.md), and the words this
+package uses in a specific sense are in [CONTEXT.md](./CONTEXT.md).
+
+## Testing
+
+`UniMob.UI.Testing` is a consumable assembly, constrained to `UNITY_INCLUDE_TESTS` so nothing in it
+reaches a player build. It carries `TestZone`, a frame clock a test drives by hand, so a test that
+needs frames does not need a play-mode transition:
+
+```csharp
+using var zone = TestZone.Install();
+
+var state = TestHarness.Mount(new CounterWidget());
+TestHarness.Layout(state, LayoutConstraints.Loose(1000, 1000));
+
+zone.PumpFrames(30);       // 30 frames at 1/60
+zone.Settle();             // or: pump until nothing is left to do
+```
+
+`RecordingReporter` and `RecordingErrors` capture layout issues and faults for the length of a
+`using` block, so a test asserts on what went wrong rather than on Unity's console.
 
 ## How to install
 
