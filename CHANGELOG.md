@@ -25,9 +25,9 @@ API and follow semantic versioning.
 `UniMob.UI.Testing` is a consumable assembly rather than a test assembly, and follows semantic
 versioning with the rest of the public API.
 
-`UniMob.UI.Internal`, `UniMob.UI.Internal.Views`, `UniMob.UI.Diagnostics` and `UniMob.UI.DevTools`
-are the extension surface. They are public on purpose, so that a consumer can write its own views
-and diagnostics, but they are not covered by the version promise and may change in a minor release.
+`UniMob.UI.Internal`, `UniMob.UI.Internal.Views` and `UniMob.UI.Diagnostics` are the extension
+surface. They are public on purpose, so that a consumer can write its own views and diagnostics, but
+they are not covered by the version promise and may change in a minor release.
 
 ### Added
 
@@ -111,6 +111,9 @@ Every entry in this section is a breaking change.
   no longer compiles.
 - `Resources/Layout/UniMob.Text.prefab`. `Resources/Layout/UniMob.ScrollList.prefab` remains; its
   template is an eleven-object hierarchy wired into `ScrollRect.content`.
+- `UniMob.UI.DevTools.WidgetCapture`, and with it the `UniMob.UI.DevTools` namespace. Rendering a
+  widget tree to a PNG is a test-harness job, and doing it from `Runtime` is what gave it a frame
+  count for a settle. `UniMob.UI.Testing.WidgetSnapshotter` replaces it.
 
 ### Fixed
 
