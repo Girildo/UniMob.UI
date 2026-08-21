@@ -48,7 +48,10 @@ and diagnostics, but they are not covered by the version promise and may change 
   `PumpFor`, and a `Settle` that asks whether anything is left to do rather than counting quiet
   frames. `TestHarness` mounts and lays out a widget with no GameObject involved.
   `RecordingReporter` and `RecordingErrors` capture layout issues and faults for the length of a
-  scope. The assembly is constrained to `UNITY_INCLUDE_TESTS`, so none of it reaches a player build.
+  scope. `WidgetSnapshotter` renders a widget tree to a PNG by mounting it the
+  way `UniMobUI.RunApp` mounts any tree, and fails the capture when a font cannot draw a
+  character the tree asks for. The assembly is constrained to `UNITY_INCLUDE_TESTS`, so none of
+  it reaches a player build.
 - **`UniMobError`**, the one place an exception caught on a caller's behalf is reported, mirroring
   `UniMobDiagnostics`: `IErrorReporter`, `UniMobFault`, and an `Override` that restores the previous
   reporter when its scope is disposed. An app can route faults to its own crash reporting.

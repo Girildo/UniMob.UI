@@ -47,7 +47,11 @@ namespace UniMob
         protected bool HasActiveTickers => _tickers.Count > 0;
 
         /// <summary>Whether anything is queued for the next frame.</summary>
-        protected bool NextFrameQueueEmpty => _nextFrame.Count == 0;
+        /// <remarks>
+        ///     Wider than <see cref="HasActiveTickers"/> because a harness driving the real clock has
+        ///     to ask this of <see cref="Current"/>, which it cannot derive from.
+        /// </remarks>
+        protected internal bool NextFrameQueueEmpty => _nextFrame.Count == 0;
 
         /// <summary>
         ///     Registers <paramref name="ticker"/> to run every frame, given the seconds since the last.

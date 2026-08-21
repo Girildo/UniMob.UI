@@ -44,3 +44,10 @@ against it.
 
 Almost everything runs in EditMode. `Tests/Runtime` holds exactly one fixture, and it exists to prove
 the real frame driver drives -- the one thing a fake clock cannot establish about itself.
+
+`WidgetSnapshotter` is the exception that keeps the PlayMode assembly earning its place: it renders a
+mounted tree through a camera, which needs the real player loop. It settles on real frames rather
+than through `TestZone`, and on a narrower condition -- the scheduler is idle and the next-frame
+queue is empty, with tickers excluded. `UniMobUI.RunApp` always mounts a `UniMobDeviceWidget`, whose
+ticker polls the screen for as long as the tree is mounted, so `IsSettled` would never come true for
+anything hosted the way the app hosts it.
