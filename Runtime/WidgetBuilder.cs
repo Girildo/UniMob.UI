@@ -1,3 +1,5 @@
+using System;
+
 namespace UniMob.UI
 {
     /// <summary>
@@ -6,4 +8,18 @@ namespace UniMob.UI
     /// </summary>
     public delegate TWidget WidgetBuilder<out TWidget>(BuildContext context)
         where TWidget : Widget?;
+
+    /// <summary>
+    /// Builds the widget for one slot from a piece of local state and a setter that replaces it.
+    /// Calling <paramref name="setState"/> stores the new value and rebuilds the slot.
+    /// </summary>
+    /// <remarks>
+    /// <typeparamref name="TState"/> is invariant: it is read as a value and written through
+    /// <see cref="Action{T}"/>.
+    /// </remarks>
+    public delegate Widget StatefulWidgetBuilder<TState>(
+        BuildContext context,
+        TState state,
+        Action<TState> setState
+    );
 }

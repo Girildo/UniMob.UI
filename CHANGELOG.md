@@ -31,6 +31,12 @@ they are not covered by the version promise and may change in a minor release.
 
 ### Added
 
+- `StatefulBuilder<TState>`, a builder that owns one piece of local state, and the
+  `StatefulWidgetBuilder<TState>` delegate it takes. `Builder` covers a subtree built from a
+  closure; this covers the same thing when that subtree needs a value of its own, without declaring
+  a widget and a state class for one flag. The builder receives the current value and a setter that
+  replaces it. `InitialValue` seeds the state on the first build only; a different `Key` replaces
+  the state and seeds it again.
 - View registration is public, so a view can be declared in source from any assembly instead of
   shipping a prefab under `Resources/`: `IViewFactory`, `RegisterViewFactoryAttribute`,
   `RegisterComponentViewFactoryAttribute`, `RegisterCustomViewFactoryAttribute`, and
