@@ -73,6 +73,9 @@ Every entry in this section is a breaking change.
   with different sizing behaviour, so a stray `using` picked the wrong one and failed as a
   wrong-sized box rather than a compile error. `UniMob.UI.Layout` is gone and each name now resolves
   to exactly one type.
+- **`ConstrainedBuilderDelegate<T>` is now `ConstrainedWidgetBuilder<TWidget>`.** It was the only
+  builder delegate in the package named `...Delegate` rather than `...Builder`, and the only one
+  whose type parameter was not named for what it produces.
 - **A widget owns its state.** `Widget.CreateState()` returns a non-null `State` and
   `StatefulWidget.CreateState()` is abstract, so a widget that never declares its state fails to
   compile rather than at first mount. Null previously meant "ask an ancestor for one", which made

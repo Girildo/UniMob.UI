@@ -7,11 +7,12 @@ using UniMob.UI.Rendering;
 
 namespace UniMob.UI.Widgets
 {
-    public delegate T ConstrainedBuilderDelegate<out T>(
+    /// <summary>Builds the widget for one slot from the constraints that slot was given.</summary>
+    public delegate TWidget ConstrainedWidgetBuilder<out TWidget>(
         BuildContext context,
         LayoutConstraints constraints
     )
-        where T : Widget;
+        where TWidget : Widget;
 
     public class ConstrainedBuilder : SingleChildLayoutWidget
     {
@@ -19,7 +20,7 @@ namespace UniMob.UI.Widgets
         /// Builds the child from the constraints this widget is given. Without one there is no
         /// child, which is the same thing as building nothing.
         /// </summary>
-        public ConstrainedBuilderDelegate<Widget>? Builder { get; init; }
+        public ConstrainedWidgetBuilder<Widget>? Builder { get; init; }
 
         public override State CreateState() => new ConstrainedBuilderState();
 

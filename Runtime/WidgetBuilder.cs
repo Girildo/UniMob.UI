@@ -9,6 +9,9 @@ namespace UniMob.UI
     public delegate TWidget WidgetBuilder<out TWidget>(BuildContext context)
         where TWidget : Widget?;
 
+    /// <summary>Builds the widget at one index of a list.</summary>
+    public delegate Widget IndexedWidgetBuilder(BuildContext context, int index);
+
     /// <summary>
     /// Builds the widget for one slot from a piece of local state and a setter that replaces it.
     /// Calling <paramref name="setState"/> stores the new value and rebuilds the slot.
