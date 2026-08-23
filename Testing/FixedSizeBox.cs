@@ -18,8 +18,6 @@ namespace UniMob.UI.Tests
         public System.Type Type => typeof(FixedSizeBox);
         public Key Key { get; set; }
 
-        public State CreateState(StateProvider provider) => null;
-
         public State CreateState() => new FixedSizeBoxState();
 
         public RenderObject CreateRenderObject(BuildContext context, IState state) =>

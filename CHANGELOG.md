@@ -67,6 +67,10 @@ Every entry in this section is a breaking change.
   with different sizing behaviour, so a stray `using` picked the wrong one and failed as a
   wrong-sized box rather than a compile error. `UniMob.UI.Layout` is gone and each name now resolves
   to exactly one type.
+- **A widget owns its state.** `Widget.CreateState()` returns a non-null `State` and
+  `StatefulWidget.CreateState()` is abstract, so a widget that never declares its state fails to
+  compile rather than at first mount. Null previously meant "ask an ancestor for one", which made
+  every inflation branch on a case the signature could not rule out.
 - **Namespaces name what they hold.** Widgets are in `UniMob.UI.Widgets`, render objects and
   `LayoutConstraints` in `UniMob.UI.Rendering`, `Navigator`/`Route`/`ViewPanel` in
   `UniMob.UI.Navigation`, views and pooling in `UniMob.UI.Internal`. Render objects are no longer
@@ -114,6 +118,13 @@ Every entry in this section is a breaking change.
 - `UniMob.UI.DevTools.WidgetCapture`, and with it the `UniMob.UI.DevTools` namespace. Rendering a
   widget tree to a PNG is a test-harness job, and doing it from `Runtime` is what gave it a frame
   count for a settle. `UniMob.UI.Testing.WidgetSnapshotter` replaces it.
+- The state registry: `StateProvider`, `IStateProvider`, `IStateProviderSource` and
+  `StateProviderWidget`. It deferred the choice of which `State` backs a widget to a type-keyed
+  registry, but every injection point took the concrete `StateProvider`, so a consumer's own
+  `IStateProvider` could not reach a tree. The decision worth deferring is what a state can reach,
+  which is what ancestor lookup already answers. `Widget.CreateState(StateProvider)` goes with it,
+  `UniMobUI.RunApp` and `UniMobDeviceWidget` lose their provider parameter, and
+  `UniMobUIApp.StateProvider` is gone.
 
 ### Fixed
 

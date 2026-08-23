@@ -9,7 +9,6 @@ namespace UniMob.UI
     {
         public static void RunApp(
             Lifetime lifetime,
-            StateProvider stateProvider,
             ViewPanel root,
             WidgetBuilder<Widget> builder,
             string? debugName = null
@@ -28,7 +27,7 @@ namespace UniMob.UI
                 ctx =>
                 {
                     var child = builder.Invoke(ctx);
-                    return new UniMobDeviceWidget(child, root.gameObject, stateProvider);
+                    return new UniMobDeviceWidget(child, root.gameObject);
                 }
             );
 

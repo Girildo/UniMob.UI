@@ -5,21 +5,19 @@ namespace UniMob.UI
 {
     public class UniMobDeviceWidget : StatefulWidget
     {
-        public UniMobDeviceWidget(Widget child, GameObject root, StateProvider stateProvider)
+        public UniMobDeviceWidget(Widget child, GameObject root)
         {
             Child = child;
             Root = root;
-            StateProvider = stateProvider;
         }
 
         public Widget Child { get; }
         public GameObject Root { get; }
-        public StateProvider StateProvider { get; }
 
         public override State CreateState() => new UniMobDeviceState();
     }
 
-    public class UniMobDeviceState : HocState<UniMobDeviceWidget>, IStateProviderSource
+    public class UniMobDeviceState : HocState<UniMobDeviceWidget>
     {
         private RectInt _lastFullArea;
         private RectInt _lastSafeArea;
@@ -30,10 +28,6 @@ namespace UniMob.UI
 
         [Atom]
         public float Scale { get; private set; }
-
-        public StateProvider StateProvider => Widget.StateProvider;
-
-        IStateProvider IStateProviderSource.StateProvider => StateProvider;
 
         public override Widget Build(BuildContext context)
         {

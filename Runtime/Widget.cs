@@ -10,8 +10,11 @@ namespace UniMob.UI
 
         Key? Key { get; }
 
-        State? CreateState(StateProvider provider);
-        State? CreateState();
+        /// <summary>
+        /// Creates the mutable state that backs this widget while it stays in the tree. Called once,
+        /// when the widget is inflated; an update reuses the state and never calls this again.
+        /// </summary>
+        State CreateState();
 
         /// <summary>
         /// Creates the lightweight RenderObject responsible for layout calculations.

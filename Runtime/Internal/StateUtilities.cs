@@ -218,21 +218,13 @@ namespace UniMob.UI.Internal
                 throw new ArgumentNullException(nameof(newWidget));
             Assert.IsNull(Atom.CurrentScope);
 
-            var newChild = newWidget.CreateState();
-            if (newChild == null)
-            {
-                var providerSource = context.FindAncestorStateImplementing<IStateProviderSource>();
-                if (providerSource != null)
-                {
-                    newChild = providerSource.StateProvider.Of(newWidget);
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        $"Widget {newWidget} requires a StateProvider, but no IStateProviderSource was found in the context."
-                    );
-                }
-            }
+            // CreateState is public and non-null only by annotation, so a consumer's widget can
+            // still hand back null. Guarded here it names the widget; unguarded, Mount throws an NRE.
+            var newChild =
+                newWidget.CreateState()
+                ?? throw new InvalidOperationException(
+                    $"{newWidget.Type.Name}.CreateState() returned null. Every widget owns its state."
+                );
 
             newChild.Mount(context);
             newChild.Update(newWidget);

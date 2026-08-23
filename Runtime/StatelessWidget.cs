@@ -27,8 +27,6 @@ namespace UniMob.UI
         /// <inheritdoc/>
         public virtual string? GetDiagnosticInfo() => null;
 
-        public State? CreateState(StateProvider provider) => null;
-
         public State CreateState()
         {
             return new StatelessElement(this);

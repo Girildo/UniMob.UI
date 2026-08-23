@@ -330,7 +330,7 @@ namespace UniMob.UI.Tests
 
             var panel = panelGo.AddComponent<ViewPanel>();
 
-            UniMobUI.RunApp(this.lifetime.Lifetime, new StateProvider(), panel, builder);
+            UniMobUI.RunApp(this.lifetime.Lifetime, panel, builder);
         }
 
         /// <summary>

@@ -48,23 +48,6 @@ namespace UniMob.UI
 
             return root;
         }
-
-        internal T? FindAncestorStateImplementing<T>()
-            where T : class
-        {
-            var ancestor = this;
-
-            while (ancestor != null)
-            {
-                if (ancestor.State is T implementingState)
-                {
-                    return implementingState;
-                }
-                ancestor = ancestor.Parent;
-            }
-
-            return null;
-        }
     }
 
     public class MutableBuildContext : BuildContext

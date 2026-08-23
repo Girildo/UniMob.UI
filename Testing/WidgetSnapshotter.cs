@@ -205,7 +205,7 @@ namespace UniMob.UI.Tests
         }
 
         private void Mount(LifetimeController mount, Widget root) =>
-            UniMobUI.RunApp(mount.Lifetime, new StateProvider(), _panel, _ => root);
+            UniMobUI.RunApp(mount.Lifetime, _panel, _ => root);
 
         /// <summary>Lays the tree out, fills the atlases, checks them, and writes the picture.</summary>
         /// <remarks>

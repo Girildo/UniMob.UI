@@ -11,15 +11,8 @@ namespace UniMob.UI
 
         public Key? Key { get; init; }
 
-        public virtual State? CreateState(StateProvider provider)
-        {
-            return provider.Of(this);
-        }
-
-        public virtual State? CreateState()
-        {
-            return null;
-        }
+        /// <inheritdoc/>
+        public abstract State CreateState();
 
         /// <summary>
         /// Creates the lightweight RenderObject responsible for layout calculations.
