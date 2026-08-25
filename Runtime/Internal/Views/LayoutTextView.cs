@@ -5,6 +5,7 @@ using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UniMob.UI.Widgets;
+using Unity.Profiling;
 using UnityEngine;
 
 [assembly: RegisterComponentViewFactory(
@@ -85,13 +86,26 @@ namespace UniMob.UI.Internal.Views
             if (text == null)
                 return;
 
+            // Assigning only marks TMP dirty. The mesh rebuild it provokes is deferred to the canvas
+            // update later in the frame, where TMP's own markers already account for it -- so there is
+            // deliberately no marker here to imply otherwise.
             text.text = State.Value;
+
             // Sampled here rather than in Build: AnimationController.Value is an atom and Render is a
             // reactive scope, so a tick re-runs only this method and writes one colour.
             text.color = State.AnimatedColor.Value;
             text.fontSize = State.FontSize;
             text.fontWeight = State.FontWeight;
-            text.textStyle = State.Style;
+
+            // Guarded, unlike every other property here, because TMP's textStyle setter is the one that
+            // does not guard itself: it sets havePropertiesChanged and calls SetVerticesDirty and
+            // SetLayoutDirty unconditionally, so assigning the style a text already has still schedules
+            // a full regeneration. Render re-runs on every layout pass, so writing it straight through
+            // regenerates every visible label every frame -- the whole cost of a scroll.
+            if (!ReferenceEquals(text.textStyle, State.Style))
+            {
+                text.textStyle = State.Style;
+            }
             text.textWrappingMode = State.WrappingEnabled
                 ? TextWrappingModes.Normal
                 : TextWrappingModes.NoWrap;
@@ -164,8 +178,33 @@ namespace UniMob.UI.Internal.Views
                 return;
             }
 
-            var needed = text.GetPreferredValues(State.Value, box.x, float.PositiveInfinity);
-            var shortfall = needed.y - box.y;
+            // Nothing the answer depends on has moved, so the answer cannot have moved either.
+            // Load-bearing for frame cost, not just tidiness: Render runs inside a reactive scope that
+            // reads WatchLayout, so it re-runs on every layout pass, and GetPreferredValues re-parses
+            // the whole string into the component's buffers on every call with no cache of its own.
+            // Without this guard a scrolling list pays a full text-processing pass per visible label
+            // per frame for a diagnostic that had already decided.
+            if (
+                _lastCheckedValue == State.Value
+                && _lastCheckedBox == box
+                && _lastCheckedFontSize == State.FontSize
+                && ReferenceEquals(_lastCheckedStyle, State.Style)
+            )
+            {
+                return;
+            }
+
+            _lastCheckedValue = State.Value;
+            _lastCheckedBox = box;
+            _lastCheckedFontSize = State.FontSize;
+            _lastCheckedStyle = State.Style;
+
+            float shortfall;
+            using (TextFitDiagnosticMarker.Auto())
+            {
+                shortfall =
+                    text.GetPreferredValues(State.Value, box.x, float.PositiveInfinity).y - box.y;
+            }
 
             if (shortfall <= LayoutConstants.OverflowTolerance)
             {
@@ -197,5 +236,17 @@ namespace UniMob.UI.Internal.Views
             + "Give it more room, or find why the measurement and the renderer disagree.";
 
         private bool _reportedNotFitting;
+
+        private string? _lastCheckedValue;
+        private Vector2 _lastCheckedBox;
+        private int _lastCheckedFontSize;
+        private TMP_Style? _lastCheckedStyle;
+
+        // Named so a Profiler capture can tell this apart from the deferred canvas rebuild: TMP's own
+        // markers nest inside this one when the cost is ours, and sit outside it when the cost is the
+        // rebuild. Measurement is marked separately, in RenderText.
+        private static readonly ProfilerMarker TextFitDiagnosticMarker = new(
+            "UniMob.Text.FitDiagnostic"
+        );
     }
 }
