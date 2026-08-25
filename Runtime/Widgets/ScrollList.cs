@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
@@ -116,7 +119,24 @@ namespace UniMob.UI.Widgets
                 {
                     var key = children[i]?.Key;
                     if (key != null)
-                        _childKeyToIndexMap.Add(key, i);
+                    {
+                        try
+                        {
+                            _childKeyToIndexMap.Add(key, i);
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            UniMobError.Report(
+                                new(
+                                    ex,
+                                    "ScrollList: duplicate child key detected. Each child of a ScrollList must have a unique Key.",
+                                    this
+                                )
+                            );
+                            children.Clear();
+                            return children;
+                        }
+                    }
                 }
 
                 return children;
