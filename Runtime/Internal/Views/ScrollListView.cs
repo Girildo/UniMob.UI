@@ -60,21 +60,24 @@ namespace UniMob.UI.Internal.Views
             var isHorizontal = State.Axis == Axis.Horizontal;
             ApplyPixelOffsetToScrollRect(State.ScrollController.PixelOffset, isHorizontal);
 
-            Atom.Reaction(
-                StateLifetime,
-                () =>
-                {
-                    var controllerValue = State.ScrollController.PixelOffset;
-                    var currentValue = ReadPixelOffsetFromScrollRect(isHorizontal);
+            Atom.Reaction(StateLifetime, () => SyncScrollRectToController(isHorizontal));
+        }
 
-                    if (Mathf.Abs(currentValue - controllerValue) > 0.5f)
-                    {
-                        _isUpdatingFromController = true;
-                        ApplyPixelOffsetToScrollRect(controllerValue, isHorizontal);
-                        Zone.Current.NextFrame(() => _isUpdatingFromController = false);
-                    }
-                }
-            );
+        // Moves the ScrollRect onto the controller's pixel offset when the two disagree. The offset is
+        // the one the render object builds its window for, so a ScrollRect anywhere else shows a
+        // region nothing was built for. Reads the controller's atom, so a reaction calling this
+        // tracks it.
+        private void SyncScrollRectToController(bool isHorizontal)
+        {
+            var controllerValue = State.ScrollController.PixelOffset;
+            var currentValue = ReadPixelOffsetFromScrollRect(isHorizontal);
+
+            if (Mathf.Abs(currentValue - controllerValue) <= 0.5f)
+                return;
+
+            _isUpdatingFromController = true;
+            ApplyPixelOffsetToScrollRect(controllerValue, isHorizontal);
+            Zone.Current.NextFrame(() => _isUpdatingFromController = false);
         }
 
         // Total distance, in pixels, the content can scroll along the given axis. The ScrollRect's own
@@ -199,9 +202,21 @@ namespace UniMob.UI.Internal.Views
 
             var currentSize = isHorizontal ? contentRoot.rect.width : contentRoot.rect.height;
             if (Mathf.Abs(currentSize - totalContentSize) > 0.01f)
+            {
                 contentRoot.sizeDelta = isHorizontal
                     ? new Vector2(totalContentSize, contentRoot.sizeDelta.y)
                     : new Vector2(contentRoot.sizeDelta.x, totalContentSize);
+
+                // A ScrollRect keeps its normalized position across a resize, which moves it in
+                // pixels; and a view activated before its content had a size could not apply the
+                // controller's offset at all. Either way the window was built for the controller's
+                // offset, so the ScrollRect goes back onto it. Unwatched: the reaction started in
+                // Activate already follows the controller, and a render pass must not.
+                using (Atom.NoWatch)
+                {
+                    SyncScrollRectToController(isHorizontal);
+                }
+            }
 
             using (var render = _mapper.CreateRender())
             {
