@@ -37,8 +37,13 @@ namespace UniMob.UI.Internal
         // items that scrolled out of the build window (unless the owner supplies its own key resolver).
         private readonly Dictionary<Key, int> _seenKeyToIndex = new();
 
-        // Scratch buffer for BuildWindow's eviction pass, reused to avoid per-call allocation.
-        private readonly List<int> _evictionScratch = new();
+        // Scratch buffers for BuildWindow, reused to avoid per-call allocation. The widgets the builder
+        // returned for the window, the State each of them claimed, and the built States not yet claimed,
+        // split by whether they can be found by key or only by the slot they were built at.
+        private readonly List<Widget> _windowWidgetsScratch = new();
+        private readonly List<State?> _claimedScratch = new();
+        private readonly Dictionary<Key, State> _unclaimedByKeyScratch = new();
+        private readonly Dictionary<int, State> _unclaimedBySlotScratch = new();
 
         // The [start, end) window the render object currently wants built. A MutableAtom, not a plain field,
         // so re-writing the SAME range (the common case: RequestBuildWindow fires every scroll tick, but
@@ -149,62 +154,34 @@ namespace UniMob.UI.Internal
             return visible;
         }
 
-        // Pull body of _builtWindow: evicts indices now outside the window and (re)builds ItemBuilder's
-        // widgets for it. Reads _buildWindowRange.Value directly (not via parameters) so it runs as tracked
-        // atom evaluation -- see _builtWindow's field doc.
+        // Pull body of _builtWindow: (re)builds ItemBuilder's widgets for the window and reconciles them
+        // against the States built so far. Reads _buildWindowRange.Value directly (not via parameters) so
+        // it runs as tracked atom evaluation -- see _builtWindow's field doc.
         private IState[] BuildWindow()
         {
             var (startIndexInclusive, endIndexExclusive) = _buildWindowRange.Value;
 
-            _evictionScratch.Clear();
-            foreach (var index in _builtStates.Keys)
-            {
-                if (index < startIndexInclusive || index >= endIndexExclusive)
-                    _evictionScratch.Add(index);
-            }
-
             // Read the current builder OUTSIDE NoWatch so the widget is tracked (a widget swap must rebuild).
             var itemBuilder = _itemBuilder();
 
-            // Only reconciliation (UpdateChild/DeactivateChild) goes in NoWatch -- it asserts it isn't inside
-            // a tracked scope, and this method IS _builtWindow's tracked pull. ItemBuilder must stay OUTSIDE
-            // NoWatch (see the build loop below): it reads arbitrary reactive state (e.g. a ViewModel [Atom]
-            // "IsSelected" flag), and that read must be tracked as a dependency of _builtWindow so a later
-            // change re-runs the current window even if its index range never moves.
-            using (Atom.NoWatch)
-            {
-                foreach (var index in _evictionScratch)
-                {
-                    StateUtilities.DeactivateChild(_builtStates[index]);
-                    _builtStates.Remove(index);
-                }
-            }
-
             // Re-run ItemBuilder for every index in the window each time this pull fires (not just
-            // newly-entering ones) -- like the eager Children path re-diffing its whole list. UpdateChild is
-            // cheap when unchanged (returns the same State) and rebuilds just the slots whose Key/Type moved.
-            // No builder is the eager path, which reaches here only with an empty window.
+            // newly-entering ones) -- like the eager Children path re-diffing its whole list. It must stay
+            // OUTSIDE NoWatch: it reads arbitrary reactive state (e.g. a ViewModel [Atom] "IsSelected"
+            // flag), and that read must be tracked as a dependency of _builtWindow so a later change
+            // re-runs the current window even if its index range never moves. No builder is the eager
+            // path, which reaches here only with an empty window.
+            _windowWidgetsScratch.Clear();
             if (itemBuilder != null)
             {
                 for (var index = startIndexInclusive; index < endIndexExclusive; index++)
-                {
-                    var widget = itemBuilder(_itemBuildContext, index);
+                    _windowWidgetsScratch.Add(itemBuilder(_itemBuildContext, index));
+            }
 
-                    using (Atom.NoWatch)
-                    {
-                        var built = StateUtilities.UpdateChild(
-                            _itemBuildContext,
-                            _builtStates.GetValueOrDefault(index),
-                            widget
-                        );
-                        // Never null: IndexedWidgetBuilder returns a widget, and UpdateChild answers
-                        // null only for a null one.
-                        _builtStates[index] = built!;
-
-                        if (built!.Key != null)
-                            _seenKeyToIndex[built.Key] = index;
-                    }
-                }
+            // Only reconciliation (UpdateChild/DeactivateChild) goes in NoWatch -- it asserts it isn't inside
+            // a tracked scope, and this method IS _builtWindow's tracked pull.
+            using (Atom.NoWatch)
+            {
+                Reconcile(startIndexInclusive, _windowWidgetsScratch);
             }
 
             var result = new IState[endIndexExclusive - startIndexInclusive];
@@ -212,6 +189,82 @@ namespace UniMob.UI.Internal
                 result[index - startIndexInclusive] = _builtStates[index];
 
             return result;
+        }
+
+        // Matches the window's widgets to the built States and replaces _builtStates with the outcome.
+        // A keyed widget claims the State carrying its key wherever that State was built, so an item
+        // inserted, removed or reordered above the window shifts every slot without rebuilding any of
+        // them. An unkeyed widget can only claim the State at its own slot. States nothing claimed are
+        // deactivated: those that left the window, and those whose key or type no longer matches.
+        private void Reconcile(int startIndexInclusive, List<Widget> widgets)
+        {
+            _unclaimedByKeyScratch.Clear();
+            _unclaimedBySlotScratch.Clear();
+            foreach (var pair in _builtStates)
+            {
+                // A key shared by two built States can only be found by slot: indexing the second
+                // under the same key would shadow the first, and a State in neither map is never
+                // deactivated.
+                if (pair.Value.Key is { } key && _unclaimedByKeyScratch.TryAdd(key, pair.Value))
+                    continue;
+
+                _unclaimedBySlotScratch[pair.Key] = pair.Value;
+            }
+
+            _claimedScratch.Clear();
+            for (var i = 0; i < widgets.Count; i++)
+            {
+                var widget = widgets[i];
+                State? claimed = null;
+
+                if (widget.Key is { } key)
+                {
+                    if (
+                        _unclaimedByKeyScratch.TryGetValue(key, out var byKey)
+                        && StateUtilities.CanUpdateWidget(byKey.RawWidget, widget)
+                    )
+                    {
+                        _unclaimedByKeyScratch.Remove(key);
+                        claimed = byKey;
+                    }
+                }
+                else if (_unclaimedBySlotScratch.Remove(startIndexInclusive + i, out var bySlot))
+                {
+                    claimed = bySlot;
+                }
+
+                _claimedScratch.Add(claimed);
+            }
+
+            // Deactivated before anything is inflated: a GlobalKey handed from an outgoing State to an
+            // incoming one is cleared by the outgoing State's disposal, which must not run after the
+            // incoming one has registered itself.
+            foreach (var state in _unclaimedByKeyScratch.Values)
+                StateUtilities.DeactivateChild(state);
+            foreach (var state in _unclaimedBySlotScratch.Values)
+                StateUtilities.DeactivateChild(state);
+            _unclaimedByKeyScratch.Clear();
+            _unclaimedBySlotScratch.Clear();
+
+            _builtStates.Clear();
+            for (var i = 0; i < widgets.Count; i++)
+            {
+                var index = startIndexInclusive + i;
+
+                // Never null: IndexedWidgetBuilder returns a widget, and UpdateChild answers null only
+                // for a null one. An unkeyed claim whose type changed is replaced here, by UpdateChild.
+                var built = StateUtilities.UpdateChild(
+                    _itemBuildContext,
+                    _claimedScratch[i],
+                    widgets[i]
+                )!;
+                _builtStates[index] = built;
+
+                if (built.Key != null)
+                    _seenKeyToIndex[built.Key] = index;
+            }
+
+            _claimedScratch.Clear();
         }
 
         private void DeactivateBuiltStates()

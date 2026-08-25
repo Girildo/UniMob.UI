@@ -155,5 +155,147 @@ namespace UniMob.UI.Tests
             );
             Assert.AreEqual(0, builtIndices.Count, "the old ItemBuilder must not run again");
         }
+
+        // A lazy list whose items carry keys must reconcile by those keys, the way the eager Children
+        // path does: a State follows its key to a new slot instead of being rebuilt because the slot it
+        // sat in now shows a different key. The builder below reads a mutable id list, so a test can
+        // insert, remove or reorder items and rebuild the same window.
+        private static (ISliverState state, System.Action rebuild) MountKeyedList(List<int> ids)
+        {
+            ScrollList Build() =>
+                new ScrollList
+                {
+                    ItemCount = ids.Count,
+                    ItemBuilder = (context, index) =>
+                        new FixedSizeBox { Key = Key.Of(ids[index]), Size = new Vector2(10, 10) },
+                };
+
+            var state = (ISliverState)TestHarness.Mount(Build());
+            return (state, () => TestHarness.Update((State)state, Build()));
+        }
+
+        [Test]
+        public void ItemInsertedAboveWindow_KeepsTheStatesOfTheKeysStillInWindow()
+        {
+            var ids = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            var (state, rebuild) = MountKeyedList(ids);
+
+            var before = state.RequestBuildWindow(0, 5); // keys 0..4 at slots 0..4
+
+            ids.Insert(0, 100);
+            rebuild();
+            var after = state.RequestBuildWindow(0, 5); // keys 100,0,1,2,3 at slots 0..4
+
+            Assert.AreEqual(Key.Of(100), after[0].Key, "the inserted item occupies slot 0");
+            for (var i = 0; i < 4; i++)
+            {
+                Assert.AreSame(
+                    before[i],
+                    after[i + 1],
+                    $"key {i} moved from slot {i} to slot {i + 1} and must keep its State"
+                );
+            }
+
+            Assert.IsFalse(
+                after.Any(s => s.StateLifetime.IsDisposed),
+                "no State in the new window may be disposed"
+            );
+            Assert.IsTrue(
+                before[4].StateLifetime.IsDisposed,
+                "key 4 was pushed out of the window and must be deactivated"
+            );
+        }
+
+        [Test]
+        public void ItemRemovedAboveWindow_KeepsTheStatesOfTheKeysStillInWindow()
+        {
+            var ids = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            var (state, rebuild) = MountKeyedList(ids);
+
+            var before = state.RequestBuildWindow(0, 5); // keys 0..4 at slots 0..4
+
+            ids.RemoveAt(0);
+            rebuild();
+            var after = state.RequestBuildWindow(0, 5); // keys 1..5 at slots 0..4
+
+            for (var i = 1; i < 5; i++)
+            {
+                Assert.AreSame(
+                    before[i],
+                    after[i - 1],
+                    $"key {i} moved from slot {i} to slot {i - 1} and must keep its State"
+                );
+            }
+
+            Assert.AreEqual(Key.Of(5), after[4].Key, "key 5 entered the window at slot 4");
+            Assert.IsFalse(
+                before.Contains(after[4]),
+                "key 5 was never built before and must be a fresh State"
+            );
+            Assert.IsTrue(
+                before[0].StateLifetime.IsDisposed,
+                "the removed key 0 must be deactivated"
+            );
+        }
+
+        [Test]
+        public void ItemsReorderedWithinWindow_MoveTheirStatesToTheNewSlots()
+        {
+            var ids = new List<int> { 0, 1, 2, 3, 4 };
+            var (state, rebuild) = MountKeyedList(ids);
+
+            var before = state.RequestBuildWindow(0, 5);
+
+            ids.Reverse();
+            rebuild();
+            var after = state.RequestBuildWindow(0, 5);
+
+            for (var i = 0; i < 5; i++)
+            {
+                Assert.AreSame(
+                    before[i],
+                    after[4 - i],
+                    $"key {i} moved from slot {i} to slot {4 - i} and must keep its State"
+                );
+            }
+
+            Assert.IsFalse(
+                before.Any(s => s.StateLifetime.IsDisposed),
+                "a reorder disposes nothing: every key is still in the window"
+            );
+        }
+
+        [Test]
+        public void UnkeyedItems_KeepTheStateAtTheirSlot()
+        {
+            var widget = new ScrollList
+            {
+                ItemCount = 10,
+                ItemBuilder = (context, index) => new FixedSizeBox { Size = new Vector2(10, 10) },
+            };
+            var state = (ISliverState)TestHarness.Mount(widget);
+
+            var before = state.RequestBuildWindow(0, 5);
+            state.RequestBuildWindow(2, 7);
+            var after = state.RequestBuildWindow(0, 5);
+
+            for (var i = 2; i < 5; i++)
+            {
+                Assert.AreSame(
+                    before[i],
+                    after[i],
+                    $"slot {i} stayed inside the window throughout and must keep its State"
+                );
+            }
+
+            Assert.IsTrue(
+                before[0].StateLifetime.IsDisposed && before[1].StateLifetime.IsDisposed,
+                "slots 0 and 1 left the window in between and must have been deactivated"
+            );
+            Assert.IsFalse(
+                after.Any(s => s.StateLifetime.IsDisposed),
+                "no State in the current window may be disposed"
+            );
+        }
     }
 }
