@@ -69,15 +69,7 @@ namespace UniMob.UI.Internal.Views
                 return;
             }
 
-#if UNITY_EDITOR
-
-            var rawWidgetType = State.RawWidget.GetType().Name;
-            if (rawWidgetType.EndsWith("State"))
-                rawWidgetType = rawWidgetType.Substring(0, rawWidgetType.Length - "State".Length);
-
-            this.name = $"{rawWidgetType}[SingleChildLayoutView<{typeof(TState).Name}>]";
-
-#endif
+            EditorUpdateName();
 
             using (var render = _mapper.CreateRender())
             {
@@ -131,6 +123,36 @@ namespace UniMob.UI.Internal.Views
             _warnings.HideUnused();
 #endif
         }
+
+        /// <summary>
+        ///     Names this object after the widget it paints, for the Editor hierarchy.
+        /// </summary>
+        /// <remarks>
+        ///     Rebuilt only when the bound widget type changes. Render runs on every layout pass, so
+        ///     naming unconditionally costs two string allocations per view per frame.
+        /// </remarks>
+        [Conditional("UNITY_EDITOR")]
+        private void EditorUpdateName()
+        {
+#if UNITY_EDITOR
+            var widgetType = State.RawWidget.GetType();
+            if (ReferenceEquals(widgetType, _namedFor))
+            {
+                return;
+            }
+
+            _namedFor = widgetType;
+            this.name = EditorViewName.For(widgetType, ViewLabel);
+#endif
+        }
+
+#if UNITY_EDITOR
+        // One per closed generic type, because that is all the label depends on.
+        private static readonly string ViewLabel =
+            $"[SingleChildLayoutView<{typeof(TState).Name}>]";
+
+        private Type? _namedFor;
+#endif
 
 #if UNIMOB_UI_DIAGNOSTICS
         private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();

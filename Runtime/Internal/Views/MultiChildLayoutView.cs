@@ -7,14 +7,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UniMob.UI;
 using UniMob.UI.Diagnostics;
-using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
 using UnityEngine;
-#if UNIMOB_UI_DIAGNOSTICS
-// LayoutWarningOverlay is the only type in this namespace and it compiles out with the diagnostics,
-// taking the namespace with it -- so an unguarded using of it is a compile error in a build without.
-#endif
 
 [assembly: RegisterComponentViewFactory(
     "UniMob.MultiChildLayoutView",
@@ -36,25 +31,23 @@ namespace UniMob.UI.Internal.Views
 
         protected override void Render()
         {
-#if UNITY_EDITOR
-            var rawWidgetType = State.RawWidget.GetType().Name;
-            if (rawWidgetType.EndsWith("State"))
-                rawWidgetType = rawWidgetType.Substring(0, rawWidgetType.Length - "State".Length);
-
-            this.name = $"{rawWidgetType}[MultiChildLayoutView]";
-#endif
+            EditorUpdateName();
 
             if (State.RenderObject is not IMultiChildrenRenderObject multiChildRenderObject)
                 return;
 
+            // Hoisted, not read per iteration: an atom read inside a running atom appends a
+            // dependency edge every time, and AtomBase does not dedupe them. Read in the loop, a
+            // 40-child column registers 81 edges per render instead of one.
+            var children = State.Children;
             var childrenLayout = multiChildRenderObject.ChildrenLayout;
 
             using var render = _mapper.CreateRender();
 
             // Render each child
-            for (var i = 0; i < State.Children.Length; i++)
+            for (var i = 0; i < children.Length; i++)
             {
-                var child = State.Children[i];
+                var child = children[i];
 
                 if (child is null)
                 {
@@ -99,7 +92,9 @@ namespace UniMob.UI.Internal.Views
                     _warnings.Paint(rt);
                 }
 #endif
-                // SYNC UNITY HIERARCHY WITH DECLARATIVE ORDER
+                // Synchronize the hierarchy order with the layout order, so the Editor hierarchy is a faithful representation of the layout.
+                // This matters for paint order in ZStack especially: Unity paints from the first child to the last,
+                // so a layout that draws a child on top of another must have it later in the hierarchy.
                 if (rt.GetSiblingIndex() != i)
                 {
                     rt.SetSiblingIndex(i);
@@ -125,6 +120,7 @@ namespace UniMob.UI.Internal.Views
         [Conditional("UNIMOB_UI_FORCE_DIAGNOSTICS")]
         private void NoteNonFiniteChild(int index, IState child, LayoutAxes axes)
         {
+#if UNIMOB_UI_DIAGNOSTICS
             if (axes == LayoutAxes.None)
             {
                 _reportedNonFinite.Remove(index);
@@ -146,15 +142,42 @@ namespace UniMob.UI.Internal.Views
                     size: child.RenderObject?.PeekSize()
                 )
             );
+#endif
         }
 
+        /// <summary>
+        ///     Names this object after the widget it paints, for the Editor hierarchy.
+        /// </summary>
+        /// <remarks>
+        ///     Rebuilt only when the bound widget type changes. Render runs on every layout pass, so
+        ///     naming unconditionally costs two string allocations per view per frame.
+        /// </remarks>
+        [Conditional("UNITY_EDITOR")]
+        private void EditorUpdateName()
+        {
+#if UNITY_EDITOR
+            var widgetType = State.RawWidget.GetType();
+            if (ReferenceEquals(widgetType, _namedFor))
+            {
+                return;
+            }
+
+            _namedFor = widgetType;
+            this.name = EditorViewName.For(widgetType, "[MultiChildLayoutView]");
+#endif
+        }
+
+#if UNITY_EDITOR
+        private Type? _namedFor;
+#endif
+
+#if UNIMOB_UI_DIAGNOSTICS
         private const string BoundItBeforeItIsPainted =
             "An infinite size is legal in transit and fatal at a RectTransform. Bound this child "
             + "(Expanded, SizedBox, or a fixed-size ancestor) so it materialises before it is painted.";
 
         private readonly HashSet<int> _reportedNonFinite = new HashSet<int>();
 
-#if UNIMOB_UI_DIAGNOSTICS
         private readonly LayoutWarningOverlay _warnings = new LayoutWarningOverlay();
 #endif
     }
