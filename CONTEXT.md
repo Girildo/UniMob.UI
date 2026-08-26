@@ -8,6 +8,7 @@ Words this package uses in a specific sense, where the ordinary reading would mi
 | **fault** | An exception that escaped a lifecycle callback, reported to `UniMobError`. |
 | **layout issue** | A layout-protocol violation, reported to `UniMobDiagnostics`. A different thing from a fault, with a different audience. |
 | **tick** | One ticker invocation, given a delta. Produces invalidations and consumes nothing. |
+| **animation ticker** | A ticker registered through `AddAnimationTicker`, so it exists only while something is moving, and is counted by `Zone.RunningAnimations`. A plain `AddTicker` is a polling ticker and is not counted. Both are `Action<float>`, so the distinction lives in the registry, not in the type. |
 | **pump** | One whole frame: tickers, the next-frame queue, the scheduler, continuations, the geometry ticker. |
 | **settle** | Pump until nothing is left to do, or fail at a deadline. Not a frame count. |
 | **pull** | A render object being driven, either by its parent with constraints or by its view through `WatchLayout`. |

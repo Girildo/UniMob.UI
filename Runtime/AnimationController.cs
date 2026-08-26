@@ -127,8 +127,7 @@ namespace UniMob.UI
         {
             _prevDeltaTime = NotTickedYet;
 
-            Zone.Current.RemoveTicker(Tick);
-            Zone.Current.AddTicker(Tick);
+            Zone.Current.AddAnimationTicker(Tick);
         }
 
         private void RemoveAnimationTicker()

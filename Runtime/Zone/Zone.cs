@@ -16,6 +16,7 @@ namespace UniMob
     public abstract class Zone
     {
         private readonly List<Action<float>> _tickers = new List<Action<float>>();
+        private readonly HashSet<Action<float>> _animationTickers = new HashSet<Action<float>>();
 
         private List<Action> _nextFrame = new List<Action>();
         private List<Action> _nextFrameExecuting = new List<Action>();
@@ -53,6 +54,16 @@ namespace UniMob
         /// </remarks>
         protected internal bool NextFrameQueueEmpty => _nextFrame.Count == 0;
 
+        /// <summary>How many animations the clock is currently driving.</summary>
+        /// <remarks>
+        ///     A frame-rate policy cannot ask whether the clock is busy: a hosted tree always has the
+        ///     device widget's screen poll registered, so <see cref="HasActiveTickers"/> is permanently
+        ///     true. This counts only the tickers that exist because something is moving.
+        /// </remarks>
+        // Null-checked, unlike every other Current call site, because this one is read from outside a
+        // mounted tree, where no ZoneDriver has run.
+        public static int RunningAnimations => Current?._animationTickers.Count ?? 0;
+
         /// <summary>
         ///     Registers <paramref name="ticker"/> to run every frame, given the seconds since the last.
         /// </summary>
@@ -61,8 +72,25 @@ namespace UniMob
             _tickers.Add(ticker);
         }
 
+        /// <summary>
+        ///     Registers <paramref name="ticker"/> as an animation: a ticker that exists only while
+        ///     something is moving, and so counts towards <see cref="RunningAnimations"/>. Registering
+        ///     one twice does nothing, which is what lets an animation restart without leaking a count.
+        /// </summary>
+        internal void AddAnimationTicker(Action<float> ticker)
+        {
+            if (!_animationTickers.Add(ticker))
+            {
+                return;
+            }
+
+            _tickers.Add(ticker);
+        }
+
         public void RemoveTicker(Action<float> ticker)
         {
+            // Dropped from both, so an animation leaving by the general path cannot strand the count.
+            _animationTickers.Remove(ticker);
             _tickers.Remove(ticker);
         }
 

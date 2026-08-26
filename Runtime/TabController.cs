@@ -63,8 +63,7 @@ namespace UniMob.UI
 
         private void AddAnimationTicker()
         {
-            Zone.Current.RemoveTicker(Tick);
-            Zone.Current.AddTicker(Tick);
+            Zone.Current.AddAnimationTicker(Tick);
         }
 
         private void RemoveAnimationTicker()

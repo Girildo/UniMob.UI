@@ -62,6 +62,11 @@ they are not covered by the version promise and may change in a minor release.
   `UniMobDiagnostics`: `IErrorReporter`, `UniMobFault`, and an `Override` that restores the previous
   reporter when its scope is disposed. An app can route faults to its own crash reporting.
 - `Zone` is public, and a ticker registered with it receives the seconds since the last frame.
+- `Zone.RunningAnimations`, the count of tickers that exist because something is moving. A hosted
+  tree always has `UniMobDeviceWidget`'s screen poll registered, so "is a ticker registered" cannot
+  answer whether the UI is idle. This can, which is what lets a consumer drive a frame-rate policy
+  from the clock rather than guessing from input. `AddTicker` still registers a polling ticker and
+  is not counted; the animation layer registers through an internal `AddAnimationTicker`.
 - `CONTEXT.md`, which defines the words this package uses in a specific sense and records the order
   the frame drivers run in.
 
