@@ -18,6 +18,8 @@ namespace UniMob.UI
         [SerializeField]
         private float bottom;
 
+        public static RectPadding Zero => All(0);
+
         public RectPadding(float left, float right, float top, float bottom)
         {
             this.left = left;

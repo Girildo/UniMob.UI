@@ -8,7 +8,7 @@ namespace UniMob.UI.Widgets
     /// </summary>
     public class PaddingBox : SingleChildLayoutWidget
     {
-        public RectPadding Padding { get; init; }
+        public RectPadding Padding { get; init; } = RectPadding.Zero;
 
         public PaddingBox() { }
 
