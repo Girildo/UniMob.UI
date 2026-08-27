@@ -37,12 +37,15 @@ namespace UniMob.UI
         public static RectPadding FromLTRB(float left, float top, float right, float bottom) =>
             new(left, top, right, bottom);
 
+        /// <summary>
+        /// Creates a new RectPadding with only the specified sides set, the rest left at zero.
+        /// </summary>
         public static RectPadding Only(
             float left = 0,
             float right = 0,
             float top = 0,
             float bottom = 0
-        ) => new(left, right, top, bottom);
+        ) => FromLTRB(left, top, right, bottom);
 
         public override string ToString()
         {
