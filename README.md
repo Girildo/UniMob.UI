@@ -11,8 +11,9 @@ original bottom-up `WidgetSize` layer has been removed rather than kept alongsid
 
 Upstream is kept as a read-only remote for archaeology. Changes are not taken from it and are not offered back to it.
 
-The `UniMob` core package it depends on is *not* forked, which is why the namespaces and the package name still say
-`UniMob`.
+The `UniMob` core package it depends on is consumed from a fork as well
+([Girildo/UniMob](https://github.com/Girildo/UniMob), version 2.6.0, which adds `AtomScheduler.HasPendingWork`).
+The namespaces and the package name still say `UniMob` because both packages keep upstream's identity.
 
 ## Getting Started
 
@@ -126,7 +127,6 @@ private Widget Build(BuildContext context)
 {
     return new ScrollGrid
     {
-        CrossAxisAlignment = CrossAxisAlignment.Center,
         MaxCrossAxisExtent = 750f,
         Children =
         {
@@ -188,9 +188,11 @@ private Widget BuildDailyOffer(string offerId)
 
 > **[Text](./Runtime/Widgets/Text.cs)** -- display and style text.
 >
-> **[Image](./Runtime/Widgets/Image.cs), [ColoredImageBox](./Runtime/Widgets/ColoredImageBox.cs)** -- display a sprite.
+> **[Image](./Runtime/Widgets/Image.cs), [ColoredImageBox](./Runtime/Widgets/ColoredImageBox.cs)** -- display a texture, or a sprite over a colour.
 >
-> **[GestureDetector](./Runtime/Widgets/GestureDetector.cs), [Clickable](./Runtime/Widgets/Clickable.cs)** -- recognize taps, presses, drags and pointer movement.
+> **[GestureDetector](./Runtime/Widgets/GestureDetector.cs)** -- recognize taps, presses, drags and pointer movement, with an invisible raycast target of its own.
+>
+> **[Clickable](./Runtime/Widgets/Clickable.cs)** -- make a painted child activatable through a Unity Button; it carries no raycast target of its own.
 >
 > **[IgnorePointer](./Runtime/Widgets/IgnorePointer.cs)** -- make a subtree invisible to hit testing.
 >
@@ -204,11 +206,15 @@ private Widget BuildDailyOffer(string offerId)
 >
 > **[AnimatedSwitcher](./Runtime/Widgets/AnimatedSwitcher.cs)** -- animate a child out and its replacement in.
 >
-> **[Tabs](./Runtime/Widgets/Tabs.cs)** -- a horizontally scrollable, draggable list of tabs.
+> **[Tabs](./Runtime/Widgets/Tabs.cs)** -- horizontally paged tabs driven by a `TabController`; swiping is not built in.
 >
 > **[Navigator](./Runtime/Navigation/Navigator.cs)** -- a stack of routes, with push, pop and transitions.
 >
 > **[Builder](./Runtime/Widgets/Builder.cs)** -- build a subtree inline from a delegate.
+>
+> **[StatefulBuilder](./Runtime/Widgets/StatefulBuilder.cs)** -- build a subtree that owns one piece of local state.
+>
+> **[Overlay](./Runtime/Widgets/Overlay.cs)** -- a layer of independently-lived entries drawn over a child, reached through `Overlay.Of(context)`.
 
 Conventions for adding a widget are in [Runtime/README.md](./Runtime/README.md), and the words this
 package uses in a specific sense are in [CONTEXT.md](./CONTEXT.md).
@@ -220,6 +226,8 @@ reaches a player build. It carries `TestZone`, a frame clock a test drives by ha
 needs frames does not need a play-mode transition:
 
 ```csharp
+using UniMob.UI.Tests; // the UniMob.UI.Testing assembly's namespace
+
 using var zone = TestZone.Install();
 
 var state = TestHarness.Mount(new CounterWidget());
@@ -240,7 +248,7 @@ Distributed as a git package
 ([how to install a package from a git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html)).
 
 <br>Git URL (UniMob.UI): `https://github.com/Girildo/UniMob.UI.git`
-<br>Git URL (UniMob): `https://github.com/codewriter-packages/UniMob.git`
+<br>Git URL (UniMob): `https://github.com/Girildo/UniMob.git` (2.6.0 or later; `UniMob.UI.Testing` needs `AtomScheduler.HasPendingWork`, which upstream does not ship)
 
 ## License
 

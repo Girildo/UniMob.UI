@@ -4,36 +4,37 @@ Layout is Flutter-style: the parent passes `LayoutConstraints` down, the child r
 
 ## Namespaces
 
-The folder a file sits in names its namespace, and the namespace says what the file is.
+The folder a file sits in names its namespace, and the namespace says what the file is. The one exception is `Zone/`, whose two files are `namespace UniMob` because the clock is not UI.
 
 | Folder | Namespace | Holds |
 |---|---|---|
-| `Runtime/` | `UniMob.UI` | The framework itself: `Widget`, `State`, `View`, `ViewPanel`, `BuildContext`, `Key`, and the value types widgets share (`Alignment`, `Axis`, `RectPadding`). |
+| `Runtime/` | `UniMob.UI` | The framework itself: `Widget`, `State`, `View`, `ViewPanel`, `BuildContext`, `Key`, every `I<X>State` contract, and the value types widgets share (`Alignment`, `Axis`, `RectPadding`, `FlexFit`, `ImageFit`, `CrossFadeState`, `HorizontalTextAlignment`, `GestureDetails`). |
+| `Zone/` | `UniMob` | The frame clock: `Zone`, `ZoneDriver`. |
 | `Widgets/` | `UniMob.UI.Widgets` | Public API: widgets, their `State` classes, the widget base interfaces (`ISingleChildLayoutWidget`, `IMultiChildLayoutWidget`), and widget-specific enums. |
-| `Rendering/` | `UniMob.UI.Rendering` | `RenderObject` subclasses, the `I<X>State` contracts they consume, and the public value types layout speaks in (`LayoutConstraints`, `LayoutInfo`, `SliverGridDelegate`, `WidgetGeometry`). |
+| `Rendering/` | `UniMob.UI.Rendering` | `RenderObject` subclasses and the public value types layout speaks in (`LayoutConstraints`, `LayoutInfo`, `SliverGridDelegate`, `WidgetGeometry`). |
 | `Navigation/` | `UniMob.UI.Navigation` | `Navigator`, `Route`, `PageRoute`, and the pop protocol (`PopResult`, `PopDecision`, `INavigatorObserver`). |
-| `Internal/` | `UniMob.UI.Internal` | Genuinely internal: the view mapper, view loaders, pools, `VirtualizedChildren`, `LayoutConstants`. |
+| `Internal/` | `UniMob.UI.Internal` | Genuinely internal: the view mapper, `VirtualizedChildren`, `LayoutConstants`. View loaders are `UniMob.UI.Internal.ViewLoaders` and pools are `UniMob.UI.Internal.Pooling`, each in its own subfolder. |
 | `Internal/Views/` | `UniMob.UI.Internal.Views` | Unity `MonoBehaviour` views (`*View`) plus the shared `SingleChildLayoutView` / `MultiChildLayoutView`. |
-| `Diagnostics/` | `UniMob.UI.Diagnostics` | **Public.** Describing the tree (`DiagnosticNode`, `WidgetPath`, `LayoutTree`) and reporting a fault (`LayoutIssue`, `IDiagnosticsReporter`, `UniMobDiagnostics`). Deliberately not internal: tests cannot see `internal`, and a diagnostics layer nobody outside can call is not one. |
+| `Diagnostics/` | `UniMob.UI.Diagnostics` | **Public.** Describing the tree (`DiagnosticNode`, `WidgetPath`, `LayoutTree`), reporting a layout issue (`LayoutIssue`, `IDiagnosticsReporter`, `UniMobDiagnostics`) and reporting a fault (`UniMobFault`, `IErrorReporter`, `UniMobError`). Deliberately not internal: a consumer routes both into its own logging, and a diagnostics layer nobody outside can call is not one. |
 
 ## Where each type lives, and what it's called
 
 | Piece | Name | File | Visibility |
 |---|---|---|---|
 | Widget | `<Widget>` | `Widgets/<Widget>.cs` | `public` |
-| State | `<Widget>State` | same file as the widget | `internal` (default) |
-| State contract | `I<X>State` | in its consumer's file (render object or bespoke view) | `internal`/`public` |
+| State | `<Widget>State` | same file as the widget | `internal` unless something outside must name it |
+| State contract | `I<X>State` | `Runtime/I<X>State.cs` | `public` |
 | Render object | `Render<Behavior>` | `Rendering/` | `public` |
-| Bespoke view | `<Widget>View` | `Internal/Views/` | `internal` |
+| Bespoke view | `<Widget>View` | `Internal/Views/` | `internal`, `public` where a consumer subclasses it (`SingleChildLayoutView`, `MultiChildLayoutView`, `ImageView`, `LayoutTextView`) |
 
 Rules:
 
-- **One widget per file.** `Widgets/<Widget>.cs` holds `public class <Widget>` plus its `<Widget>State`. A tightly-coupled variant family may share a single file **named after the family** (e.g. `Flexible.cs` holds `Flexible` + `Expanded` + `FlexFit` + `FlexibleState`) — but only deliberately, and never leave an orphan stub file for the absorbed variant.
+- **One widget per file.** `Widgets/<Widget>.cs` holds `public class <Widget>` plus its `<Widget>State`. A tightly-coupled variant family may share a single file **named after the family** (e.g. `Flexible.cs` holds `IFlexible` + `Flexible` + `Expanded` + `FlexibleState`) — but only deliberately, and never leave an orphan stub file for the absorbed variant.
 - **States are `internal` by default.** Consumers construct the widget, not the state. Make a state `public` only when something outside the assembly must reference it.
-- **Render objects are named by layout behavior and shared**, not 1:1 with the widget: `RenderFlex` (Row/Column), `RenderPositionedBox` (Align/Positioned), `RenderProxy` (Expanded/Flexible). Use `Render<Widget>` only when the behavior is unique to that widget (`RenderConstrainedBox`).
-- **The consumer owns its required-state contract.** The `I<X>State` interface is declared in the file of whatever reads it — the render object (`IConstrainedBoxState` in `RenderConstrainedBox.cs`) or, for view-driven effects, the bespoke view (`IOpacityState` in `OpacityView.cs`). The widget's `State` implements it. This keeps the state→consumer coupling explicit and one-directional.
-- **Add a bespoke view only when needed.** Widgets that need custom Unity rendering or interaction get a `<Widget>View` (see `OpacityView`, `GestureDetectorView`, `ImageView`, `ColoredImageBoxView`). Everything else lets the `State.View` fall through to the shared `$$_Layout.SingleChildLayoutView` / `$$_Layout.MultiChildLayoutView`.
-- **Widget-specific enums live in the widget file** (`FlexFit`, `CrossFadeState`); value types used by more than one widget get their own top-level file.
+- **Render objects are named by layout behavior and shared**, not 1:1 with the widget: `RenderFlex` (Row/Column), `RenderProxy` (Expanded/Flexible/Positioned/Opacity/Clickable, and every other state that only marks or wraps its child). Use `Render<Widget>` only when the behavior is unique to that widget (`RenderConstrainedBox`).
+- **The consumer names its required-state contract.** The `I<X>State` interface is a public file of its own under `Runtime/` (`IConstrainedBoxState.cs`, `IOpacityState.cs`), in the root namespace every sub-namespace reaches without a using. The consumer (a render object, or a bespoke view for view-driven effects) takes the interface and the widget's `State` implements it. This keeps the state→consumer coupling explicit and one-directional.
+- **Add a bespoke view only when needed.** Widgets that need custom Unity rendering or interaction get a `<Widget>View` (see `OpacityView`, `GestureDetectorView`, `ImageView`, `ColoredImageBoxView`). Everything else lets the `State.View` fall through to the shared `WidgetViewReference.Registered("UniMob.SingleChildLayoutView")` / `Registered("UniMob.MultiChildLayoutView")`.
+- **Widget-specific enums live in the widget file** (`WrapAlignment`, `AnimatedSwitcherTransitionMode`); a value type a state contract exposes (`FlexFit`, `CrossFadeState`, `ImageFit`) gets its own top-level file under `Runtime/`.
 - **A render object takes its owner state, not a lifetime.** `base(state)`, never `base(state.StateLifetime)` — the lifetime comes off the state, and `Owner` is what lets a report say which widget it is about.
 
 ## Skeleton — single-child widget
@@ -47,7 +48,7 @@ namespace UniMob.UI.Widgets
 {
     public class Foo : SingleChildLayoutWidget
     {
-        public float Bar { get; set; }
+        public float Bar { get; init; }
 
         public override State CreateState() => new FooState();
 
@@ -62,14 +63,19 @@ namespace UniMob.UI.Widgets
 }
 ```
 
-The contract + render object live together under `Internal/RenderObjects/RenderFoo.cs`:
+The contract is `Runtime/IFooState.cs` and the render object is `Rendering/RenderFoo.cs`:
+
+```csharp
+namespace UniMob.UI
+{
+    public interface IFooState : ISingleChildLayoutState { float Bar { get; } }
+}
+```
 
 ```csharp
 namespace UniMob.UI.Rendering
 {
-    public interface IFooState : ISingleChildLayoutState { float Bar { get; } }
-
-    internal class RenderFoo : SingleChildRenderObject
+    public class RenderFoo : SingleChildRenderObject
     {
         // PerformSizing(constraints) -> Vector2 ; PerformPositioning(size) ; intrinsics
     }
@@ -88,7 +94,7 @@ namespace UniMob.UI.Widgets
 {
     public class Foo : StatefulWidget, IMultiChildLayoutWidget
     {
-        public List<Widget> Children { get; set; } = new();
+        public List<Widget> Children { get; init; } = new();
 
         public override State CreateState() => new FooState();
 
@@ -104,14 +110,14 @@ namespace UniMob.UI.Widgets
         public IState[] Children => _children.Value;
 
         public override WidgetViewReference View
-            => WidgetViewReference.Resource("$$_Layout.MultiChildLayoutView");
+            => WidgetViewReference.Registered("UniMob.MultiChildLayoutView");
     }
 }
 ```
 
 ## Composed & facade widgets (`HocState`)
 
-Not every widget needs a render object. A widget defined purely in terms of other widgets uses `HocState<TWidget>` and returns a composed subtree from `Build(context)` — no render object, no view. The child builds lazily, so any `AnimationController` is created in `InitState()` (ready before the first `Build`) and reacted to in `DidUpdateWidget(old)`.
+Not every widget needs a render object. A widget defined purely in terms of other widgets uses `HocState<TWidget>` and returns a composed subtree from `Build(context)` — no view, and no render object of the widget's own (the state owns a `RenderProxy` over its child, so it stays a link in the layout chain). The child builds lazily, so any `AnimationController` is created in `InitState()` (ready before the first `Build`) and reacted to in `DidUpdateWidget(old)`.
 
 - **Composition** — build from other widgets: `Container` → `Align`/`ColoredImageBox`/`SizedBox`; `AnimatedCrossFade` → a `ZStack` of two `CompositeTransition`s.
 
@@ -125,7 +131,7 @@ Not every widget needs a render object. A widget defined purely in terms of othe
 
 **Hug / fill** — the two answers a box that could legally be either size gives when asked to size itself. Which one it gives is decided by the constraints it was handed, never by anything at the call site: `Align` fills a bounded axis and hugs an unbounded one, so the same widget fills as a flex child (a flex hands its own cross axis down) and hugs under a scroll list. A non-null `WidthFactor`/`HeightFactor` forces hugging on that axis whatever its value — the rule is `factor != null || !bounded` — which is why `WidthFactor = 1` is the idiom for "hug" rather than the no-op multiply it reads as, and why a hugged axis has no space left for `Alignment` to move the child in. Flutter's `RenderPositionedBox` rule, kept verbatim so that its documentation applies here.
 
-**Build-only state** — a state with no view, and therefore no `GameObject`. `HocState`, `StatelessElement`, and every state owning a `RenderProxy` (`Flexible`, `Positioned`, `Opacity`, `Clickable`, and the rest). Invisible in Unity's Hierarchy window, and disproportionately the cause of layout faults.
+**Build-only state** — a state with no view, and therefore no `GameObject`: every `HocState` (`Builder`, `Container`, `Spacer`, `StatefulBuilder`, `AnimatedCrossFade`, `AnimatedSwitcher`) and `StatelessElement`. Each owns a `RenderProxy` over its child. Wrappers such as `Flexible`, `Positioned`, `Opacity` and `Clickable` also own a `RenderProxy` but are view states with a non-painting layout view, so they do have a `GameObject`. Build-only states are invisible in Unity's Hierarchy window, and disproportionately the cause of layout faults.
 
 **Owner** — the single state a render object belongs to. A structural relationship, held by the render object, true whether or not anything is being reported.
 
@@ -189,10 +195,11 @@ The contract on a label lives on `Widget.GetDiagnosticInfo`: one line, describes
 ## Inspecting a running app
 
 `Window > UniMob > Widget Hierarchy` shows the tree as you wrote it. Unity's own Hierarchy cannot: a
-GameObject exists only where a state has a view, so every build-only widget — `HocState`, and
-everything owning a `RenderProxy` (`Flexible`, `Positioned`, `Opacity`, `Clickable`,
-`GestureDetector`, …) — is invisible in it, and those are disproportionately the ones that cause
-layout faults. Rows come from `DiagnosticNode` and fault badges from `RenderObject.HasLayoutIssue`,
+GameObject exists only where a state has a view, so every build-only widget — every `HocState`
+(`Builder`, `Container`, `Spacer`, `StatefulBuilder`, `AnimatedCrossFade`, `AnimatedSwitcher`) and
+every `StatelessWidget` — is invisible in it, and the wrappers you can see (`Flexible`, `Positioned`,
+`Opacity`, `Clickable`, `GestureDetector`, …) are named after their view rather than after what you
+wrote. Rows come from `DiagnosticNode` and fault badges from `RenderObject.HasLayoutIssue`,
 so the window agrees with the console by construction.
 
 **Select** works like a browser's element picker, and deliberately so — it is the interaction people
@@ -214,8 +221,8 @@ sorting and what actually paints. Two consequences worth knowing before they con
 - **A widget that paints nothing is never the direct answer.** You land on a painted descendant and
   walk up — the same move as in a browser, and the reason this window exists.
 - **A widget that takes no input cannot be picked at all**: anything below an `IgnorePointer` (whose
-  view drops `blocksRaycasts`), a `CustomPaint` (whose image sets `raycastTarget = false`), or any
-  Graphic with raycasting off. The raycast lands on whatever is *behind* it rather than failing, so
+  view drops `blocksRaycasts`), a `Clickable` with nothing painted under it, or any Graphic with
+  raycasting off (an app's custom-drawn view that sets `raycastTarget = false`, for instance). The raycast lands on whatever is *behind* it rather than failing, so
   nothing announces this.
 
 That second case is what the **Boxes** toggle beside Select is for: it hit-tests layout boxes
@@ -262,6 +269,6 @@ They are `void` and `[Conditional]`, so a release player deletes the call **and 
 
 Each report is emitted **once per render object per fault**, and re-arms when that fault clears. `HasLayoutIssue` is the level-triggered counterpart, true for as long as the fault is happening — that is what the stripe is drawn from.
 
-Severity is derived from the code, not chosen at the site: overflow warns, everything else errors. `Remedy` goes the other way and stays per-site, because the same code has genuinely different fixes in a flex, an anchored box and a pan surface.
+Severity is derived from the code, not chosen at the site: the three codes that still render (`Overflow`, `ContentOverflow`, `ChildOutOfBounds`) warn, the four that will not render (`UnboundedConstraint`, `NonFiniteChildSize`, `NonFiniteSize`, `SizeExceedsConstraints`) error. `Remedy` goes the other way and stays per-site, because the same code has genuinely different fixes in a flex, an anchored box and a pan surface.
 
 To capture reports instead of logging them — in a test, or to route them into an application logger — install a reporter with `UniMobDiagnostics.Override(...)`, which restores the previous one when its scope is disposed.

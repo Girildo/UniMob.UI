@@ -114,15 +114,17 @@ would block forever on a task waiting for a frame the fixture was itself prevent
 
 ## Testing
 
-`Testing/` is a consumable assembly (`UniMob.UI.Testing`), not a test assembly. It is constrained to
+`Testing/` is a consumable assembly (`UniMob.UI.Testing`, namespace `UniMob.UI.Tests`), not a test assembly. It is constrained to
 `UNITY_INCLUDE_TESTS`, so nothing in it reaches a player build, and an app can build widget tests
 against it.
 
-Almost everything runs in EditMode. `Tests/Runtime` holds exactly one fixture, and it exists to prove
-the real frame driver drives -- the one thing a fake clock cannot establish about itself.
+Almost everything runs in EditMode. `Tests/Runtime` holds only what needs the real player loop:
+`ZoneDriverTests`, which proves the real frame driver drives -- the one thing a fake clock cannot
+establish about itself -- plus the allocation, view-render-cost and `ScrollRect` offset fixtures,
+which measure Unity objects a `TestHarness` mount never creates.
 
-`WidgetSnapshotter` is the exception that keeps the PlayMode assembly earning its place: it renders a
-mounted tree through a camera, which needs the real player loop. It settles on real frames rather
+`WidgetSnapshotter`, in `Testing/`, is the consumable that needs PlayMode: it renders a mounted tree
+through a camera, which needs the real player loop. It settles on real frames rather
 than through `TestZone`, and on a narrower condition -- the scheduler is idle and the next-frame
 queue is empty, with tickers excluded. `UniMobUI.RunApp` always mounts a `UniMobDeviceWidget`, whose
 ticker polls the screen for as long as the tree is mounted, so `IsSettled` would never come true for

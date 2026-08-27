@@ -7,20 +7,21 @@ this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-To be released as 1.0.0. Give this section its version and its date in the same commit that sets
-`version` in `package.json`, and not before.
+`package.json` already carries 1.0.0, the version this section will be released as. Give this
+section that version and its date in the commit that tags the release, and open a new
+`[Unreleased]` section above it for what follows.
 
 The first release on this fork's own version line, and the first with a public API worth promising
 to keep.
 
-The numbers before it are not a sequence this package owns. `0.7.0` was the last version the fork
-set for itself; `0.13.x`, `0.14.0` and `0.15.0` arrived from upstream's `package.json` through a
-merge and were never releases of this code. History before 1.0.0 lives in git, not here.
+The numbers before it were bumped by hand and never documented. Upstream stopped at `0.7.0`; this
+fork continued to `0.15.0` without release notes, so nothing before 1.0.0 is a version with a
+promise attached. History before 1.0.0 lives in git, not here.
 
 ### Stability
 
-`UniMob.UI`, `UniMob.UI.Widgets`, `UniMob.UI.Rendering` and `UniMob.UI.Navigation` are the public
-API and follow semantic versioning.
+`UniMob.UI`, `UniMob.UI.Widgets`, `UniMob.UI.Rendering`, `UniMob.UI.Navigation`, and the frame clock
+`UniMob.Zone` are the public API and follow semantic versioning.
 
 `UniMob.UI.Testing` is a consumable assembly rather than a test assembly, and follows semantic
 versioning with the rest of the public API.
@@ -69,6 +70,12 @@ they are not covered by the version promise and may change in a minor release.
   is not counted; the animation layer registers through an internal `AddAnimationTicker`.
 - `CONTEXT.md`, which defines the words this package uses in a specific sense and records the order
   the frame drivers run in.
+- **`Overlay` and `OverlayEntry`**, a layer of independently-lived entries drawn over a child and
+  reached through `Overlay.Of(context)`. A `Navigator` with the stack replaced by a set and the
+  modality moved onto the entry: entries are ordered by insertion, each removable on its own, an
+  entry dies with the state that inserted it, and the layer installs no raycast target of its own.
+  `IOverlayState` and `RenderOverlay` come with it.
+- `RectPadding.Zero`.
 
 ### Changed
 
@@ -86,19 +93,20 @@ Every entry in this section is a breaking change.
   compile rather than at first mount. Null previously meant "ask an ancestor for one", which made
   every inflation branch on a case the signature could not rule out.
 - **Namespaces name what they hold.** Widgets are in `UniMob.UI.Widgets`, render objects and
-  `LayoutConstraints` in `UniMob.UI.Rendering`, `Navigator`/`Route`/`ViewPanel` in
-  `UniMob.UI.Navigation`, views and pooling in `UniMob.UI.Internal`. Render objects are no longer
-  reached through a path containing `Internal`, which they never were.
+  `LayoutConstraints` in `UniMob.UI.Rendering`, `Navigator`/`Route` in `UniMob.UI.Navigation`,
+  views in `UniMob.UI.Internal.Views`, pooling and view loading under `UniMob.UI.Internal`.
+  `ViewPanel` stays in `UniMob.UI`. Render objects are no longer reached through a path containing
+  `Internal`, which they never were.
 - **State contracts live in `UniMob.UI`.** Every `I*State` is in the root namespace, which every
   sub-namespace reaches without a using directive. The enums and payload types those contracts
   expose moved with them: `FlexFit`, `ImageFit`, `HorizontalTextAlignment`, and `GestureDetails`,
   `TapDetails`, `PointerDetails`, `DragDetails`.
 - **Widget properties are `init`-only**, `Key` included. Object initializers are unaffected;
   assigning to a widget after construction no longer compiles.
-- **Null contracts are in the type system.** Nullable reference types replace 101 JetBrains
-  annotations, which also removes an undeclared dependency on `UnityEngine.CoreModule` for the
-  attributes.
-- **`NavigatorStack.Pop()` returns void.** Every caller popped for the effect.
+- **Null contracts are in the type system.** Nullable reference types replace the `[CanBeNull]` and
+  `[NotNull]` annotations (90 of them) that used to carry the contract.
+- **`NavigatorState.Pop()` returns void.** Every caller popped for the effect, and a discarded
+  `Route` reads to the compiler as a forgotten await.
 - **A ticker takes its delta.** `Zone.AddTicker` and `RemoveTicker` take `Action<float>` rather than
   `Action`, as Flutter's `Ticker` does, so a ticker no longer reads the clock itself.
 - **The frame drivers have a pinned order.** `ZoneDriver` carries `[DefaultExecutionOrder(-1000)]`,
@@ -111,8 +119,10 @@ Every entry in this section is a breaking change.
 - **`Text` builds its view in source** instead of loading `Resources/Layout/UniMob.Text`.
 - **Minimum Unity is 6000.3**, corrected from a `2019.3` floor the package had long since left.
   Dependencies move with it: `com.codewriter.unimob` 2.6.0, `com.unity.addressables` 2.9.0,
-  `com.unity.textmeshpro` 5.0.0. 2.6.0 adds `AtomScheduler.HasPendingWork`, which is what lets a
-  test ask the reactive graph whether it still has queued work.
+  `com.unity.textmeshpro` 5.0.0. `com.codewriter.unimob` 2.6.0 is a build of the
+  [Girildo/UniMob](https://github.com/Girildo/UniMob) fork (upstream is at 2.5.0); it adds
+  `AtomScheduler.HasPendingWork`, which is what lets a test ask the reactive graph whether it still
+  has queued work.
 
 ### Removed
 
@@ -127,11 +137,12 @@ Every entry in this section is a breaking change.
   so had never loaded.
 - `Route.GetAwaiter()`, deprecated in favour of `PopTask` and `PushTask`. Awaiting a route directly
   no longer compiles.
-- `Resources/Layout/UniMob.Text.prefab`. `Resources/Layout/UniMob.ScrollList.prefab` remains; its
-  template is an eleven-object hierarchy wired into `ScrollRect.content`.
+- `Resources/Layout/UniMob.Text.prefab`. `Resources/Layout/UniMob.ScrollList.prefab` remains: a
+  `ScrollRect` root with its `Content` child wired into `ScrollRect.content`.
 - `UniMob.UI.DevTools.WidgetCapture`, and with it the `UniMob.UI.DevTools` namespace. Rendering a
   widget tree to a PNG is a test-harness job, and doing it from `Runtime` is what gave it a frame
-  count for a settle. `UniMob.UI.Testing.WidgetSnapshotter` replaces it.
+  count for a settle. `WidgetSnapshotter` in the `UniMob.UI.Testing` assembly (namespace
+  `UniMob.UI.Tests`) replaces it.
 - The state registry: `StateProvider`, `IStateProvider`, `IStateProviderSource` and
   `StateProviderWidget`. It deferred the choice of which `State` backs a widget to a type-keyed
   registry, but every injection point took the concrete `StateProvider`, so a consumer's own
@@ -165,3 +176,19 @@ Every entry in this section is a breaking change.
   silently and permanently because nothing rebuilds it.
 - `Tests/Shared` shipped into player builds, carrying no define constraint while documenting that no
   test helper does.
+- `ScrollList` reconciled its lazy window by slot, so a keyed item inserted, removed or reordered
+  above the window deactivated and re-inflated every visible state. A keyed widget now claims the
+  state carrying its key wherever it was built; an unkeyed one claims only its own slot; a duplicate
+  key falls back to the slot.
+- A remounted `ScrollList` applied its remembered offset before its content had a size, so a
+  scrolled list came back empty until the first scroll. The view re-syncs the `ScrollRect` onto the
+  controller whenever it resizes the content.
+- A `GestureDetector` handling a tap now also takes the pointer press, so a tap never presses a
+  `Button` wrapping it; a drag-only detector claims nothing.
+- Two `ScrollList` children with the same `Key` threw out of a dictionary mid-build. The duplicate is
+  now reported through `UniMobError` and the list builds empty for that pass.
+- `LayoutTextView` reassigned `textStyle` on every render, which marks a TextMeshPro object dirty
+  unconditionally, and re-measured for the overflow diagnostic on every render. Both now happen only
+  when something changed.
+- The text measurer and the view-template root are `HideAndDontSave` and `DontDestroyOnLoad`, like
+  `WidgetGeometryTicker`, so they stay out of the scene and out of the save.
