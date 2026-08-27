@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
 using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
