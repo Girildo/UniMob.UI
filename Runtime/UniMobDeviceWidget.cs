@@ -94,7 +94,7 @@ namespace UniMob.UI
             var bottom = (_lastSafeArea.yMin - _lastFullArea.yMin) * invScale;
             var top = (_lastFullArea.yMax - _lastSafeArea.yMax) * invScale;
 
-            SafeArea = new RectPadding(left, right, top, bottom);
+            SafeArea = RectPadding.FromLTRB(left, top, right, bottom);
         }
 
         private float GetScale()
