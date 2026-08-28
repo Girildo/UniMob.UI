@@ -1,0 +1,4 @@
+# LF in the repository and in every working tree, on every platform.
+# csharpier reads end_of_line from .editorconfig; a CRLF working tree fails
+# `csharpier check` on CI even when the file is otherwise correctly formatted.
+* text=auto eol=lf
