@@ -21,6 +21,10 @@ namespace UniMob.UI.Internal.Views
             base.Awake();
 
             _button = GetComponent<Button>();
+            _button.navigation = new UnityEngine.UI.Navigation
+            {
+                mode = UnityEngine.UI.Navigation.Mode.None,
+            };
             _button.onClick.AddListener(HandleClick);
         }
 
