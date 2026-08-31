@@ -45,7 +45,10 @@ namespace UniMob.UI.Tests
         {
             var leaf = MountChain(new FixedSizeBox());
 
-            Assert.AreEqual("Column > PaddingBox > FixedSizeBox", WidgetPath.From(leaf));
+            Assert.AreEqual(
+                "Column > PaddingBox \"RectPadding: 5\" > FixedSizeBox",
+                WidgetPath.From(leaf)
+            );
         }
 
         [Test]
@@ -53,7 +56,10 @@ namespace UniMob.UI.Tests
         {
             var leaf = MountChain(new FixedSizeBox());
 
-            Assert.AreEqual("... > PaddingBox > FixedSizeBox", WidgetPath.From(leaf, maxDepth: 2));
+            Assert.AreEqual(
+                "... > PaddingBox \"RectPadding: 5\" > FixedSizeBox",
+                WidgetPath.From(leaf, maxDepth: 2)
+            );
         }
 
         [Test]
@@ -88,7 +94,10 @@ namespace UniMob.UI.Tests
                 }
             );
 
-            Assert.AreEqual("Column > PaddingBox > LabelledBox \"count=1\"", probe.Get());
+            Assert.AreEqual(
+                "Column > PaddingBox \"RectPadding: 5\" > LabelledBox \"count=1\"",
+                probe.Get()
+            );
 
             live.Value = 2;
             probe.Get();
