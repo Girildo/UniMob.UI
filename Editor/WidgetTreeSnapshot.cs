@@ -276,10 +276,11 @@ namespace UniMob.UI.Editor
 
             if (node.Target == null || node.Target.transform is not RectTransform rect)
             {
-                // A build-only widget has no rect of its own, and those are most of the interesting
-                // ones -- Expanded, Positioned, GestureDetector and the rest. Its extent on screen is
-                // the union of the view-backed widgets beneath it, which for a proxy is exactly its
-                // child's box and for a wrapper is the area it governs.
+                // Reached by a node that is not mounted to a view: a sliver's cache window, or a
+                // read taken before the first render. A widget that merely builds another is not
+                // one of them -- HocState and StatelessElement forward InnerViewState to the child
+                // they build, so they answer with that child's view. The extent is the union of the
+                // view-backed widgets beneath, which for a wrapper is the area it governs.
                 var union = Rect.zero;
 
                 foreach (var child in node.Children)
@@ -445,7 +446,7 @@ namespace UniMob.UI.Editor
             }
         }
 
-        /// <summary>False for a build-only widget, which has no box of its own to contain anything.</summary>
+        /// <summary>False for a node mounted to no view, which has no box of its own to contain anything.</summary>
         private static bool Contains(Node node, Vector2 screenPoint)
         {
             return node.Target != null

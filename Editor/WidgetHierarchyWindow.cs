@@ -12,11 +12,16 @@ namespace UniMob.UI.Editor
     /// </summary>
     /// <remarks>
     ///     Unity's Hierarchy shows GameObjects, and a GameObject exists only where a state has a view.
-    ///     Every build-only state is therefore invisible in it -- <c>HocState</c>,
-    ///     <c>StatelessElement</c>, and everything owning a <c>RenderProxy</c>: Flexible, Expanded,
-    ///     Positioned, Opacity, IgnorePointer, Clickable, GestureDetector, ConstrainedBuilder. Those are
-    ///     disproportionately the widgets that <i>cause</i> layout faults, and the ones you can see are
-    ///     named "Column[MultiChildLayoutView]" rather than by what the author wrote.
+    ///     Every build-only state is therefore invisible in it -- <c>HocState</c> and
+    ///     <c>StatelessElement</c>, which have no view at all and forward <c>InnerViewState</c> to the
+    ///     child they build, so every <c>StatelessWidget</c> and every <c>ProxyWidget</c> is missing.
+    ///     Those are disproportionately the widgets that <i>cause</i> layout faults, and the ones you
+    ///     can see are named "Column[MultiChildLayoutView]" rather than by what the author wrote.
+    ///     <para>
+    ///         Owning a <c>RenderProxy</c> is not the test for it. Flexible, Expanded, Positioned,
+    ///         Opacity, IgnorePointer, Clickable, GestureDetector and ConstrainedBuilder each own one
+    ///         and each registers a view, so all of them do appear.
+    ///     </para>
     ///     <para>
     ///         Rows come from <c>DiagnosticNode</c> and badges from <c>RenderObject.HasLayoutIssue</c>,
     ///         so this window agrees with the console by construction rather than by maintenance.
