@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace UniMob.UI.Tests
 {
-    // One node, four channels, and the rule that a failure in any one of them costs only that one.
+    // One node, five channels, and the rule that a failure in any one of them costs only that one.
     public class DiagnosticNodeTests
     {
         // Every member throws, which is FakeState's whole point and the worst input this renderer can

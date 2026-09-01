@@ -5,8 +5,9 @@ using System.Text;
 namespace UniMob.UI.Diagnostics
 {
     /// <summary>
-    ///     Renders one node of the widget tree as text: what it is, which one it is, and whatever its
-    ///     author had to say about it. <c>AppButton#submit "Cart Add to cart"</c>.
+    ///     Renders one node of the widget tree as text: what it is, which one it is, what a test
+    ///     addresses it by, and whatever its author had to say about it.
+    ///     <c>AppButton#submit @Login/SubmitButton "Cart Add to cart"</c>.
     /// </summary>
     /// <remarks>
     ///     The one place the label channels are resolved, and the primitive everything describing a
@@ -21,6 +22,20 @@ namespace UniMob.UI.Diagnostics
     /// </remarks>
     public static class DiagnosticNode
     {
+        /// <summary>
+        ///     Resolves a widget's semantic key, the out-of-band address a test targets it by. Null
+        ///     until an application installs one, and while it is null a node renders exactly as it did
+        ///     before this channel existed.
+        /// </summary>
+        /// <remarks>
+        ///     A hook rather than a member on <see cref="Widget"/>: the keys live in a side table owned
+        ///     by the application, which this package cannot see, and a channel nothing in the framework
+        ///     reads cannot change layout or reconciliation. Called under <c>Atom.NoWatch</c>, on the
+        ///     widget of every node described, so it belongs to whoever owns that table and must be
+        ///     cheap.
+        /// </remarks>
+        public static Func<Widget, string?>? SemanticKeyResolver { get; set; }
+
         /// <summary>
         ///     Describes <paramref name="state"/> in one line. Never throws, and never registers an atom
         ///     dependency: the whole read is inside <c>Atom.NoWatch</c>, which is what lets a label be a
@@ -54,6 +69,7 @@ namespace UniMob.UI.Diagnostics
             {
                 builder.Append(TypeName(state));
                 AppendKey(builder, state);
+                AppendSemanticKey(builder, state);
                 AppendLabel(builder, state);
             }
         }
@@ -128,6 +144,51 @@ namespace UniMob.UI.Diagnostics
             }
         }
 
+        // Channel 2: the semantic key, the address a test targets the widget by. An '@' sigil, because
+        // it is neither identity for reconciliation nor prose for a human, and so must not be readable
+        // as either the '#' key or the quoted label beside it. Omitted entirely while no resolver is
+        // installed, which is what keeps every existing node byte-identical.
+        private static void AppendSemanticKey(StringBuilder builder, IState state)
+        {
+            var resolver = SemanticKeyResolver;
+            if (resolver is null)
+            {
+                return;
+            }
+
+            Widget widget;
+            try
+            {
+                widget = state.RawWidget;
+            }
+            catch (Exception)
+            {
+                // A state can refuse to answer for its widget, and mid-construction it has none. Not
+                // this channel's failure to report: channel 0 has already said what it could.
+                return;
+            }
+
+            if (widget == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var key = resolver.Invoke(widget);
+                if (!string.IsNullOrEmpty(key))
+                {
+                    // Sanitized like a label: a node is one line wherever it is read, however the key
+                    // was authored.
+                    builder.Append(" @").Append(Sanitize(key));
+                }
+            }
+            catch (Exception ex)
+            {
+                builder.Append(" <semantic key threw: ").Append(ex.GetType().Name).Append('>');
+            }
+        }
+
         /// <summary>
         ///     Cuts <paramref name="value"/> to <paramref name="max"/> characters, marking the cut.
         ///     What an author calls when their label echoes content they do not control.
@@ -149,7 +210,7 @@ namespace UniMob.UI.Diagnostics
             return value.Substring(0, max) + "...";
         }
 
-        // Channels 2 and 3: what the widget, or the state that beat it to it, says about itself.
+        // Channels 3 and 4: what the widget, or the state that beat it to it, says about itself.
         private static void AppendLabel(StringBuilder builder, IState state)
         {
             string? label;
