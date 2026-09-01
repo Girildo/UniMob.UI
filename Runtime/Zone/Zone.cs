@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UniMob.Core;
 using UniMob.UI.Diagnostics;
 
 namespace UniMob
@@ -63,6 +64,27 @@ namespace UniMob
         // Null-checked, unlike every other Current call site, because this one is read from outside a
         // mounted tree, where no ZoneDriver has run.
         public static int RunningAnimations => Current?._animationTickers.Count ?? 0;
+
+        /// <summary>
+        ///     Whether the clock and the reactive graph have nothing left to do: no atom queued for
+        ///     actualization, and nothing queued for the following frame. True where no clock has been
+        ///     installed, since nothing can be outstanding on a frame nobody is driving.
+        /// </summary>
+        /// <remarks>
+        ///     Tickers are deliberately no part of this. A hosted tree always has the device widget's
+        ///     screen poll registered, so a registered ticker means something is watching rather than
+        ///     something is outstanding, and what a tick produces lands in the scheduler anyway. A
+        ///     predicate that included them would never come true for a tree hosted the way an app hosts
+        ///     one, and a harness waiting on it would wait forever. Whether anything is moving is the
+        ///     separate question <see cref="RunningAnimations"/> answers.
+        ///     <para>
+        ///         Public so that a harness driving the real clock can ask it: <see cref="Current"/> is
+        ///         not, and neither is the queue.
+        ///     </para>
+        /// </remarks>
+        // Null-checked for the same reason RunningAnimations is.
+        public static bool IsQuiescent =>
+            !AtomScheduler.HasPendingWork && (Current?.NextFrameQueueEmpty ?? true);
 
         /// <summary>
         ///     Registers <paramref name="ticker"/> to run every frame, given the seconds since the last.

@@ -125,7 +125,8 @@ which measure Unity objects a `TestHarness` mount never creates.
 
 `WidgetSnapshotter`, in `Testing/`, is the consumable that needs PlayMode: it renders a mounted tree
 through a camera, which needs the real player loop. It settles on real frames rather
-than through `TestZone`, and on a narrower condition -- the scheduler is idle and the next-frame
-queue is empty, with tickers excluded. `UniMobUI.RunApp` always mounts a `UniMobDeviceWidget`, whose
-ticker polls the screen for as long as the tree is mounted, so `IsSettled` would never come true for
-anything hosted the way the app hosts it.
+than through `TestZone`, and on a narrower condition: `Zone.IsQuiescent`, which is the scheduler being idle
+and the next-frame queue being empty, with tickers excluded. `UniMobUI.RunApp` always mounts a
+`UniMobDeviceWidget`, whose ticker polls the screen for as long as the tree is mounted, so `IsSettled`
+would never come true for anything hosted the way the app hosts it. `Zone.IsQuiescent` is public, so a
+harness outside this package can wait on the same condition without being a friend of it.

@@ -134,7 +134,7 @@ namespace UniMob.UI.Tests
                 for (var frame = 0; frame < SettleFrameLimit && !settled; frame++)
                 {
                     yield return null;
-                    settled = NothingLeftToDo;
+                    settled = Zone.IsQuiescent;
                 }
 
                 if (!settled)
@@ -151,7 +151,7 @@ namespace UniMob.UI.Tests
                 mount.Dispose();
                 yield return null;
 
-                if (!NothingLeftToDo)
+                if (!Zone.IsQuiescent)
                 {
                     throw new InvalidOperationException(
                         $"'{outputPath}' left work running after it was unmounted: "
@@ -167,19 +167,6 @@ namespace UniMob.UI.Tests
                 mount.Dispose();
             }
         }
-
-        /// <summary>
-        ///     Whether the mounted tree has nothing left to do: no atom queued for actualization and
-        ///     nothing queued for the following frame.
-        /// </summary>
-        /// <remarks>
-        ///     Tickers are deliberately no part of this. <see cref="UniMobUI.RunApp"/> always mounts a
-        ///     <c>UniMobDeviceWidget</c>, whose ticker polls the screen for as long as the tree is
-        ///     mounted, so a registered ticker means something is watching rather than something is
-        ///     outstanding -- and what a tick actually produces lands in the scheduler.
-        /// </remarks>
-        private static bool NothingLeftToDo =>
-            !AtomScheduler.HasPendingWork && Zone.Current.NextFrameQueueEmpty;
 
         private static string Outstanding() =>
             AtomScheduler.HasPendingWork
