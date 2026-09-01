@@ -55,6 +55,32 @@ namespace UniMob.UI.Navigation
         public Route TopmostRoute => _stack.TopmostRoute;
 
         /// <summary>
+        ///     Whether this navigator is between stack states: a command is queued, a command is running,
+        ///     or a pop request is still being decided.
+        /// </summary>
+        /// <remarks>
+        ///     False only when all three are empty. Every other member here answers about the stack, and
+        ///     the stack is not the whole of a navigation: a push initializes its incoming route before
+        ///     pushing it, so for as long as <c>OnInitialize</c> runs -- which may be many frames --
+        ///     <see cref="NavigationStack"/>, <see cref="TopmostRoute"/>, <see cref="Screens"/> and every
+        ///     route's <see cref="Route.ScreenState"/> read exactly as they did at rest. A replace does
+        ///     the same. This is the only member that is true across that window.
+        ///     <para>
+        ///         True across a route's entry and exit transitions too, since both are awaited inside the
+        ///         command loop: an animated page that is still leaving is still navigating. True from the
+        ///         moment a pop is requested as well, because the request takes the route's slot before
+        ///         the route's hook runs and holds it across a hook that awaits or navigates itself.
+        ///     </para>
+        ///     <para>
+        ///         A command loop that fails abandons whatever it had queued, and this stays true until a
+        ///         later navigation drains those commands. That is the state the navigator is in, not a
+        ///         misreading of it.
+        ///     </para>
+        /// </remarks>
+        public bool IsNavigating =>
+            _processing || _pendingCommands.Count > 0 || _pendingRequests.Count > 0;
+
+        /// <summary>
         ///     How deep the stack is and what is on top of it: <c>"3 routes: room-edit"</c>. Read off the
         ///     stack directly, since <see cref="TopmostRoute"/> throws on the empty stack this state has
         ///     before <c>InitState</c>.
