@@ -85,6 +85,11 @@ namespace UniMob.UI.Diagnostics
         ///     it that has not been built yet is null. Callers must render those honestly rather than
         ///     skipping them, or the numbering stops meaning what it says.
         ///     <para>
+        ///         A navigator answers with every screen on its stack, not only the topmost one. A dump
+        ///         wants the whole stack, and a caller that wants only what the user can see filters for
+        ///         itself.
+        ///     </para>
+        ///     <para>
         ///         Shared so that everything describing the tree walks it the same way. Reading a
         ///         virtualized list's children is an atom recompute, so this belongs on demand, never
         ///         inside a pass, and callers are responsible for their own <c>Atom.NoWatch</c>.
@@ -94,6 +99,15 @@ namespace UniMob.UI.Diagnostics
         {
             switch (state)
             {
+                // Ahead of the multi-child case, which NavigatorState satisfies as well. Screens is the
+                // published contract and is the whole stack; Children is a layout-facing projection, and
+                // the other multi-child states narrow theirs to the realized window.
+                case INavigatorState { Screens: null }:
+                    return Array.Empty<IState>();
+
+                case INavigatorState navigator:
+                    return navigator.Screens;
+
                 case IMultiChildLayoutState multiChild:
                     return multiChild.Children;
 
