@@ -33,52 +33,6 @@ namespace UniMob.UI.Internal.Views
             {
                 TryGetComponent(out text);
             }
-
-            // Registered once per component, not once per activation: the callback list is append-only
-            // and is never cleared, so re-registering would grow it for the life of the view.
-            AddActivationCallback(DiscardInheritedGeometry);
-        }
-
-        /// <summary>
-        ///     Hands this view to its new state carrying none of the previous one's glyphs.
-        /// </summary>
-        /// <remarks>
-        ///     Works around a TMP defect that otherwise resurrects discarded text on a window resize or a
-        ///     device rotation, permanently.
-        ///     <para>
-        ///         TMP ends its empty-text generation in <c>ClearMesh()</c>, which is only
-        ///         <c>canvasRenderer.SetMesh(null)</c> -- the geometry itself survives in the mesh info.
-        ///         Anything that later measures a non-empty string against this component repopulates the
-        ///         character buffer guarding <c>InternalUpdate</c> without disturbing the character count,
-        ///         the dirty flag or the mesh. A lossy-scale change past TMP's 20% threshold then reaches
-        ///         <c>UpdateSDFScale</c>, whose last act is an unconditional
-        ///         <c>canvasRenderer.SetMesh(m_mesh)</c>, and the discarded glyphs are on screen again with
-        ///         nothing left to describe the fault: character count already 0, dirty flag already
-        ///         false, so no rebuild is ever scheduled. Only a large resize crosses that threshold,
-        ///         which is why it tracks maximising and rotating rather than dragging an edge.
-        ///     </para>
-        ///     <para>
-        ///         The string is reset alongside the geometry, and that pairing is load-bearing:
-        ///         <see cref="Render" />'s assignment is a no-op when the incoming value equals the
-        ///         outgoing one, so discarding geometry on its own would leave such a view permanently
-        ///         blank. Emptying the text first guarantees the assignment that follows always differs.
-        ///     </para>
-        ///     <para>
-        ///         Cleared through TMP's own <c>ClearMeshInfo</c> rather than <c>Mesh.Clear()</c>, which
-        ///         is a trap: dropping the vertices leaves the UV array longer than them, and the stray
-        ///         upload writes UVs before it uploads, so every resize would throw "Mesh.uv is out of
-        ///         bounds" instead. TMP zeroes its vertices in place, keeping the arrays the same length.
-        ///     </para>
-        /// </remarks>
-        private void DiscardInheritedGeometry()
-        {
-            if (text == null)
-            {
-                return;
-            }
-
-            text.text = string.Empty;
-            text.textInfo?.ClearMeshInfo(true);
         }
 
         protected override void Render()
@@ -86,9 +40,7 @@ namespace UniMob.UI.Internal.Views
             if (text == null)
                 return;
 
-            // Assigning only marks TMP dirty. The mesh rebuild it provokes is deferred to the canvas
-            // update later in the frame, where TMP's own markers already account for it -- so there is
-            // deliberately no marker here to imply otherwise.
+            // Assigning only marks TMP dirty; RegenerateNow below is what draws it.
             text.text = State.Value;
 
             // Sampled here rather than in Build: AnimationController.Value is an atom and Render is a
@@ -125,7 +77,50 @@ namespace UniMob.UI.Internal.Views
 
             text.verticalAlignment = VerticalAlignmentOptions.Middle;
 
+            RegenerateNow();
+
             NoteTextThatDoesNotFit();
+        }
+
+        /// <summary>
+        ///     Leaves this text drawn with the values above, rather than waiting to be asked.
+        /// </summary>
+        /// <remarks>
+        ///     TMP draws only from <c>OnPreRenderCanvas</c>, and reaches it only if it is registered
+        ///     with <c>CanvasUpdateRegistry</c> -- a registration <c>SetVerticesDirty</c> refuses
+        ///     without a word while a graphic rebuild is in flight, or while the component is not
+        ///     active-and-enabled. It has raised its dirty flag by then, and a raised flag is the one
+        ///     state TMP's per-frame <c>InternalUpdate</c> will not act on, so a refused registration
+        ///     is permanent: the component keeps the geometry it happens to be holding for the rest of
+        ///     its life. That is how the same text came back after a resize, and how it went missing
+        ///     after a rotation once the old workaround had emptied the mesh first.
+        ///     <para>
+        ///         Generating here rather than repairing it later makes the registration stop mattering
+        ///         at all: every render leaves the mesh matching the string with both flags down, so
+        ///         there is no stale geometry for <c>UpdateSDFScale</c> to put back on screen, and no
+        ///         missed rebuild to leave a blank. The queued rebuild still runs later in the frame and
+        ///         finds nothing to do.
+        ///     </para>
+        ///     <para>
+        ///         Asking the composite <see cref="UniMobTextMeshProBehaviour.WantsRegeneration" />, not
+        ///         <c>havePropertiesChanged</c>: a resize dirties a text through
+        ///         <c>OnRectTransformDimensionsChange</c>, which raises only the layout half. That is
+        ///         the half a rotation moves, and the parent writes this view's rect before rendering
+        ///         it, so the flag is already up by the time this runs.
+        ///     </para>
+        ///     <para>
+        ///         It is also the guard that keeps this cheap. Render re-runs on every layout pass, and
+        ///         a pass that changed nothing leaves both flags down, so only the labels that actually
+        ///         moved or changed pay anything. Before the diagnostic below, so a release player draws
+        ///         exactly what the Editor draws.
+        ///     </para>
+        /// </remarks>
+        private void RegenerateNow()
+        {
+            if (text.WantsRegeneration)
+            {
+                text.ForceMeshUpdate();
+            }
         }
 
         /// <summary>
