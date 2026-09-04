@@ -120,5 +120,92 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(40f, wrap.GetIntrinsicHeight(100f), 0.01f);
         }
+
+        [Test]
+        public void IntrinsicWidth_Vertical_IsTheWidthOfTheColumnsTheChildrenPackInto()
+        {
+            var state = new FakeWrapState
+            {
+                Children = new[] { Box(30, 50), Box(30, 50), Box(30, 50) },
+                Direction = Axis.Vertical,
+            };
+
+            var wrap = new RenderWrap(state);
+
+            // Two children fit in a 100-tall column, so the third starts a second one: 2 x 30 wide.
+            // The cross axis has no closed form -- it is a function of where the runs break -- so this
+            // is the branch that has to pack rather than sum.
+            Assert.AreEqual(60f, wrap.GetIntrinsicWidth(100f), 0.01f);
+        }
+
+        [Test]
+        public void IntrinsicHeight_Horizontal_IsTheHeightOfTheRowsTheChildrenPackInto()
+        {
+            var state = new FakeWrapState
+            {
+                Children = new[] { Box(30, 50), Box(30, 50), Box(30, 50) },
+            };
+
+            var wrap = new RenderWrap(state);
+
+            // All three fit across 100, so there is one row and the answer is one child tall.
+            Assert.AreEqual(50f, wrap.GetIntrinsicHeight(100f), 0.01f);
+            // Narrow enough to force a second row, and the answer doubles.
+            Assert.AreEqual(100f, wrap.GetIntrinsicHeight(70f), 0.01f);
+        }
+
+        [Test]
+        public void IntrinsicHeight_Horizontal_CountsRunSpacingBetweenRows()
+        {
+            var state = new FakeWrapState
+            {
+                Children = new[] { Box(30, 50), Box(30, 50), Box(30, 50) },
+                RunSpacing = 7,
+            };
+
+            var wrap = new RenderWrap(state);
+
+            Assert.AreEqual(107f, wrap.GetIntrinsicHeight(70f), 0.01f);
+        }
+
+        [Test]
+        public void IntrinsicQueriesLayNoChildOut()
+        {
+            var boxes = new[]
+            {
+                new CountingBox { BoxSize = new Vector2(30, 50) },
+                new CountingBox { BoxSize = new Vector2(30, 50) },
+                new CountingBox { BoxSize = new Vector2(30, 50) },
+            };
+            var children = Array.ConvertAll(boxes, box => (IState)TestHarness.Mount(box));
+            var renders = Array.ConvertAll(
+                children,
+                child => (RenderCountingBox)child.RenderObject
+            );
+
+            var state = new FakeWrapState { Children = children };
+            var wrap = new RenderWrap(state);
+
+            wrap.Layout(new LayoutConstraints(0, 0, 100, 1000));
+            var passesAfterLayout = Array.ConvertAll(renders, render => render.SizingPasses);
+
+            // Both intrinsics, at extents deliberately unlike the constraints laid out above:
+            // a query that laid children out would have to re-measure them to answer.
+            wrap.GetIntrinsicWidth(45f);
+            wrap.GetIntrinsicHeight(45f);
+
+            // The invariant the whole intrinsic protocol rests on. A query that reaches for
+            // LayoutChild answers correctly and still strands its children at constraints nothing is
+            // going to draw them in -- silently, until the next pass happens to repair it.
+            CollectionAssert.AreEqual(
+                passesAfterLayout,
+                Array.ConvertAll(renders, render => render.SizingPasses),
+                "an intrinsic query laid a child out"
+            );
+
+            // And it must not have disturbed the run list positioning reads either.
+            Assert.AreEqual(new Vector2(90, 50), wrap.PeekSize());
+            Assert.AreEqual(new Vector2(60, 0), wrap.ChildrenLayout[2].Position);
+        }
     }
 }

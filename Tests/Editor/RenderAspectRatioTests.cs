@@ -83,17 +83,37 @@ namespace UniMob.UI.Tests
         }
 
         [Test]
-        public void IntrinsicWidth_IsZero_WhenHeightIsInfinite()
+        public void IntrinsicWidth_IsZero_WhenHeightIsUnboundedAndThereIsNoChild()
         {
             var render = Build(aspectRatio: 2f);
             Assert.AreEqual(0f, render.GetIntrinsicWidth(float.PositiveInfinity));
         }
 
         [Test]
-        public void IntrinsicHeight_IsZero_WhenWidthIsInfinite()
+        public void IntrinsicHeight_IsZero_WhenWidthIsUnboundedAndThereIsNoChild()
         {
             var render = Build(aspectRatio: 2f);
             Assert.AreEqual(0f, render.GetIntrinsicHeight(float.PositiveInfinity));
+        }
+
+        [Test]
+        public void IntrinsicWidth_FallsBackToTheChild_WhenHeightIsUnbounded()
+        {
+            var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(70, 40) });
+            var render = Build(aspectRatio: 2f, child);
+
+            // Not 0: with no height to scale, the ratio implies nothing and the child is the only
+            // thing that knows a size. Zero would be indistinguishable from a measured zero.
+            Assert.AreEqual(70f, render.GetIntrinsicWidth(float.PositiveInfinity));
+        }
+
+        [Test]
+        public void IntrinsicHeight_FallsBackToTheChild_WhenWidthIsUnbounded()
+        {
+            var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(70, 40) });
+            var render = Build(aspectRatio: 2f, child);
+
+            Assert.AreEqual(40f, render.GetIntrinsicHeight(float.PositiveInfinity));
         }
 
         [Test]
@@ -103,6 +123,33 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(20f, render.GetIntrinsicWidth(10f));
             Assert.AreEqual(5f, render.GetIntrinsicHeight(10f));
+        }
+
+        [Test]
+        public void IntrinsicSize_PrefersTheRatioOverTheChild_WhenTheArgumentIsBounded()
+        {
+            var child = TestHarness.Mount(new FixedSizeBox { Size = new Vector2(70, 40) });
+            var render = Build(aspectRatio: 2f, child);
+
+            // The child is consulted only where the ratio has nothing to say. A bounded argument
+            // determines the other axis outright, and the child is about to be forced to it anyway.
+            Assert.AreEqual(20f, render.GetIntrinsicWidth(10f));
+            Assert.AreEqual(5f, render.GetIntrinsicHeight(10f));
+        }
+
+        [Test]
+        public void RatioIsRereadOnRebuild()
+        {
+            var constraints = LayoutConstraints.Loose(100, 1000);
+            var state = TestHarness.Mount(new AspectRatio { Ratio = 2f });
+
+            Assert.AreEqual(new Vector2(100, 50), TestHarness.Layout(state, constraints));
+
+            TestHarness.Update(state, new AspectRatio { Ratio = 1f });
+
+            // Same constraints, so only the widget swap can move the answer. A render object that
+            // snapshots the ratio at construction stays at 2 here and reports (100, 50) forever.
+            Assert.AreEqual(new Vector2(100, 100), TestHarness.Layout(state, constraints));
         }
     }
 }

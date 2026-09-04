@@ -4,19 +4,17 @@ using UnityEngine;
 namespace UniMob.UI.Rendering
 {
     /// <summary>
-    /// A generic render object that acts as a proxy for another render object, forwarding layout and rendering
-    /// to its child. This is useful for creating wrapper widgets that modify the behavior of their child
-    /// without changing its layout logic (e.g. a clickable button that sizes itself to its child).
+    ///     Sizes itself to a given width/height ratio within the constraints it was handed, and forces
+    ///     its child to exactly that size. Where the box cannot satisfy the ratio, the box wins.
     /// </summary>
     public class RenderAspectRatio : RenderProxy
     {
-        private float _aspectRatio;
+        private readonly IAspectRatioState _state;
 
         public RenderAspectRatio(IAspectRatioState state)
             : base(state)
         {
-            // Intentionally left blank.
-            this._aspectRatio = state.AspectRatio;
+            _state = state;
         }
 
         // The aspect ratio is defined as width / height.
@@ -32,19 +30,20 @@ namespace UniMob.UI.Rendering
                 return constraints.Smallest;
             }
 
+            var aspectRatio = _state.AspectRatio;
             var width = constraints.MaxWidth;
             float height;
 
             // We default to maximizing width, then compute height.
             if (constraints.HasBoundedWidth)
             {
-                height = width / _aspectRatio;
+                height = width / aspectRatio;
             }
             else
             {
                 // If width is unconstrained, maximize height instead.
                 height = constraints.MaxHeight;
-                width = height * _aspectRatio;
+                width = height * aspectRatio;
             }
 
             // Now we check if the computed dimensions violate any constraints,
@@ -52,25 +51,25 @@ namespace UniMob.UI.Rendering
             if (width > constraints.MaxWidth)
             {
                 width = constraints.MaxWidth;
-                height = width / _aspectRatio;
+                height = width / aspectRatio;
             }
 
             if (height > constraints.MaxHeight)
             {
                 height = constraints.MaxHeight;
-                width = height * _aspectRatio;
+                width = height * aspectRatio;
             }
 
             if (width < constraints.MinWidth)
             {
                 width = constraints.MinWidth;
-                height = width / _aspectRatio;
+                height = width / aspectRatio;
             }
 
             if (height < constraints.MinHeight)
             {
                 height = constraints.MinHeight;
-                width = height * _aspectRatio;
+                width = height * aspectRatio;
             }
 
             var desired = new Vector2(width, height);
@@ -105,20 +104,35 @@ namespace UniMob.UI.Rendering
             return size;
         }
 
+        /// <summary>
+        ///     The width the ratio implies for <paramref name="height"/>, or the child's own preferred
+        ///     width where there is no height to derive one from.
+        /// </summary>
+        /// <remarks>
+        ///     A ratio relates the two axes without fixing either, so an unbounded argument leaves it
+        ///     nothing to scale and the child is the only thing left that knows a size. Answering zero
+        ///     there reports a measurement rather than the absence of one, and a caller sizing a column
+        ///     to its content cannot tell the two apart.
+        /// </remarks>
         protected override float ComputeIntrinsicWidth(float height)
         {
-            if (float.IsPositiveInfinity(height))
-                return 0; // Cannot determine intrinsic width from infinite height
+            if (float.IsFinite(height))
+            {
+                return height * _state.AspectRatio;
+            }
 
-            return height * _aspectRatio;
+            return base.ComputeIntrinsicWidth(height);
         }
 
+        /// <inheritdoc cref="ComputeIntrinsicWidth"/>
         protected override float ComputeIntrinsicHeight(float width)
         {
-            if (float.IsPositiveInfinity(width))
-                return 0; // Cannot determine intrinsic height from infinite width
+            if (float.IsFinite(width))
+            {
+                return width / _state.AspectRatio;
+            }
 
-            return width / _aspectRatio;
+            return base.ComputeIntrinsicHeight(width);
         }
     }
 }

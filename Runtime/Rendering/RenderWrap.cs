@@ -26,6 +26,12 @@ namespace UniMob.UI.Rendering
         }
 
         private readonly List<RunMetrics> _runs = new();
+        private readonly List<Vector2> _childSizes = new();
+
+        // Scratch for the dry pass, deliberately not the buffers above: a measurement that shared
+        // them would answer correctly and still leave the live layout holding its own results.
+        private readonly List<RunMetrics> _dryRuns = new();
+        private readonly List<Vector2> _dryChildSizes = new();
 
         public RenderWrap(IWrapState state)
             : base(state)
@@ -33,38 +39,44 @@ namespace UniMob.UI.Rendering
             _state = state;
         }
 
-        protected override Vector2 PerformSizing(LayoutConstraints constraints)
+        /// <summary>
+        ///     Greedily packs <paramref name="childSizes"/> into runs against
+        ///     <paramref name="mainAxisLimit"/>, appending each one to <paramref name="runs"/>, and
+        ///     returns the extent they occupy as <c>(main, cross)</c>.
+        /// </summary>
+        /// <remarks>
+        ///     Arithmetic over the sizes it is handed, and nothing else. Whether those came from laying
+        ///     the children out or from asking them their intrinsics is the caller's business, which is
+        ///     what lets a sizing pass and a dry measurement share one definition of where runs break.
+        /// </remarks>
+        private Vector2 PackRuns(
+            IReadOnlyList<Vector2> childSizes,
+            float mainAxisLimit,
+            List<RunMetrics> runs
+        )
         {
-            ChildrenLayoutBuffer.Clear();
-            _runs.Clear();
-
-            var childConstraints = constraints.Loosen();
+            var isHorizontal = Direction == Axis.Horizontal;
+            var spacing = Spacing;
 
             var currentMain = 0f;
             var childrenMainSum = 0f;
             var maxRunCross = 0f;
             var maxOverallMain = 0f;
 
-            var mainAxisConstraint = constraints.MaxAlongAxis(Direction);
-
             var currentRun = new RunMetrics { StartIndex = 0 };
 
-            for (var i = 0; i < _state.Children.Length; i++)
+            for (var i = 0; i < childSizes.Count; i++)
             {
-                var child = _state.Children[i];
-                var childSize = LayoutChild(child, childConstraints);
+                var childSize = childSizes[i];
+                var childMain = isHorizontal ? childSize.x : childSize.y;
+                var childCross = isHorizontal ? childSize.y : childSize.x;
 
-                ChildrenLayoutBuffer.Add(new LayoutInfo { Size = childSize });
-
-                var childMain = Direction == Axis.Horizontal ? childSize.x : childSize.y;
-                var childCross = Direction == Axis.Horizontal ? childSize.y : childSize.x;
-
-                if (currentRun.Count > 0 && currentMain + childMain > mainAxisConstraint)
+                if (currentRun.Count > 0 && currentMain + childMain > mainAxisLimit)
                 {
-                    currentRun.MainSize = currentMain - Spacing;
+                    currentRun.MainSize = currentMain - spacing;
                     currentRun.ChildrenMainSize = childrenMainSum;
                     currentRun.CrossSize = maxRunCross;
-                    _runs.Add(currentRun);
+                    runs.Add(currentRun);
 
                     maxOverallMain = Mathf.Max(maxOverallMain, currentRun.MainSize);
 
@@ -74,7 +86,7 @@ namespace UniMob.UI.Rendering
                     currentRun = new RunMetrics { StartIndex = i };
                 }
 
-                currentMain += childMain + Spacing;
+                currentMain += childMain + spacing;
                 childrenMainSum += childMain;
                 maxRunCross = Mathf.Max(maxRunCross, childCross);
                 currentRun.Count++;
@@ -82,22 +94,47 @@ namespace UniMob.UI.Rendering
 
             if (currentRun.Count > 0)
             {
-                currentRun.MainSize = currentMain - Spacing;
+                currentRun.MainSize = currentMain - spacing;
                 currentRun.ChildrenMainSize = childrenMainSum;
                 currentRun.CrossSize = maxRunCross;
-                _runs.Add(currentRun);
+                runs.Add(currentRun);
                 maxOverallMain = Mathf.Max(maxOverallMain, currentRun.MainSize);
             }
 
             var totalCross = 0f;
-            for (var r = 0; r < _runs.Count; r++)
+            for (var r = 0; r < runs.Count; r++)
             {
-                totalCross += _runs[r].CrossSize + (r > 0 ? RunSpacing : 0);
+                totalCross += runs[r].CrossSize + (r > 0 ? RunSpacing : 0);
             }
 
-            var finalWidth = Direction == Axis.Horizontal ? maxOverallMain : totalCross;
-            var finalHeight = Direction == Axis.Horizontal ? totalCross : maxOverallMain;
-            var desired = new Vector2(finalWidth, finalHeight);
+            return new Vector2(maxOverallMain, totalCross);
+        }
+
+        protected override Vector2 PerformSizing(LayoutConstraints constraints)
+        {
+            ChildrenLayoutBuffer.Clear();
+            _runs.Clear();
+            _childSizes.Clear();
+
+            var childConstraints = constraints.Loosen();
+            var children = _state.Children;
+
+            for (var i = 0; i < children.Length; i++)
+            {
+                _childSizes.Add(LayoutChild(children[i], childConstraints));
+            }
+
+            var extent = PackRuns(_childSizes, constraints.MaxAlongAxis(Direction), _runs);
+
+            for (var i = 0; i < _childSizes.Count; i++)
+            {
+                ChildrenLayoutBuffer.Add(new LayoutInfo { Size = _childSizes[i] });
+            }
+
+            var desired =
+                Direction == Axis.Horizontal
+                    ? new Vector2(extent.x, extent.y)
+                    : new Vector2(extent.y, extent.x);
 
             // Both axes, and both are reachable. A run always accepts its first child, so one child
             // wider than the whole wrap overflows the main axis; and nothing bounds the number of
@@ -231,8 +268,43 @@ namespace UniMob.UI.Rendering
             }
         }
 
+        /// <summary>
+        ///     The cross-axis extent the runs need when the children are packed against
+        ///     <paramref name="mainAxisLimit"/>, measured through their intrinsics rather than by laying
+        ///     them out.
+        /// </summary>
+        /// <remarks>
+        ///     The cross axis has no closed form: how many runs there are, and how thick each one is,
+        ///     both fall out of where the runs happen to break, so it has to be packed to be known.
+        ///     <para>
+        ///         Packing it through intrinsics is what keeps the answer free of side effects. Reaching
+        ///         for <see cref="RenderObject.LayoutChild"/> here would commit these speculative
+        ///         constraints onto real children, leaving them measured against a box nobody is going
+        ///         to draw them in until something lays them out again.
+        ///     </para>
+        /// </remarks>
+        private float DryCrossExtent(float mainAxisLimit)
+        {
+            _dryRuns.Clear();
+            _dryChildSizes.Clear();
+
+            foreach (var child in _state.Children)
+            {
+                var render = child.RenderObject;
+
+                // Width first, then the height that width implies: a child whose height depends on its
+                // width (any wrapping text) answers for the shape it would actually take.
+                var childWidth = render.GetIntrinsicWidth(float.PositiveInfinity);
+                _dryChildSizes.Add(new Vector2(childWidth, render.GetIntrinsicHeight(childWidth)));
+            }
+
+            return PackRuns(_dryChildSizes, mainAxisLimit, _dryRuns).y;
+        }
+
         protected override float ComputeIntrinsicWidth(float height)
         {
+            // Along the main axis the runs are irrelevant: one unwrapped line is the widest this can
+            // want, whatever the height does to where it would break.
             if (Direction == Axis.Horizontal)
             {
                 var totalWidth = 0f;
@@ -242,11 +314,8 @@ namespace UniMob.UI.Rendering
                 }
                 return Mathf.Max(0, totalWidth - Spacing);
             }
-            else
-            {
-                var constraints = new LayoutConstraints(0, 0, 0, height);
-                return PerformSizing(constraints).x;
-            }
+
+            return DryCrossExtent(mainAxisLimit: height);
         }
 
         protected override float ComputeIntrinsicHeight(float width)
@@ -260,11 +329,8 @@ namespace UniMob.UI.Rendering
                 }
                 return Mathf.Max(0, totalHeight - Spacing);
             }
-            else
-            {
-                var constraints = new LayoutConstraints(0, width, 0, float.PositiveInfinity);
-                return PerformSizing(constraints).y;
-            }
+
+            return DryCrossExtent(mainAxisLimit: width);
         }
 
         private const string MakeRoomForTheRuns =
