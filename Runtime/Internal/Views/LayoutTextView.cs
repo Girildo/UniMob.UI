@@ -97,9 +97,9 @@ namespace UniMob.UI.Internal.Views
         ///     <para>
         ///         Generating here rather than repairing it later makes the registration stop mattering
         ///         at all: every render leaves the mesh matching the string with both flags down, so
-        ///         there is no stale geometry for <c>UpdateSDFScale</c> to put back on screen, and no
-        ///         missed rebuild to leave a blank. The queued rebuild still runs later in the frame and
-        ///         finds nothing to do.
+        ///         there is no missed rebuild to leave a blank. The queued rebuild still runs later in
+        ///         the frame and finds nothing to do. What an emptied text leaves in its meshes is the
+        ///         component's own concern, in <see cref="UniMobTextMeshProBehaviour.ClearMesh" />.
         ///     </para>
         ///     <para>
         ///         Asking the composite <see cref="UniMobTextMeshProBehaviour.WantsRegeneration" />, not

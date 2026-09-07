@@ -23,5 +23,24 @@ namespace UniMob.UI
         ///     only about the first would not see it coming.
         /// </remarks>
         internal bool WantsRegeneration => m_havePropertiesChanged || m_isLayoutDirty;
+
+        /// <summary>
+        ///     Stops drawing this text and discards its geometry, so that nothing that re-uploads the
+        ///     meshes later can draw the previous string.
+        /// </summary>
+        /// <remarks>
+        ///     TextMeshPro's own <c>ClearMesh</c> only detaches the meshes from their canvas renderers;
+        ///     the meshes keep the previous string's glyphs. Its per-frame scale update then hands them
+        ///     straight back: a canvas scale change of more than 20% re-uploads the meshes as they are,
+        ///     guarded only by the parse buffer starting with a terminator -- which a styled string
+        ///     never does, because it starts with the style's opening tag, empty or not. That is how a
+        ///     rotation brought back the words a label had been emptied of. Zeroing the geometry here
+        ///     leaves that path nothing to draw.
+        /// </remarks>
+        public override void ClearMesh()
+        {
+            base.ClearMesh();
+            m_textInfo?.ClearMeshInfo(true);
+        }
     }
 }

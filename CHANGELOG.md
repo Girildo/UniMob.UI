@@ -192,3 +192,8 @@ Every entry in this section is a breaking change.
   when something changed.
 - The text measurer and the view-template root are `HideAndDontSave` and `DontDestroyOnLoad`, like
   `WidgetGeometryTicker`, so they stay out of the scene and out of the save.
+- A `Text` emptied of a styled value got its old words back on the next device rotation, or any
+  other canvas scale change of more than 20%. TextMeshPro clears an emptied text by detaching its
+  meshes and leaves the glyphs inside them, and its scale update re-attaches them as they are,
+  guarded only by the parse buffer starting with a terminator, which a styled string never does.
+  `UniMobTextMeshProBehaviour.ClearMesh` now discards the geometry as well.

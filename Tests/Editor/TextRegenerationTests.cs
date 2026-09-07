@@ -175,9 +175,9 @@ namespace UniMob.UI.Tests
         [Test]
         public void GeneratingAnEmptyValue_LeavesNoCharacters()
         {
-            // A rebound view whose new value is empty. TMP's empty path terminates the character buffer
-            // that arms UpdateSDFScale and hands the canvas renderer no mesh, so there is nothing left
-            // for a later scale change to put back on screen.
+            // A rebound view whose new value is empty: generating it hands the canvas renderer no
+            // mesh. What the meshes themselves still hold afterwards, and what a later scale change
+            // makes of that, is TextGeometryAfterScaleChangeTests' question.
             this.text.text = string.Empty;
             this.text.ForceMeshUpdate();
 
