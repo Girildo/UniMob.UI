@@ -19,7 +19,9 @@ namespace UniMob.UI.Tests
             public Action<TapDetails> OnTap { get; set; }
             public Action<PointerDetails> OnPointerDown { get; set; }
             public Action<PointerDetails> OnPointerUp { get; set; }
+            public Action<DragDetails> OnDragStart { get; set; }
             public Action<DragDetails> OnDragUpdate { get; set; }
+            public Action<DragDetails> OnDragEnd { get; set; }
             public Action<PointerDetails> OnPointerMove { get; set; }
 
             public IState Child => throw new NotImplementedException();
@@ -60,6 +62,30 @@ namespace UniMob.UI.Tests
             Assert.IsFalse(
                 GestureDetectorView.HandlesPress(state),
                 "a drag-only detector must leave the press to the button it sits inside"
+            );
+        }
+
+        [Test]
+        public void DragStartOnlyDetectorLeavesThePress()
+        {
+            var state = new FakeGestureDetectorState { OnDragStart = _ => { } };
+
+            Assert.IsFalse(
+                GestureDetectorView.HandlesPress(state),
+                "listening for the start of a drag is still only listening for a drag, and must not "
+                    + "take the press from the button this detector sits inside"
+            );
+        }
+
+        [Test]
+        public void DragEndOnlyDetectorLeavesThePress()
+        {
+            var state = new FakeGestureDetectorState { OnDragEnd = _ => { } };
+
+            Assert.IsFalse(
+                GestureDetectorView.HandlesPress(state),
+                "listening for the end of a drag is still only listening for a drag, and the press "
+                    + "belongs to whatever handles taps"
             );
         }
 
