@@ -66,12 +66,14 @@ namespace UniMob.UI.Rendering
 
         /// <summary>
         ///     Shifts a child's leading-edge offset to the requested spot in the viewport: Start keeps the
-        ///     leading edge; Center/End pull it back by the appropriate slice of the leftover viewport space.
+        ///     leading edge; Center/End pull it back by the appropriate slice of the leftover viewport space;
+        ///     Nearest keeps <paramref name="currentOffset" /> for a child already fully in view.
         /// </summary>
         public static float AlignToScrollPosition(
             float leadingEdge,
             float childSize,
             float viewportSize,
+            float currentOffset,
             ScrollToPosition position
         )
         {
@@ -79,8 +81,30 @@ namespace UniMob.UI.Rendering
             {
                 ScrollToPosition.Center => leadingEdge - (viewportSize - childSize) / 2f,
                 ScrollToPosition.End => leadingEdge - (viewportSize - childSize),
+                ScrollToPosition.Nearest => AlignToNearestEdge(
+                    leadingEdge,
+                    childSize,
+                    viewportSize,
+                    currentOffset
+                ),
                 _ => leadingEdge,
             };
+        }
+
+        private static float AlignToNearestEdge(
+            float leadingEdge,
+            float childSize,
+            float viewportSize,
+            float currentOffset
+        )
+        {
+            if (leadingEdge < currentOffset || childSize >= viewportSize)
+                return leadingEdge;
+
+            var trailingEdge = leadingEdge + childSize;
+            return trailingEdge > currentOffset + viewportSize
+                ? trailingEdge - viewportSize
+                : currentOffset;
         }
     }
 }

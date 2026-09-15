@@ -492,6 +492,7 @@ namespace UniMob.UI.Rendering
                 childOffset,
                 childSize,
                 viewportSize,
+                _state.ScrollPixelOffset,
                 position
             );
             return Mathf.Clamp(childOffset, 0, totalScrollableDist);
@@ -507,27 +508,34 @@ namespace UniMob.UI.Rendering
         /// </summary>
         private float CalculateLazyScrollPixelOffset(int index, ScrollToPosition position)
         {
-            var itemCount = _state.ItemCount!.Value;
+            if (index < 0)
+                return 0;
+
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var viewportSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
 
-            var totalScrollableDist = EstimateLazyContentMainAxisSize() - viewportSize;
-            if (totalScrollableDist <= 0 || index < 0 || index >= itemCount)
-                return 0;
-
-            var childOffset = EstimateLeadingEdgeOffset(index);
+            var leadingEdge = EstimateLeadingEdgeOffset(index);
             var childSize =
                 _state.ItemExtent.HasValue ? _state.ItemExtent.Value
                 : _measuredExtents.TryGetValue(index, out var exact) ? exact
                 : _averageExtent;
 
-            childOffset = SliverLayoutMath.AlignToScrollPosition(
-                childOffset,
+            // An index at or past the laid-out count is one the source already holds and the list has not
+            // been rebuilt for yet. The content it is about to have reaches at least that item's trailing
+            // edge, so the range must not stop short of it.
+            var contentSize = Mathf.Max(EstimateLazyContentMainAxisSize(), leadingEdge + childSize);
+            var totalScrollableDist = contentSize - viewportSize;
+            if (totalScrollableDist <= 0)
+                return 0;
+
+            var offset = SliverLayoutMath.AlignToScrollPosition(
+                leadingEdge,
                 childSize,
                 viewportSize,
+                _state.ScrollPixelOffset,
                 position
             );
-            return Mathf.Clamp(childOffset, 0, totalScrollableDist);
+            return Mathf.Clamp(offset, 0, totalScrollableDist);
         }
 
         private const string BoundTheScrollAxis =

@@ -429,21 +429,26 @@ namespace UniMob.UI.Rendering
 
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var viewportSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
-            var itemCount = _state.ItemCount ?? _state.AllChildren.Length;
-
-            if (index < 0 || index >= itemCount)
-                return 0;
-
-            var totalScrollableDist = TotalContentSize() - viewportSize;
-            if (totalScrollableDist <= 0)
+            if (index < 0)
                 return 0;
 
             var row = _layout.RowOf(index);
             var leadingEdge = EstimateRowLeadingEdgeOffset(row);
+            var rowExtent = RowMainExtent(row);
+
+            // An index at or past the laid-out count is one the source already holds and the grid has not
+            // been rebuilt for yet. The content it is about to have reaches at least that row's trailing
+            // edge, so the range must not stop short of it.
+            var contentSize = Mathf.Max(TotalContentSize(), leadingEdge + rowExtent);
+            var totalScrollableDist = contentSize - viewportSize;
+            if (totalScrollableDist <= 0)
+                return 0;
+
             var offset = SliverLayoutMath.AlignToScrollPosition(
                 leadingEdge,
-                RowMainExtent(row),
+                rowExtent,
                 viewportSize,
+                _state.ScrollPixelOffset,
                 position
             );
             return Mathf.Clamp(offset, 0, totalScrollableDist);

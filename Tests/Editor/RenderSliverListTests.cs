@@ -378,5 +378,29 @@ namespace UniMob.UI.Tests
             ); // 60 - (50-40)/2
             Assert.AreEqual(50f, render.CalculateScrollPixelOffset(3, ScrollToPosition.End), 0.01f); // 60 - (50-40)
         }
+
+        [Test]
+        public void CalculateScrollPixelOffset_Lazy_AnIndexPastTheLaidOutCount_IsPlacedAfterTheLastItem()
+        {
+            // Laid out for 10 items while the source already holds an 11th, as a KeyToIndexResolver
+            // answers in the frame before the list rebuilds.
+            var state = new FakeSliverState
+            {
+                ItemCount = 10,
+                ItemExtent = 50,
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => Box(50)).ToArray(),
+            };
+
+            var render = new RenderSliverList(state);
+            render.Layout(new LayoutConstraints(0, 0, 100, 100));
+
+            Assert.AreEqual(
+                450f,
+                render.CalculateScrollPixelOffset(10, ScrollToPosition.Nearest),
+                0.01f,
+                "item 10 spans [500, 550), which the viewport [450, 550) shows"
+            );
+        }
     }
 }

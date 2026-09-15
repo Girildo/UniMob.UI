@@ -76,6 +76,8 @@ they are not covered by the version promise and may change in a minor release.
   entry dies with the state that inserted it, and the layer installs no raycast target of its own.
   `IOverlayState` and `RenderOverlay` come with it.
 - `RectPadding.Zero`.
+- `ScrollToPosition.Nearest`, which scrolls the least distance that shows a whole item and leaves a
+  list alone whose item is already fully in view.
 
 ### Changed
 
@@ -153,6 +155,10 @@ Every entry in this section is a breaking change.
 
 ### Fixed
 
+- A lazy `ScrollList` or `ScrollGrid` asked to scroll to an index at or past the count it was last laid
+  out for scrolled to the top. That is the index a `KeyToIndexResolver` answers for an item the source
+  has gained a frame before the list rebuilds. Such an index is now placed by the same estimate as any
+  unbuilt item, and the scrollable range reaches it.
 - `ScrollListView.AnimateScrollTo` invoked an easing that every caller down the chain defaults to
   null, so a plain `ScrollTo` threw on the first frame of the animation. It now eases linearly.
 - `ScrollListView.Awake` built its view mapper against `contentRoot` before resolving it, so the

@@ -340,5 +340,32 @@ namespace UniMob.UI.Tests
             ); // 60 - (40-60)/2 = 70
             Assert.AreEqual(80f, render.CalculateScrollPixelOffset(4, ScrollToPosition.End), 0.01f); // 60 - (40-60) = 80
         }
+
+        [Test]
+        public void CalculateScrollPixelOffset_AnIndexPastTheLaidOutCount_IsPlacedInTheRowAfterTheLast()
+        {
+            // Laid out for 10 cells in 5 rows while the source already holds an 11th, as a
+            // KeyToIndexResolver answers in the frame before the grid rebuilds.
+            var state = new FakeSliverGridState
+            {
+                GridDelegate = new SliverGridDelegateWithFixedCrossAxisCount(
+                    2,
+                    mainAxisExtent: 50f
+                ),
+                ItemCount = 10,
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => VCell(0)).ToArray(),
+            };
+
+            var render = new RenderSliverGrid(state);
+            render.Layout(new LayoutConstraints(0, 0, 200, 100));
+
+            Assert.AreEqual(
+                200f,
+                render.CalculateScrollPixelOffset(10, ScrollToPosition.Nearest),
+                0.01f,
+                "cell 10 opens row 5, spanning [250, 300), which the viewport [200, 300) shows"
+            );
+        }
     }
 }

@@ -325,8 +325,11 @@ namespace UniMob.UI.Internal.Views
                     yield return null;
                 }
 
-                // Ensure it ends at the exact target position.
-                ApplyPixelOffsetToScrollRect(targetPixelOffset, isHorizontal);
+                // Lands through the controller rather than the ScrollRect: the target can lie past a range
+                // the content has not grown to yet, where the ScrollRect would clamp it. The controller keeps
+                // the target, and the resize that follows puts the ScrollRect back onto it.
+                State.ScrollController.PixelOffset = targetPixelOffset;
+                SyncScrollRectToController(isHorizontal);
             }
             finally
             {
