@@ -282,6 +282,19 @@ namespace UniMob.UI.Internal.Views
             return true;
         }
 
+        /// <summary>
+        ///     Kills any running scroll animation and any ScrollRect inertia, then lands the ScrollRect on the
+        ///     controller's <see cref="ScrollController.PixelOffset"/>, which is already written. Landing here
+        ///     rather than on the next reaction is what makes the jump show up in the same frame it was
+        ///     asked for.
+        /// </summary>
+        public void SnapToControllerOffset()
+        {
+            StopAllCoroutines();
+            scrollRect.StopMovement();
+            SyncScrollRectToController(State.Axis == Axis.Horizontal);
+        }
+
         private IEnumerator AnimateScrollTo(float targetPixelOffset, float duration, Easing? easing)
         {
             // Every caller down the chain defaults easing to null; without this the coroutine throws
