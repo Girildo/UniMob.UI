@@ -5,10 +5,10 @@ namespace UniMob.UI.Rendering
 {
     public readonly struct LayoutConstraints : IEquatable<LayoutConstraints>
     {
-        public float MinWidth { get; }
-        public float MinHeight { get; }
-        public float MaxWidth { get; }
-        public float MaxHeight { get; }
+        public float MinWidth { get; init; }
+        public float MinHeight { get; init; }
+        public float MaxWidth { get; init; }
+        public float MaxHeight { get; init; }
 
         public LayoutConstraints(float minWidth, float minHeight, float maxWidth, float maxHeight)
         {
@@ -21,21 +21,6 @@ namespace UniMob.UI.Rendering
             MinHeight = minHeight;
             MaxWidth = maxWidth;
             MaxHeight = maxHeight;
-        }
-
-        public LayoutConstraints CopyWith(
-            float? minWidth = null,
-            float? minHeight = null,
-            float? maxWidth = null,
-            float? maxHeight = null
-        )
-        {
-            return new LayoutConstraints(
-                minWidth ?? this.MinWidth,
-                minHeight ?? this.MinHeight,
-                maxWidth ?? this.MaxWidth,
-                maxHeight ?? this.MaxHeight
-            );
         }
 
         /// <summary>
