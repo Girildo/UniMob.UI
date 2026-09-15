@@ -78,6 +78,20 @@ they are not covered by the version promise and may change in a minor release.
 - `RectPadding.Zero`.
 - `ScrollToPosition.Nearest`, which scrolls the least distance that shows a whole item and leaves a
   list alone whose item is already fully in view.
+- **`Scrollbar`**, a scrollbar bound to a `ScrollController` and placed by the caller: over the list
+  in a `ZStack` with a `Positioned`, or beside it in a `Row`. The thumb is draggable, a tap on the
+  track pages by one viewport toward the tap (`PageOnTrackTap`), and `ScrollbarVisibility` picks
+  between a bar that is always up and one that fades out after `FadeDelay` once the list stops
+  (`WhileScrolling`, the default). The thumb is a widget (`Thumb`), so an app styles it with the
+  widgets it already has. `IScrollbarState` and `RenderScrollbar` come with it.
+- `ScrollMetrics` and, on `ScrollController`, `Metrics`, `IsAttached` and `JumpTo(pixelOffset)`.
+  `Metrics` is the attached scrollable's offset, content extent and viewport extent along its axis,
+  derived reactively from the list's own layout and `null` until something is attached and laid
+  out; an observer created before the list mounts wakes when it does. `JumpTo` moves the list to a
+  pixel offset at once, stopping any running `ScrollTo` animation and any ScrollRect inertia.
+  Attaching a second scrollable to one controller is reported as a fault instead of going unnoticed.
+- `GestureDetector.OnDragStart` and `OnDragEnd`, the two ends of the drag whose middle
+  `OnDragUpdate` already reported.
 
 ### Changed
 
@@ -155,6 +169,9 @@ Every entry in this section is a breaking change.
 
 ### Fixed
 
+- `ScrollController.NormalizedValue` always read 0, because nothing wrote it. It is now computed
+  from `Metrics`: 0 at the top, 1 at the end of the scrollable range, and 0 while there is nothing
+  to scroll.
 - A lazy `ScrollList` or `ScrollGrid` asked to scroll to an index at or past the count it was last laid
   out for scrolled to the top. That is the index a `KeyToIndexResolver` answers for an item the source
   has gained a frame before the list rebuilds. Such an index is now placed by the same estimate as any

@@ -156,6 +156,49 @@ private Widget BuildDailyOffer(string offerId)
 }
 ```
 
+## Scrolling with a scrollbar
+
+A `Scrollbar` describes and drives whatever scrollable its `ScrollController` is attached to, so the
+list and the bar share one controller and the caller decides where the bar goes. Over the list, as a
+transient indicator:
+
+```csharp
+var controller = new ScrollController(lifetime);
+
+new ZStack
+{
+    Children =
+    {
+        new ScrollList { ScrollController = controller, ItemCount = count, ItemBuilder = BuildRow },
+        new Positioned
+        {
+            Top = 0, Bottom = 0, Right = 2,
+            Child = new Scrollbar { Controller = controller },
+        },
+    },
+}
+```
+
+Beside it, always visible, as a desktop list expects. A `Row` stretches its children across so the bar
+gets the row's height to fill:
+
+```csharp
+new Row
+{
+    CrossAxisAlignment = CrossAxisAlignment.Stretch,
+    Children =
+    {
+        new Expanded { Child = new ScrollList { ScrollController = controller, /* ... */ } },
+        new Scrollbar { Controller = controller, Visibility = ScrollbarVisibility.Always },
+    },
+}
+```
+
+The bar fills its box along its `Axis` and is `Thickness` across. The thumb is any widget (`Thumb`),
+sized by the bar; dragging it scrolls the list, and a tap on the track pages by one viewport toward
+the tap. `ScrollController.Metrics` is what the bar reads, and it is public: a widget of your own can
+draw a scroll position from the same three numbers.
+
 ## Built-in widgets
 
 **Layout**
@@ -183,6 +226,8 @@ private Widget BuildDailyOffer(string offerId)
 **Scrolling**
 
 > **[ScrollList](./Runtime/Widgets/ScrollList.cs), [ScrollGrid](./Runtime/Widgets/ScrollGrid.cs)** -- virtualized scrollable list and grid, on either axis.
+>
+> **[Scrollbar](./Runtime/Widgets/Scrollbar.cs)** -- a draggable thumb on a track for the list a `ScrollController` is attached to; placed by the caller, over the list or beside it.
 
 **Painting and input**
 
