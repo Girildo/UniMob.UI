@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using UniMob.UI.Internal;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Rendering;
 
 namespace UniMob.UI.Internal
@@ -11,21 +11,31 @@ namespace UniMob.UI.Internal
     // the fiddly NoWatch/atom discipline lives in exactly one place. The full architecture is documented
     // at the top of RenderSliverList.cs; the hazards specific to this bridge are called out inline below.
     //
-    // Scope: it owns the LAZY building (ItemBuilder mode) and the visible-index tracking. The eager
-    // ("Children") path stays in the owning state, because building those goes through State.CreateChildren
-    // (a protected State method this helper can't call); the owner injects how to resolve an eager index to
-    // a State via `resolveEagerIndex`.
+    // Scope: every way a child is addressed. It builds the lazy window (ItemBuilder mode), tracks the
+    // visible indices, indexes the eager children's keys, and answers both index-by-key questions. The
+    // eager States go through State.CreateChildren, a protected State method this helper cannot call,
+    // so the owner hands that capability in as a delegate and the holder is built here.
     internal sealed class VirtualizedChildren
     {
+        // The scrollable this addresses the children of. Named in a fault report, so the author reads
+        // about the widget they wrote.
+        private readonly IState _owner;
+
         private readonly BuildContext _itemBuildContext;
 
         // Returns the owner's *current* Widget.ItemBuilder. Called inside tracked atom pulls (not captured
         // once) so a widget swap that changes the builder invalidates the built window -- see BuildWindow.
         private readonly Func<IndexedWidgetBuilder?> _itemBuilder;
 
-        // Owner-provided eager resolver (index -> State from the owner's CreateChildren collection). Only
-        // consulted in eager mode; in lazy mode the visible set resolves from _builtStates below.
-        private readonly Func<int, IState?> _resolveEagerIndex;
+        // Returns the owner's *current* Widget.Children, for the same reason _itemBuilder is a delegate.
+        private readonly Func<List<Widget>> _eagerWidgets;
+
+        // The eagerly-built children. Only consulted in eager mode; in lazy mode the visible set
+        // resolves from _builtStates below.
+        private readonly StateCollectionHolder _eagerChildren;
+
+        // Index of the eager children's keys, rebuilt by AdoptEagerChildren on every eager build.
+        private readonly Dictionary<Key, int> _eagerKeyToIndex = new();
 
         // Cache of currently-built items by logical index. Deliberately NOT routed through
         // StateCollectionHolder (its reconciler disposes anything absent from the list it's given, so a
@@ -68,16 +78,25 @@ namespace UniMob.UI.Internal
         // _builtStates in lazy mode, or the owner's eager collection otherwise).
         private readonly Atom<IState[]> _visibleChildren;
 
+        /// <param name="createChildren">
+        ///     The owner's <c>State.CreateChildren</c>, which is protected and so cannot be reached
+        ///     from here. It is handed <see cref="AdoptEagerChildren" /> and builds lazily, on the
+        ///     first pull of the holder it returns.
+        /// </param>
         public VirtualizedChildren(
             Lifetime lifetime,
+            IState owner,
             BuildContext itemBuildContext,
             Func<IndexedWidgetBuilder?> itemBuilder,
-            Func<int, IState?> resolveEagerIndex
+            Func<List<Widget>> eagerWidgets,
+            Func<Func<BuildContext, List<Widget>>, StateCollectionHolder> createChildren
         )
         {
+            _owner = owner;
             _itemBuildContext = itemBuildContext;
             _itemBuilder = itemBuilder;
-            _resolveEagerIndex = resolveEagerIndex;
+            _eagerWidgets = eagerWidgets;
+            _eagerChildren = createChildren(AdoptEagerChildren);
 
             _builtWindow = Atom.Computed(lifetime, BuildWindow);
             _visibleChildren = Atom.Computed(lifetime, ComputeVisibleChildren);
@@ -88,9 +107,67 @@ namespace UniMob.UI.Internal
         /// <summary>The visible child States, in the order the render object reported them. Reactive.</summary>
         public IState[] VisibleChildren => _visibleChildren.Value;
 
-        /// <summary>Resolves a key seen at least once during building to its index; used by ScrollTo(Key).</summary>
-        public bool TryResolveSeenKey(Key key, out int index) =>
-            _seenKeyToIndex.TryGetValue(key, out index);
+        /// <summary>The eagerly-built child States, in the order the widget lists them. Reactive.</summary>
+        public IState[] EagerChildren => _eagerChildren.Value;
+
+        /// <summary>
+        ///     Rebuilds the eager key index from the owner's children and answers the children to
+        ///     build. A key used twice is reported as a fault against the owner and nothing is built:
+        ///     a scrollable whose keys do not identify its children cannot reconcile, scroll to a key,
+        ///     or be trusted to show the right item. The widget's own list is never modified.
+        /// </summary>
+        private List<Widget> AdoptEagerChildren(BuildContext context)
+        {
+            var children = _eagerWidgets();
+
+            _eagerKeyToIndex.Clear();
+
+            for (var i = 0; i < children.Count; i++)
+            {
+                var key = children[i]?.Key;
+                if (key == null)
+                    continue;
+
+                try
+                {
+                    _eagerKeyToIndex.Add(key, i);
+                }
+                catch (ArgumentException ex)
+                {
+                    var widgetName = _owner.RawWidget.GetType().Name;
+                    UniMobError.Report(
+                        new UniMobFault(
+                            ex,
+                            $"{widgetName}: duplicate child key detected. Each child of a {widgetName} "
+                                + "must have a unique Key.",
+                            _owner
+                        )
+                    );
+                    return new List<Widget>();
+                }
+            }
+
+            return children;
+        }
+
+        /// <summary>
+        ///     Resolves <paramref name="key" /> to the index of the item carrying it, for
+        ///     <c>ScrollTo(Key)</c>. In lazy mode <paramref name="resolver" /> answers when the owner
+        ///     supplied one, so an item that has never been built is still reachable; otherwise only
+        ///     keys built at least once resolve. In eager mode the children's own keys answer.
+        /// </summary>
+        public bool TryResolveIndex(Key key, Func<Key, int?>? resolver, out int index)
+        {
+            if (_itemBuilder() == null)
+                return _eagerKeyToIndex.TryGetValue(key, out index);
+
+            if (resolver == null)
+                return _seenKeyToIndex.TryGetValue(key, out index);
+
+            var resolved = resolver(key);
+            index = resolved ?? 0;
+            return resolved != null;
+        }
 
         /// <summary>
         ///     Ensures indices in [startIndexInclusive, endIndexExclusive) are built (constructing
@@ -142,16 +219,22 @@ namespace UniMob.UI.Internal
                 // _builtStates is a plain field (untracked here) yet safe: it's only mutated in BuildWindow,
                 // which runs (via RequestBuildWindow) before SetVisibleChildren writes _visibleIndices in the
                 // same pass -- so by the time this recomputes, _builtStates already reflects the current pass.
-                // Both resolvers answer null for an index the owner no longer has, which the visible
+                // Both lookups answer null for an index the owner no longer has, which the visible
                 // index list is written to rule out; layout dereferences what it is handed.
                 visible[i] = (
                     lazy
                         ? _builtStates.GetValueOrDefault(indices[i])
-                        : _resolveEagerIndex(indices[i])
+                        : ResolveEagerIndex(indices[i])
                 )!;
             }
 
             return visible;
+        }
+
+        private IState? ResolveEagerIndex(int index)
+        {
+            var all = _eagerChildren.Value;
+            return index < all.Length ? all[index] : null;
         }
 
         // Pull body of _builtWindow: (re)builds ItemBuilder's widgets for the window and reconciles them

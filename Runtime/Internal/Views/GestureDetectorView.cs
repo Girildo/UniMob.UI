@@ -24,7 +24,7 @@ namespace UniMob.UI.Internal.Views
         /// whatever sits above -- a button wrapping this detector -- presses that ancestor for a
         /// gesture that is not its own, and costs the tap outright under an input module that
         /// requires one object to own both ends. A drag-only detector claims nothing, so the button
-        /// above it keeps working.
+        /// above it keeps working, whichever end of the drag it listens for.
         /// </summary>
         internal static bool HandlesPress(IGestureDetectorState state) =>
             state.OnTap != null || state.OnPointerDown != null || state.OnPointerUp != null;
@@ -89,11 +89,13 @@ namespace UniMob.UI.Internal.Views
             }
 
             // 3. Manage DRAG
-            if (State.OnDragUpdate != null)
+            if (State.OnDragStart != null || State.OnDragUpdate != null || State.OnDragEnd != null)
             {
                 if (_dragReceiver == null)
                     _dragReceiver = gameObject.AddComponent<GestureDetectorDragReceiver>();
+                _dragReceiver.OnDragStart = State.OnDragStart;
                 _dragReceiver.OnDragUpdate = State.OnDragUpdate;
+                _dragReceiver.OnDragEnd = State.OnDragEnd;
             }
             else if (_dragReceiver != null)
             {
@@ -253,13 +255,13 @@ namespace UniMob.UI.Internal.Views
             IDragHandler,
             IEndDragHandler
     {
-        public Action<DragDetails>? OnDragBegin;
+        public Action<DragDetails>? OnDragStart;
         public Action<DragDetails>? OnDragEnd;
         public Action<DragDetails>? OnDragUpdate;
 
         // Unity requires Begin/End to exist for IDragHandler to play nicely with ScrollRects
         public void OnBeginDrag(PointerEventData eventData) =>
-            OnDragBegin?.Invoke(Convert(eventData));
+            OnDragStart?.Invoke(Convert(eventData));
 
         public void OnEndDrag(PointerEventData eventData) => OnDragEnd?.Invoke(Convert(eventData));
 

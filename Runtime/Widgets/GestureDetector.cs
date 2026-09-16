@@ -21,7 +21,18 @@ namespace UniMob.UI.Widgets
         public Action<PointerDetails>? OnPointerDown { get; init; }
         public Action<PointerDetails>? OnPointerUp { get; init; }
         public Action<PointerDetails>? OnPointerMove { get; init; }
+
+        /// <summary>
+        /// Called when a drag on this detector begins, before the first <see cref="OnDragUpdate"/>.
+        /// </summary>
+        public Action<DragDetails>? OnDragStart { get; init; }
+
         public Action<DragDetails>? OnDragUpdate { get; init; }
+
+        /// <summary>
+        /// Called when the pointer that was dragging this detector is released.
+        /// </summary>
+        public Action<DragDetails>? OnDragEnd { get; init; }
 
         public override State CreateState() => new GestureDetectorState();
 
@@ -41,7 +52,11 @@ namespace UniMob.UI.Widgets
         public Action<PointerDetails>? OnPointerUp => Widget.OnPointerUp;
         public Action<PointerDetails>? OnPointerMove => Widget.OnPointerMove;
 
+        public Action<DragDetails>? OnDragStart => Widget.OnDragStart;
+
         public Action<DragDetails>? OnDragUpdate => Widget.OnDragUpdate;
+
+        public Action<DragDetails>? OnDragEnd => Widget.OnDragEnd;
 
         public override WidgetViewReference View =>
             WidgetViewReference.Registered("UniMob.GestureDetectorView");

@@ -1,11 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using UniMob.UI.Diagnostics;
 using UniMob.UI.Internal;
-using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
-using UnityEngine.UI;
 using ScrollListView = UniMob.UI.Internal.Views.ScrollListView;
 using Vector2 = UnityEngine.Vector2;
 
@@ -88,73 +84,35 @@ namespace UniMob.UI.Widgets
     // It implements two interfaces on purpose: ISliverState/IScrollingListState feed the RenderObject the *full*
     // logical shape (it needs every item, visible or not, to compute layout), while IMultiChildLayoutState exposes
     // only the *visible* States to the View. The imperative layout pass writes indices while the View reads a
-    // computed [Atom] -- that impedance mismatch is why this class exists, and why the NoWatch scoping below is fiddly.
-    public class ScrollListState
-        : ViewState<ScrollList>,
-            ISliverState,
-            IScrollingListState,
-            IScrollControllerExecutor
+    // computed [Atom] -- that impedance mismatch is why this class exists, and VirtualizedChildren straddles it.
+    public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState
     {
-        private readonly StateCollectionHolder _allChildren;
-        private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
-
-        // The shared lazy-build + visible-index reactive bridge (see VirtualizedChildren). The eager path
-        // stays here (below) because it goes through the protected CreateChildren; the bridge owns the rest.
+        // The shared child-addressing bridge: lazy building, visible indices, the eager children and
+        // key-to-index resolution (see VirtualizedChildren).
         private readonly VirtualizedChildren _virtualized;
+
+        private readonly ScrollControllerBinding _binding;
 
         public float Spacing => this.Widget.Spacing;
 
         private bool IsLazy => Widget.ItemBuilder != null;
 
-        private ScrollListView? _view;
-
         public ScrollListState()
         {
-            _allChildren = CreateChildren(context =>
-            {
-                var children = Widget.Children;
-                _childKeyToIndexMap.Clear();
-                for (var i = 0; i < children.Count; i++)
-                {
-                    var key = children[i]?.Key;
-                    if (key != null)
-                    {
-                        try
-                        {
-                            _childKeyToIndexMap.Add(key, i);
-                        }
-                        catch (ArgumentException ex)
-                        {
-                            UniMobError.Report(
-                                new(
-                                    ex,
-                                    "ScrollList: duplicate child key detected. Each child of a ScrollList must have a unique Key.",
-                                    this
-                                )
-                            );
-                            children.Clear();
-                            return children;
-                        }
-                    }
-                }
-
-                return children;
-            });
-
             _virtualized = new VirtualizedChildren(
                 StateLifetime,
+                this,
                 new BuildContext(this, Context),
                 () => Widget.ItemBuilder,
-                ResolveEagerIndex
+                () => Widget.Children,
+                CreateChildren
             );
-        }
 
-        // Eager-mode resolver injected into the shared bridge: maps a visible index to its built child State
-        // from the CreateChildren collection (null when out of range, matching the prior inline behavior).
-        private IState? ResolveEagerIndex(int index)
-        {
-            var all = _allChildren.Value;
-            return index < all.Length ? all[index] : null;
+            _binding = new ScrollControllerBinding(
+                this,
+                _virtualized,
+                () => Widget.KeyToIndexResolver
+            );
         }
 
         [Atom]
@@ -167,9 +125,7 @@ namespace UniMob.UI.Widgets
         public MovementType MovementType => Widget.MovementType;
 
         [Atom]
-        // Resolved in InitState: the widget's controller if it brought one, otherwise a
-        // controller of this state's own.
-        public ScrollController ScrollController { get; private set; } = null!;
+        public ScrollController ScrollController => _binding.Controller;
 
         [Atom]
         public Vector2 ViewportSize { get; set; }
@@ -181,7 +137,7 @@ namespace UniMob.UI.Widgets
         public float ScrollPixelOffset => ScrollController.PixelOffset;
 
         [Atom]
-        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
+        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _virtualized.EagerChildren;
 
         [Atom]
         public int? ItemCount => Widget.ItemCount;
@@ -198,13 +154,13 @@ namespace UniMob.UI.Widgets
         public override void DidViewMount(IView view)
         {
             base.DidViewMount(view);
-            _view = view as ScrollListView;
+            _binding.AttachView(view as ScrollListView);
         }
 
         public override void DidViewUnmount(IView view)
         {
             base.DidViewUnmount(view);
-            _view = null;
+            _binding.AttachView(null);
         }
 
         public override WidgetViewReference View =>
@@ -224,13 +180,7 @@ namespace UniMob.UI.Widgets
 
             ValidateMode();
 
-            // Use the provided controller or create a new one.
-            ScrollController = Widget.ScrollController ?? new ScrollController(StateLifetime);
-            ScrollController.Attach(this);
-
-            // ScrollController reads this lazily on dispose, so it always detaches from whichever
-            // controller is current at that point, even if DidUpdateWidget swapped it in the meantime.
-            StateLifetime.Register(() => ScrollController.Detach(this));
+            _binding.Bind(Widget.ScrollController);
         }
 
         public override void DidUpdateWidget(ScrollList oldWidget)
@@ -239,75 +189,15 @@ namespace UniMob.UI.Widgets
 
             ValidateMode();
 
-            if (Widget.ScrollController != null && Widget.ScrollController != ScrollController)
-            {
-                ScrollController.Detach(this);
-                ScrollController = Widget.ScrollController;
-                ScrollController.Attach(this);
-            }
+            _binding.Bind(Widget.ScrollController);
         }
 
-        private void ValidateMode()
-        {
-            var hasBuilder = Widget.ItemBuilder != null;
-            var hasChildren = Widget.Children is { Count: > 0 };
-
-            if (hasBuilder && hasChildren)
-                throw new InvalidOperationException(
-                    "ScrollList cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount "
-                        + "for lazy building, or Children for eager building, not both."
-                );
-
-            if (hasBuilder && Widget.ItemCount == null)
-                throw new InvalidOperationException(
-                    "ScrollList.ItemCount must be set when ItemBuilder is provided."
-                );
-
-            if (!hasBuilder && Widget.ItemCount != null)
-                throw new InvalidOperationException(
-                    "ScrollList.ItemCount has no effect without ItemBuilder."
-                );
-        }
-
-        bool IScrollControllerExecutor.ScrollTo(
-            int index,
-            float duration,
-            ScrollToPosition position,
-            Easing? easing
-        )
-        {
-            return _view?.ScrollTo(index, duration, position, easing) ?? false;
-        }
-
-        bool IScrollControllerExecutor.ScrollTo(
-            Key key,
-            float duration,
-            ScrollToPosition position,
-            Easing? easing
-        )
-        {
-            int index;
-
-            if (IsLazy)
-            {
-                if (Widget.KeyToIndexResolver != null)
-                {
-                    var resolved = Widget.KeyToIndexResolver(key);
-                    if (resolved == null)
-                        return false;
-                    index = resolved.Value;
-                }
-                else if (!_virtualized.TryResolveSeenKey(key, out index))
-                {
-                    return false;
-                }
-            }
-            else if (!_childKeyToIndexMap.TryGetValue(key, out index))
-            {
-                return false;
-            }
-
-            return ((IScrollControllerExecutor)this).ScrollTo(index, duration, position, easing);
-        }
+        private void ValidateMode() =>
+            ScrollableWidgetValidation.ValidateChildrenMode(
+                nameof(ScrollList),
+                Widget.ItemBuilder != null,
+                Widget.Children is { Count: > 0 },
+                Widget.ItemCount
+            );
     }
 }

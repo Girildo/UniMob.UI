@@ -1,11 +1,19 @@
+using System;
 using UniMob.UI;
+using UniMob.UI.Diagnostics;
 using UniMob.UI.Widgets;
+using UnityEngine;
 
 namespace UniMob.UI
 {
     public class ScrollController : ILifetimeScope
     {
-        private IScrollControllerExecutor? _executor;
+        // The binding is an atom so that "nothing attached yet" is observable: a reader of Metrics or
+        // IsAttached created before a list mounts depends on the binding itself and wakes when it is
+        // written, rather than sleeping forever on an empty dependency list.
+        private readonly MutableAtom<IScrollControllerExecutor?> _executor = Atom.Value(
+            default(IScrollControllerExecutor?)
+        );
 
         public ScrollController(Lifetime lifetime)
         {
@@ -14,16 +22,58 @@ namespace UniMob.UI
 
         public Lifetime Lifetime { get; }
 
-        [Atom]
-        public float NormalizedValue { get; internal set; }
+        // Untracked on purpose: the imperative members must not add a dependency to whatever
+        // computation their caller happens to be inside. Metrics and IsAttached read the atom
+        // directly, and are the reactive half of the same binding.
+        private IScrollControllerExecutor? Executor
+        {
+            get
+            {
+                using (Atom.NoWatch)
+                {
+                    return _executor.Value;
+                }
+            }
+            set => _executor.Value = value;
+        }
 
         /// <summary>
-        ///     The current scroll offset in pixels along the scrolling axis, measured from the start (top/left)
-        ///     of the content. Unlike <see cref="NormalizedValue"/> (a 0..1 ratio against the total content
-        ///     size), this is an absolute value that doesn't drift when the total content size estimate changes
-        ///     underneath it -- which <see cref="Layout.ScrollList"/>'s lazy-building estimator does on
-        ///     essentially every layout pass. Used internally by <see cref="Layout.ScrollList"/>; other
-        ///     scrollable widgets that share this controller type are unaffected (they never read/write it).
+        ///     <b>[Atom]</b> The attached scrollable's geometry along its scroll axis, or <c>null</c>
+        ///     while nothing is attached or the attached scrollable has not been laid out yet.
+        ///     Observers created before a scrollable attaches wake when it does.
+        /// </summary>
+        [Atom]
+        public ScrollMetrics? Metrics => _executor.Value?.Metrics;
+
+        /// <summary>
+        ///     <b>[Atom]</b> Whether a scrollable is currently attached to this controller.
+        /// </summary>
+        public bool IsAttached => _executor.Value != null;
+
+        /// <summary>
+        ///     <b>[Atom]</b> <see cref="PixelOffset"/> as a 0..1 ratio of the scrollable range, clamped
+        ///     at both ends so an Elastic overscroll reads as exactly 0 or 1. Zero while nothing is
+        ///     attached, while the attached scrollable has not been laid out, and whenever the content
+        ///     fits its viewport.
+        /// </summary>
+        [Atom]
+        public float NormalizedValue
+        {
+            get
+            {
+                if (Metrics is { CanScroll: true } metrics)
+                    return Mathf.Clamp01(metrics.PixelOffset / metrics.MaxScrollExtent);
+
+                return 0f;
+            }
+        }
+
+        /// <summary>
+        ///     The current scroll offset in pixels along the scrolling axis, measured from the start
+        ///     (top/left) of the content. Absolute, so it does not drift when the total content size
+        ///     changes underneath it -- which a lazy list's estimator does on essentially every layout
+        ///     pass. <see cref="NormalizedValue"/> expresses the same position as a ratio of the
+        ///     scrollable range, and therefore does move with that estimate.
         /// </summary>
         [Atom]
         public float PixelOffset { get; internal set; }
@@ -40,7 +90,7 @@ namespace UniMob.UI
             Easing? easing = null
         )
         {
-            return _executor?.ScrollTo(
+            return Executor?.ScrollTo(
                     index,
                     duration,
                     position ?? ScrollToPosition.Start,
@@ -60,7 +110,7 @@ namespace UniMob.UI
             Easing? easing = null
         )
         {
-            return _executor?.ScrollTo(
+            return Executor?.ScrollTo(
                     key,
                     duration,
                     position ?? ScrollToPosition.Start,
@@ -69,12 +119,54 @@ namespace UniMob.UI
         }
 
         /// <summary>
-        ///     Binds the currently-mounted <see cref="ScrollList"/> as the executor of this controller's scroll
-        ///     requests. Only one list may be attached at a time; attaching replaces any previous executor.
+        ///     Moves the attached scrollable to <paramref name="pixelOffset"/> immediately, stopping any
+        ///     running <see cref="ScrollTo(int, float, ScrollToPosition?, Easing)"/> animation and any
+        ///     ScrollRect inertia. The offset is clamped to <c>[0, MaxScrollExtent]</c>; before the
+        ///     scrollable has been laid out there is no known upper bound, so only the lower one applies.
+        /// </summary>
+        /// <returns><c>false</c> if no scrollable is currently attached to this controller.</returns>
+        public bool JumpTo(float pixelOffset)
+        {
+            var executor = Executor;
+            if (executor == null)
+                return false;
+
+            ScrollMetrics? metrics;
+
+            // Untracked: reading the metrics reaches the attached scrollable's layout, and a jump
+            // issued from inside a computation must not make that computation depend on it.
+            using (Atom.NoWatch)
+            {
+                metrics = executor.Metrics;
+            }
+
+            var target = metrics.HasValue
+                ? Mathf.Clamp(pixelOffset, 0f, metrics.Value.MaxScrollExtent)
+                : Mathf.Max(0f, pixelOffset);
+
+            PixelOffset = target;
+            executor.SnapToControllerOffset();
+            return true;
+        }
+
+        /// <summary>
+        ///     Binds the currently-mounted scrollable as the executor of this controller's scroll
+        ///     requests. Only one may be attached at a time: attaching replaces any previous executor,
+        ///     which then stops responding to this controller, and reports that as a fault.
         /// </summary>
         internal void Attach(IScrollControllerExecutor executor)
         {
-            _executor = executor;
+            var replaced = Executor;
+
+            Executor = executor;
+
+            if (replaced == null || ReferenceEquals(replaced, executor))
+                return;
+
+            // Deferred by a frame because a keyed reorder inflates the replacement list before
+            // deactivating the list it replaces, and detach runs from the old state's lifetime: at
+            // this instant a legitimate reorder is indistinguishable from two live scrollables.
+            Zone.Current?.NextFrame(() => ReportDoubleAttach(replaced, executor));
         }
 
         /// <summary>
@@ -82,9 +174,34 @@ namespace UniMob.UI
         /// </summary>
         internal void Detach(IScrollControllerExecutor executor)
         {
-            if (_executor == executor)
-                _executor = null;
+            if (ReferenceEquals(Executor, executor))
+                Executor = null;
         }
+
+        private static void ReportDoubleAttach(
+            IScrollControllerExecutor replaced,
+            IScrollControllerExecutor current
+        )
+        {
+            if (replaced.Owner.StateLifetime.IsDisposed)
+                return;
+
+            UniMobError.Report(
+                new UniMobFault(
+                    new InvalidOperationException(
+                        $"One ScrollController drives two scrollables at once: {Describe(replaced)} "
+                            + $"and {Describe(current)}. The most recent attachment wins, and the other "
+                            + "scrollable no longer responds to this controller. Give each scrollable a "
+                            + "ScrollController of its own."
+                    ),
+                    "ScrollController.Attach",
+                    current.Owner
+                )
+            );
+        }
+
+        private static string Describe(IScrollControllerExecutor executor) =>
+            executor.Owner is State state ? state.ToDiagnosticString() : executor.GetType().Name;
     }
 
     /// <summary>
@@ -94,7 +211,25 @@ namespace UniMob.UI
     /// </summary>
     internal interface IScrollControllerExecutor
     {
+        /// <summary>
+        ///     The state this executor scrolls. What a report about the attachment names, and what says
+        ///     whether the scrollable behind it is still alive.
+        /// </summary>
+        IState Owner { get; }
+
+        /// <summary>
+        ///     <b>[Atom]</b> This scrollable's geometry along its scroll axis, or <c>null</c> before
+        ///     anything has laid it out.
+        /// </summary>
+        ScrollMetrics? Metrics { get; }
+
         bool ScrollTo(int index, float duration, ScrollToPosition position, Easing? easing);
         bool ScrollTo(Key key, float duration, ScrollToPosition position, Easing? easing);
+
+        /// <summary>
+        ///     Stops any running scroll animation and any inertia, and lands on
+        ///     <see cref="ScrollController.PixelOffset"/>, which the controller has already written.
+        /// </summary>
+        void SnapToControllerOffset();
     }
 }
