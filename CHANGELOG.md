@@ -169,6 +169,11 @@ Every entry in this section is a breaking change.
 
 ### Fixed
 
+- A `ScrollList` or `ScrollGrid` scrolled down whose content then shrank below the viewport, or
+  under the offset it was scrolled to, showed no items until the next scroll: the controller kept the
+  old offset and the window was built for it. Layout now uses the offset clamped to the content, and
+  the controller takes the clamped offset on the next frame, so growing the content again does not
+  jump back.
 - `ScrollController.NormalizedValue` always read 0, because nothing wrote it. It is now computed
   from `Metrics`: 0 at the top, 1 at the end of the scrollable range, and 0 while there is nothing
   to scroll.

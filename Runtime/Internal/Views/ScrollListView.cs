@@ -63,6 +63,16 @@ namespace UniMob.UI.Internal.Views
             Atom.Reaction(StateLifetime, () => SyncScrollRectToController(isHorizontal));
         }
 
+        private void ClampControllerToContent(bool isHorizontal)
+        {
+            if (!HasState || State.StateLifetime.IsDisposed)
+                return;
+
+            var range = GetTotalScrollableDistance(isHorizontal);
+            if (State.ScrollController.PixelOffset > range)
+                State.ScrollController.PixelOffset = range;
+        }
+
         // Moves the ScrollRect onto the controller's pixel offset when the two disagree. The offset is
         // the one the render object builds its window for, so a ScrollRect anywhere else shows a
         // region nothing was built for. Reads the controller's atom, so a reaction calling this
@@ -215,6 +225,15 @@ namespace UniMob.UI.Internal.Views
                 using (Atom.NoWatch)
                 {
                     SyncScrollRectToController(isHorizontal);
+
+                    // Content that shrank under the offset leaves a ScrollRect with nowhere to move,
+                    // so it reports nothing. Deferred: writing the controller inside this render
+                    // invalidates the children it is placing, and nothing renders them again.
+                    if (
+                        State.ScrollController.PixelOffset
+                        > GetTotalScrollableDistance(isHorizontal)
+                    )
+                        Zone.Current.NextFrame(() => ClampControllerToContent(isHorizontal));
                 }
             }
 

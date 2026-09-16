@@ -220,7 +220,11 @@ namespace UniMob.UI.Rendering
             var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
 
             var stride = (itemExtent ?? _averageExtent) + spacing;
-            var scrollOffset = _state.ScrollPixelOffset;
+            var scrollOffset = SliverLayoutMath.OffsetWithinContent(
+                _state.ScrollPixelOffset,
+                EstimateLazyContentMainAxisSize(),
+                viewportMainAxisSize
+            );
 
             var startIndex = Mathf.Clamp(
                 Mathf.FloorToInt((scrollOffset - cacheExtent) / stride),
@@ -367,7 +371,15 @@ namespace UniMob.UI.Rendering
             }
             else
             {
-                CullVisibleRun(0, 0f, _allChildrenSizes, _state.ScrollPixelOffset, visible);
+                var viewportMainAxisSize =
+                    _state.Axis == Axis.Horizontal ? _viewportSize.x : _viewportSize.y;
+                var scrollOffset = SliverLayoutMath.OffsetWithinContent(
+                    _state.ScrollPixelOffset,
+                    EagerContentMainAxisSize(),
+                    viewportMainAxisSize
+                );
+
+                CullVisibleRun(0, 0f, _allChildrenSizes, scrollOffset, visible);
             }
 
             ChildrenLayoutBuffer.Clear();

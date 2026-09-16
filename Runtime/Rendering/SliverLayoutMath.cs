@@ -65,6 +65,17 @@ namespace UniMob.UI.Rendering
         }
 
         /// <summary>
+        ///     The part of <paramref name="scrollOffset" /> the content can actually scroll to: never past
+        ///     the point where its end meets the end of the viewport. A controller keeps the offset it was
+        ///     given when the content shrinks, and a window built for that offset holds nothing to show.
+        /// </summary>
+        public static float OffsetWithinContent(
+            float scrollOffset,
+            float contentSize,
+            float viewportSize
+        ) => Mathf.Min(scrollOffset, Mathf.Max(0f, contentSize - viewportSize));
+
+        /// <summary>
         ///     Shifts a child's leading-edge offset to the requested spot in the viewport: Start keeps the
         ///     leading edge; Center/End pull it back by the appropriate slice of the leftover viewport space;
         ///     Nearest keeps <paramref name="currentOffset" /> for a child already fully in view.
