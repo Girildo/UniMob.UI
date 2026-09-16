@@ -87,11 +87,8 @@ namespace UniMob.UI.Widgets
     // computed [Atom] -- that impedance mismatch is why this class exists, and VirtualizedChildren straddles it.
     public class ScrollListState : ViewState<ScrollList>, ISliverState, IScrollingListState
     {
-        private readonly StateCollectionHolder _allChildren;
-
-        // The shared child-addressing bridge: lazy building, visible indices and key-to-index resolution
-        // (see VirtualizedChildren). The eager States are built here, because that goes through the
-        // protected CreateChildren.
+        // The shared child-addressing bridge: lazy building, visible indices, the eager children and
+        // key-to-index resolution (see VirtualizedChildren).
         private readonly VirtualizedChildren _virtualized;
 
         private readonly ScrollControllerBinding _binding;
@@ -102,13 +99,13 @@ namespace UniMob.UI.Widgets
 
         public ScrollListState()
         {
-            _allChildren = CreateChildren(IndexEagerChildren);
-
             _virtualized = new VirtualizedChildren(
                 StateLifetime,
+                this,
                 new BuildContext(this, Context),
                 () => Widget.ItemBuilder,
-                _allChildren
+                () => Widget.Children,
+                CreateChildren
             );
 
             _binding = new ScrollControllerBinding(
@@ -117,11 +114,6 @@ namespace UniMob.UI.Widgets
                 () => Widget.KeyToIndexResolver
             );
         }
-
-        // The builder runs on the first pull of _allChildren, which is long after the constructor
-        // above has assigned _virtualized.
-        private List<Widget> IndexEagerChildren(BuildContext context) =>
-            _virtualized.IndexEagerKeys(Widget.Children, this);
 
         [Atom]
         IState[] IMultiChildLayoutState.Children => _virtualized.VisibleChildren;
@@ -145,7 +137,7 @@ namespace UniMob.UI.Widgets
         public float ScrollPixelOffset => ScrollController.PixelOffset;
 
         [Atom]
-        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
+        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _virtualized.EagerChildren;
 
         [Atom]
         public int? ItemCount => Widget.ItemCount;

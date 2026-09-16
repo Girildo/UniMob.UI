@@ -34,14 +34,16 @@ namespace UniMob.UI
         IAnimation<float> Opacity { get; }
 
         /// <summary>
-        ///     <b>[Atom]</b> Whether the scrollbar takes pointer events at all. False while it is
-        ///     hidden, so an invisible strip never takes a drag meant for the list underneath it.
+        ///     <b>[Atom]</b> Whether the scrollbar takes pointer events at all. False while the bar is
+        ///     hidden and while <see cref="Metrics" /> report content that fits, so a strip that draws
+        ///     nothing never takes a drag meant for the list underneath it.
         /// </summary>
         bool BlocksPointer { get; }
 
         /// <summary>
         ///     <b>[Atom]</b> What a tap on the track does, or <c>null</c> when a tap there does
-        ///     nothing and the track is therefore not a hit target.
+        ///     nothing and the track is therefore not a hit target. Null whenever
+        ///     <see cref="BlocksPointer" /> is false.
         /// </summary>
         Action<TapDetails>? OnTrackTap { get; }
     }

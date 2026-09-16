@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using NUnit.Framework;
+using UniMob.UI.Internal;
 using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
 using UniMob.UI.Widgets;
@@ -217,6 +218,27 @@ namespace UniMob.UI.Tests
             );
         }
 
+        [UnityTest]
+        public IEnumerator ABarOverContentThatFits_IsNoHitTarget()
+        {
+            var controller = new ScrollController(this.lifetime.Lifetime);
+
+            this.Host(controller, itemCount: 3);
+            yield return this.Settle();
+
+            var barView = this.BarView();
+
+            Assert.IsFalse(
+                barView.GetComponent<CanvasGroup>().blocksRaycasts,
+                "three rows do not fill a 700px viewport, so the bar draws no thumb; a group that "
+                    + "still blocks raycasts eats every pointer event aimed at the list under it"
+            );
+            Assert.IsFalse(
+                barView.GetComponent<InvisibleRaycastTarget>().raycastTarget,
+                "and the track itself has nothing to page to, so it is not a hit target either"
+            );
+        }
+
         /// <summary>
         ///     Captures the two placements the widget documents, for a reader to look at.
         /// </summary>
@@ -253,11 +275,11 @@ namespace UniMob.UI.Tests
 
         // -- Widgets -----------------------------------------------------------------------------
 
-        private static Widget List(ScrollController controller) =>
+        private static Widget List(ScrollController controller, int itemCount) =>
             new ScrollList
             {
                 ScrollController = controller,
-                ItemCount = 400,
+                ItemCount = itemCount,
                 ItemBuilder = (context, index) => new Container(height: index % 6 == 0 ? 60 : 110),
             };
 
@@ -358,7 +380,7 @@ namespace UniMob.UI.Tests
             return path;
         }
 
-        private void Host(ScrollController controller)
+        private void Host(ScrollController controller, int itemCount = 400)
         {
             var panelGo = new GameObject("ViewPanel", typeof(RectTransform));
             panelGo.transform.SetParent(this.canvasGo.transform, false);
@@ -373,7 +395,7 @@ namespace UniMob.UI.Tests
             UniMobUI.RunApp(
                 this.lifetime.Lifetime,
                 panel,
-                _ => Overlaid(controller, List(controller))
+                _ => Overlaid(controller, List(controller, itemCount))
             );
         }
 

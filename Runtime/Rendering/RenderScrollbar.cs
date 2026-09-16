@@ -25,6 +25,11 @@ namespace UniMob.UI.Rendering
     ///         then travels whatever the resulting extent leaves free, so that the forward mapping and
     ///         the drag mapping agree at every size.
     ///     </para>
+    ///     <para>
+    ///         The instance methods answer about the geometry the last pass drew, and read nothing
+    ///         reactively: they serve pointer handlers, which must add no dependency to whatever
+    ///         computation they run inside.
+    ///     </para>
     /// </remarks>
     public class RenderScrollbar : SingleChildRenderObject
     {
@@ -52,10 +57,6 @@ namespace UniMob.UI.Rendering
         ///     pixels stands for, against the thumb and track of the last pass. Returns 0 when that
         ///     pass drew no thumb or the scrollable reports no metrics.
         /// </summary>
-        /// <remarks>
-        ///     Answers about the geometry on screen, and reads nothing reactively: it serves a pointer
-        ///     handler, which must add no dependency to whatever computation it runs inside.
-        /// </remarks>
         public float ScrollDeltaFor(float thumbDelta)
         {
             if (Thumb is not { } thumb || CurrentMetrics() is not { } metrics)
@@ -72,10 +73,6 @@ namespace UniMob.UI.Rendering
         ///     from the track start of the last pass. Returns <c>null</c> when the tap lands on the
         ///     thumb, when that pass drew no thumb, or when the scrollable reports no metrics.
         /// </summary>
-        /// <remarks>
-        ///     Answers about the geometry on screen, and reads nothing reactively: it serves a pointer
-        ///     handler, which must add no dependency to whatever computation it runs inside.
-        /// </remarks>
         public float? PageTargetFor(float trackPosition)
         {
             if (Thumb is not { } thumb || CurrentMetrics() is not { } metrics)

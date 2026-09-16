@@ -93,7 +93,7 @@ namespace UniMob.UI.Internal.Views
             {
                 if (_dragReceiver == null)
                     _dragReceiver = gameObject.AddComponent<GestureDetectorDragReceiver>();
-                _dragReceiver.OnDragBegin = State.OnDragStart;
+                _dragReceiver.OnDragStart = State.OnDragStart;
                 _dragReceiver.OnDragUpdate = State.OnDragUpdate;
                 _dragReceiver.OnDragEnd = State.OnDragEnd;
             }
@@ -255,13 +255,13 @@ namespace UniMob.UI.Internal.Views
             IDragHandler,
             IEndDragHandler
     {
-        public Action<DragDetails>? OnDragBegin;
+        public Action<DragDetails>? OnDragStart;
         public Action<DragDetails>? OnDragEnd;
         public Action<DragDetails>? OnDragUpdate;
 
         // Unity requires Begin/End to exist for IDragHandler to play nicely with ScrollRects
         public void OnBeginDrag(PointerEventData eventData) =>
-            OnDragBegin?.Invoke(Convert(eventData));
+            OnDragStart?.Invoke(Convert(eventData));
 
         public void OnEndDrag(PointerEventData eventData) => OnDragEnd?.Invoke(Convert(eventData));
 

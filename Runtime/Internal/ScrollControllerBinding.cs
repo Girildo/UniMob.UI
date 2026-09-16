@@ -10,9 +10,9 @@ namespace UniMob.UI.Internal
     ///     widget, and answers the controller's requests on the state's behalf.
     /// </summary>
     /// <remarks>
-    ///     An object rather than a set of members on the state, so that one implementation serves both
-    ///     <c>ScrollList</c> and <c>ScrollGrid</c>. It is an <see cref="ILifetimeScope" /> because it
-    ///     carries <c>[Atom]</c> members of its own, on the owning state's lifetime.
+    ///     One implementation, shared by every virtualized scrollable. It carries <c>[Atom]</c> members
+    ///     of its own on the owning state's lifetime, and is an <see cref="ILifetimeScope" /> for that
+    ///     lifetime.
     /// </remarks>
     internal sealed class ScrollControllerBinding : IScrollControllerExecutor, ILifetimeScope
     {
@@ -49,8 +49,7 @@ namespace UniMob.UI.Internal
         /// <summary>
         ///     Makes <paramref name="widgetController" /> the current controller, detaching whichever one
         ///     was current before. Called from <c>InitState</c> and from <c>DidUpdateWidget</c>. A widget
-        ///     that stops naming a controller keeps the one it named: dropping back to a controller of our
-        ///     own would silently lose the position the caller still holds a controller for.
+        ///     that stops naming a controller keeps the one it named.
         /// </summary>
         public void Bind(ScrollController? widgetController)
         {

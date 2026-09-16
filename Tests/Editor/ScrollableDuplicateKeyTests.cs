@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UniMob.UI.Rendering;
@@ -24,11 +25,13 @@ namespace UniMob.UI.Tests
         {
             using var errors = RecordingErrors.Capture();
 
-            var state = TestHarness.Mount(new ScrollList { Children = { Box(), Box(), Box() } });
+            var widget = new ScrollList { Children = { Box(), Box(), Box() } };
+            var state = TestHarness.Mount(widget);
             TestHarness.Layout(state, LayoutConstraints.Tight(100f, 100f));
 
             AssertReportedOnce(errors, state, nameof(ScrollList));
             AssertNoChildren(state);
+            AssertConfigurationIntact(widget.Children);
         }
 
         [Test]
@@ -36,13 +39,13 @@ namespace UniMob.UI.Tests
         {
             using var errors = RecordingErrors.Capture();
 
-            var state = TestHarness.Mount(
-                new ScrollGrid { CrossAxisCount = 2, Children = { Box(), Box(), Box() } }
-            );
+            var widget = new ScrollGrid { CrossAxisCount = 2, Children = { Box(), Box(), Box() } };
+            var state = TestHarness.Mount(widget);
             TestHarness.Layout(state, LayoutConstraints.Tight(100f, 100f));
 
             AssertReportedOnce(errors, state, nameof(ScrollGrid));
             AssertNoChildren(state);
+            AssertConfigurationIntact(widget.Children);
         }
 
         private static FixedSizeBox Box() =>
@@ -77,6 +80,16 @@ namespace UniMob.UI.Tests
             Assert.IsEmpty(
                 ((IMultiChildrenRenderObject)state.RenderObject).ChildrenLayout,
                 "the children are dropped rather than laid out under ambiguous keys"
+            );
+        }
+
+        private static void AssertConfigurationIntact(List<Widget> children)
+        {
+            Assert.AreEqual(
+                3,
+                children.Count,
+                "the rejected children are the scrollable's to drop, not the widget's: emptying the "
+                    + "list the caller wrote would rewrite configuration a rebuild reads again"
             );
         }
     }

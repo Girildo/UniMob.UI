@@ -31,6 +31,7 @@ namespace UniMob.UI.Tests
 
         private LifetimeController _lifetime = null!;
         private ScrollController _controller = null!;
+        private FakeScrollable _scrollable = null!;
         private TestZone _zone = null!;
 
         [SetUp]
@@ -238,16 +239,72 @@ namespace UniMob.UI.Tests
             Assert.IsNull(bar.OnTrackTap, "and scrolling does not turn it on");
         }
 
+        [Test]
+        public void ContentThatFits_TakesNoInput_UntilTheContentGrows()
+        {
+            var bar = MountBar(ScrollbarVisibility.Always, contentExtent: 80f);
+
+            AtomScheduler.Sync();
+
+            Assert.AreEqual(
+                1f,
+                bar.Opacity.Value,
+                0.001f,
+                "an Always bar is mounted up, whatever the content it describes is doing"
+            );
+            Assert.IsFalse(
+                bar.BlocksPointer,
+                $"80px of content in a {Track}px viewport draws no thumb, and a bar that draws "
+                    + "nothing must not leave a live strip over the list it covers"
+            );
+            Assert.IsNull(
+                bar.OnTrackTap,
+                "there is no screenful for a tap on the track to page by"
+            );
+
+            _scrollable.SetContentExtent(400f);
+            AtomScheduler.Sync();
+
+            Assert.IsTrue(
+                bar.BlocksPointer,
+                "the content outgrew the viewport, so the thumb is drawn and has to be grabbable"
+            );
+            Assert.IsNotNull(bar.OnTrackTap, "and the track now has somewhere to page to");
+        }
+
+        [Test]
+        public void AWhileScrollingBar_OverContentThatFits_TakesNoInput()
+        {
+            var zone = _zone;
+            var bar = MountBar(contentExtent: 80f);
+
+            Scroll(10f);
+            zone.PumpFor(FadeSettleTime);
+
+            Assert.AreEqual(
+                1f,
+                bar.Opacity.Value,
+                0.001f,
+                "the offset moved, which is what brings a WhileScrolling bar up"
+            );
+            Assert.IsFalse(
+                bar.BlocksPointer,
+                "being shown is not being drawn: the content still fits, so there is no thumb, and "
+                    + "the drags aimed at the list stay the list's"
+            );
+            Assert.IsNull(bar.OnTrackTap);
+        }
+
         // -- Helpers -----------------------------------------------------------------------------
 
         private IScrollbarState MountBar(
             ScrollbarVisibility visibility = ScrollbarVisibility.WhileScrolling,
-            bool pageOnTrackTap = true
+            bool pageOnTrackTap = true,
+            float contentExtent = 1200f
         )
         {
-            _controller.Attach(
-                new FakeScrollable(_controller, contentExtent: 1200f, viewportExtent: Track)
-            );
+            _scrollable = new FakeScrollable(_controller, contentExtent, viewportExtent: Track);
+            _controller.Attach(_scrollable);
 
             var state = TestHarness.Mount(
                 new Scrollbar

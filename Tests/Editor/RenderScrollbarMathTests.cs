@@ -6,6 +6,7 @@ namespace UniMob.UI.Tests
 {
     // Covers the pure thumb math on RenderScrollbar: the thumb a set of scroll metrics draws on a
     // track, the offset a thumb drag stands for, and the offset a track tap pages to.
+    // RenderScrollbarTests covers the same cases through a laid-out render object.
     public class RenderScrollbarMathTests
     {
         private const float Track = 200f;

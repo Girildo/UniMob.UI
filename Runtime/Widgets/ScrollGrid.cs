@@ -97,22 +97,22 @@ namespace UniMob.UI.Widgets
     // Reactive half of the grid. Like ScrollListState it feeds the render object the full logical shape
     // (ISliverGridState) while exposing only the visible States to the View (IMultiChildLayoutState, via
     // IScrollingListState so the ScrollList prefab's view binds to it). The eager/lazy child window bridge is
-    // delegated to the shared VirtualizedChildren; only the eager CreateChildren wiring stays here.
+    // delegated to the shared VirtualizedChildren, which builds the eager States through the protected
+    // CreateChildren it is handed.
     public class ScrollGridState : ViewState<ScrollGrid>, ISliverGridState, IScrollingListState
     {
-        private readonly StateCollectionHolder _allChildren;
         private readonly VirtualizedChildren _virtualized;
         private readonly ScrollControllerBinding _binding;
 
         public ScrollGridState()
         {
-            _allChildren = CreateChildren(IndexEagerChildren);
-
             _virtualized = new VirtualizedChildren(
                 StateLifetime,
+                this,
                 new BuildContext(this, Context),
                 () => Widget.ItemBuilder,
-                _allChildren
+                () => Widget.Children,
+                CreateChildren
             );
 
             _binding = new ScrollControllerBinding(
@@ -121,11 +121,6 @@ namespace UniMob.UI.Widgets
                 () => Widget.KeyToIndexResolver
             );
         }
-
-        // The builder runs on the first pull of _allChildren, which is long after the constructor
-        // above has assigned _virtualized.
-        private List<Widget> IndexEagerChildren(BuildContext context) =>
-            _virtualized.IndexEagerKeys(Widget.Children, this);
 
         private bool IsLazy => Widget.ItemBuilder != null;
 
@@ -147,7 +142,7 @@ namespace UniMob.UI.Widgets
         public float ScrollPixelOffset => ScrollController.PixelOffset;
 
         [Atom]
-        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _allChildren.Value;
+        public IState[] AllChildren => IsLazy ? Array.Empty<IState>() : _virtualized.EagerChildren;
 
         [Atom]
         public int? ItemCount => Widget.ItemCount;

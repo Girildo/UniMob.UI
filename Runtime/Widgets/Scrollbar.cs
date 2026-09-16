@@ -83,7 +83,10 @@ namespace UniMob.UI.Widgets
         private AnimationController _fade = null!;
 
         private float _idleElapsed;
-        private bool _idleTickerRegistered;
+
+        // The clock the countdown ticker is registered with, and null while none is registered. The
+        // ticker comes off this clock: Zone.Current can be swapped between register and remove.
+        private Zone? _idleClock;
 
         public ScrollbarState()
         {
@@ -107,16 +110,18 @@ namespace UniMob.UI.Widgets
         public IAnimation<float> Opacity => _fade;
 
         [Atom]
-        public bool BlocksPointer => !IsHidden;
+        public bool BlocksPointer => IsLive;
 
         [Atom]
         public Action<TapDetails>? OnTrackTap =>
-            Widget.PageOnTrackTap && !IsHidden ? HandleTrackTap : null;
+            Widget.PageOnTrackTap && IsLive ? HandleTrackTap : null;
 
         public override WidgetViewReference View =>
             WidgetViewReference.Registered("UniMob.ScrollbarView");
 
-        private bool IsHidden => _fade.IsDismissed;
+        // Drawn and reachable: a bar that is faded out, and one over content that fits, are both
+        // nothing but a strip over the list, and must take none of the input aimed at it.
+        private bool IsLive => !_fade.IsDismissed && Metrics is { CanScroll: true };
 
         public override void InitState()
         {
@@ -124,8 +129,7 @@ namespace UniMob.UI.Widgets
 
             if (Widget.Controller == null)
             {
-                throw new ArgumentNullException(
-                    nameof(Scrollbar.Controller),
+                throw new InvalidOperationException(
                     "A Scrollbar draws the scrollable a ScrollController is attached to, so it needs "
                         + "the same controller the ScrollList was given."
                 );
@@ -262,13 +266,13 @@ namespace UniMob.UI.Widgets
             _fade.Forward();
             _idleElapsed = 0f;
 
-            if (_idleTickerRegistered)
+            if (_idleClock != null)
             {
                 return;
             }
 
-            _idleTickerRegistered = true;
-            Zone.Current.AddTicker(Tick);
+            _idleClock = Zone.Current;
+            _idleClock.AddTicker(Tick);
         }
 
         private void Tick(float deltaTime)
@@ -292,13 +296,13 @@ namespace UniMob.UI.Widgets
 
         private void StopIdleCountdown()
         {
-            if (!_idleTickerRegistered)
+            if (_idleClock == null)
             {
                 return;
             }
 
-            _idleTickerRegistered = false;
-            Zone.Current?.RemoveTicker(Tick);
+            _idleClock.RemoveTicker(Tick);
+            _idleClock = null;
         }
 
         // Tolerant of a disposed state and of never having been laid out, and reads nothing
