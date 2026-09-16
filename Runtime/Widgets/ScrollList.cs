@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UniMob.UI.Internal;
+using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
-using ScrollListView = UniMob.UI.Internal.Views.ScrollListView;
-using Vector2 = UnityEngine.Vector2;
 
 namespace UniMob.UI.Widgets
 {
-    public class ScrollList : StatefulWidget
+    public class ScrollList : StatefulWidget, IScrollableWidget
     {
         /// <summary>
         ///     Eagerly-built children. Mutually exclusive with <see cref="ItemBuilder"/>/<see cref="ItemCount"/>.
