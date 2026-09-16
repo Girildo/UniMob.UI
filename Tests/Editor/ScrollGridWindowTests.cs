@@ -146,5 +146,44 @@ namespace UniMob.UI.Tests
             );
             Assert.AreEqual(0, builtIndices.Count, "the old ItemBuilder must not run again");
         }
+
+        // ScrollTo(Key) on a lazy grid asks the widget's resolver, so an item the grid has never built
+        // is still reachable. Mirrors the list's own coverage (ScrollListScrollToNearestViewTests),
+        // which needs a mounted view to watch the grid move; here the view is what a EditMode harness
+        // does not have, so what is asserted is which answer the request is routed through.
+        [Test]
+        public void ScrollToKey_Lazy_AsksTheResolver_RatherThanTheKeysItHasBuilt()
+        {
+            var controller = new ScrollController(new LifetimeController().Lifetime);
+            var asked = new List<Key>();
+
+            var widget = new ScrollGrid
+            {
+                CrossAxisCount = 2,
+                ScrollController = controller,
+                ItemCount = 20,
+                KeyToIndexResolver = key =>
+                {
+                    asked.Add(key);
+                    return null;
+                },
+                ItemBuilder = (context, index) =>
+                    new FixedSizeBox { Key = Key.Of(index), Size = new Vector2(10, 10) },
+            };
+
+            var state = (ISliverGridState)TestHarness.Mount(widget);
+            state.RequestBuildWindow(0, 5); // key 3 is now a key the grid has built at least once
+
+            Assert.IsFalse(
+                controller.ScrollTo(Key.Of(3)),
+                "the resolver disowned the key, and the keys the grid happens to have built must not "
+                    + "answer over it: a widget that supplies a resolver owns the mapping"
+            );
+            CollectionAssert.AreEqual(
+                new[] { Key.Of(3) },
+                asked,
+                "the request must reach the widget's resolver, and reach it with the key asked for"
+            );
+        }
     }
 }

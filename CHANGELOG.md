@@ -208,8 +208,8 @@ Every entry in this section is a breaking change.
   controller whenever it resizes the content.
 - A `GestureDetector` handling a tap now also takes the pointer press, so a tap never presses a
   `Button` wrapping it; a drag-only detector claims nothing.
-- Two `ScrollList` children with the same `Key` threw out of a dictionary mid-build. The duplicate is
-  now reported through `UniMobError` and the list builds empty for that pass.
+- Two `ScrollList` or `ScrollGrid` children with the same `Key` threw out of a dictionary mid-build.
+  The duplicate is now reported through `UniMobError` and the scrollable builds empty for that pass.
 - `LayoutTextView` reassigned `textStyle` on every render, which marks a TextMeshPro object dirty
   unconditionally, and re-measured for the overflow diagnostic on every render. Both now happen only
   when something changed.

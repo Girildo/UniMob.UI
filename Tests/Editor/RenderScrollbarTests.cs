@@ -435,6 +435,8 @@ namespace UniMob.UI.Tests
     /// </summary>
     internal sealed class FakeScrollable : IScrollControllerExecutor
     {
+        private sealed class OwnerState : FakeState { }
+
         private readonly ScrollController _controller;
         private readonly MutableAtom<ScrollMetrics> _shape;
 
@@ -448,6 +450,8 @@ namespace UniMob.UI.Tests
             _controller = controller;
             _shape = Atom.Value(new ScrollMetrics(0f, contentExtent, viewportExtent, axis));
         }
+
+        public IState Owner { get; } = new OwnerState();
 
         /// <summary>How many times the controller has asked this scrollable to stop and land.</summary>
         public int SnapCount { get; private set; }

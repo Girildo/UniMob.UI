@@ -98,48 +98,34 @@ namespace UniMob.UI.Widgets
     // (ISliverGridState) while exposing only the visible States to the View (IMultiChildLayoutState, via
     // IScrollingListState so the ScrollList prefab's view binds to it). The eager/lazy child window bridge is
     // delegated to the shared VirtualizedChildren; only the eager CreateChildren wiring stays here.
-    public class ScrollGridState
-        : ViewState<ScrollGrid>,
-            ISliverGridState,
-            IScrollingListState,
-            IScrollControllerExecutor
+    public class ScrollGridState : ViewState<ScrollGrid>, ISliverGridState, IScrollingListState
     {
         private readonly StateCollectionHolder _allChildren;
-        private readonly Dictionary<Key, int> _childKeyToIndexMap = new();
         private readonly VirtualizedChildren _virtualized;
-
-        private ScrollListView? _view;
+        private readonly ScrollControllerBinding _binding;
 
         public ScrollGridState()
         {
-            _allChildren = CreateChildren(context =>
-            {
-                var children = Widget.Children;
-                _childKeyToIndexMap.Clear();
-                for (var i = 0; i < children.Count; i++)
-                {
-                    var key = children[i]?.Key;
-                    if (key != null)
-                        _childKeyToIndexMap.Add(key, i);
-                }
-
-                return children;
-            });
+            _allChildren = CreateChildren(IndexEagerChildren);
 
             _virtualized = new VirtualizedChildren(
                 StateLifetime,
                 new BuildContext(this, Context),
                 () => Widget.ItemBuilder,
-                ResolveEagerIndex
+                _allChildren
+            );
+
+            _binding = new ScrollControllerBinding(
+                this,
+                _virtualized,
+                () => Widget.KeyToIndexResolver
             );
         }
 
-        // Eager-mode resolver injected into the shared bridge: maps a visible index to its built child State.
-        private IState? ResolveEagerIndex(int index)
-        {
-            var all = _allChildren.Value;
-            return index < all.Length ? all[index] : null;
-        }
+        // The builder runs on the first pull of _allChildren, which is long after the constructor
+        // above has assigned _virtualized.
+        private List<Widget> IndexEagerChildren(BuildContext context) =>
+            _virtualized.IndexEagerKeys(Widget.Children, this);
 
         private bool IsLazy => Widget.ItemBuilder != null;
 
@@ -153,9 +139,7 @@ namespace UniMob.UI.Widgets
         public MovementType MovementType => Widget.MovementType;
 
         [Atom]
-        // Resolved in InitState: the widget's controller if it brought one, otherwise a
-        // controller of this state's own.
-        public ScrollController ScrollController { get; private set; } = null!;
+        public ScrollController ScrollController => _binding.Controller;
 
         // Pixel offset, not NormalizedValue -- see ScrollController.PixelOffset for why the estimation-based
         // lazy windowing needs an absolute value that doesn't drift with the estimated content size.
@@ -207,13 +191,13 @@ namespace UniMob.UI.Widgets
         public override void DidViewMount(IView view)
         {
             base.DidViewMount(view);
-            _view = view as ScrollListView;
+            _binding.AttachView(view as ScrollListView);
         }
 
         public override void DidViewUnmount(IView view)
         {
             base.DidViewUnmount(view);
-            _view = null;
+            _binding.AttachView(null);
         }
 
         public override WidgetViewReference View =>
@@ -233,10 +217,7 @@ namespace UniMob.UI.Widgets
 
             ValidateMode();
 
-            ScrollController = Widget.ScrollController ?? new ScrollController(StateLifetime);
-            ScrollController.Attach(this);
-
-            StateLifetime.Register(() => ScrollController.Detach(this));
+            _binding.Bind(Widget.ScrollController);
         }
 
         public override void DidUpdateWidget(ScrollGrid oldWidget)
@@ -245,34 +226,17 @@ namespace UniMob.UI.Widgets
 
             ValidateMode();
 
-            if (Widget.ScrollController != null && Widget.ScrollController != ScrollController)
-            {
-                ScrollController.Detach(this);
-                ScrollController = Widget.ScrollController;
-                ScrollController.Attach(this);
-            }
+            _binding.Bind(Widget.ScrollController);
         }
 
         private void ValidateMode()
         {
-            var hasBuilder = Widget.ItemBuilder != null;
-            var hasChildren = Widget.Children is { Count: > 0 };
-
-            if (hasBuilder && hasChildren)
-                throw new InvalidOperationException(
-                    "ScrollGrid cannot have both ItemBuilder and Children set -- use ItemBuilder+ItemCount "
-                        + "for lazy building, or Children for eager building, not both."
-                );
-
-            if (hasBuilder && Widget.ItemCount == null)
-                throw new InvalidOperationException(
-                    "ScrollGrid.ItemCount must be set when ItemBuilder is provided."
-                );
-
-            if (!hasBuilder && Widget.ItemCount != null)
-                throw new InvalidOperationException(
-                    "ScrollGrid.ItemCount has no effect without ItemBuilder."
-                );
+            ScrollableWidgetValidation.ValidateChildrenMode(
+                nameof(ScrollGrid),
+                Widget.ItemBuilder != null,
+                Widget.Children is { Count: > 0 },
+                Widget.ItemCount
+            );
 
             if (Widget.CrossAxisCount.HasValue == Widget.MaxCrossAxisExtent.HasValue)
                 throw new InvalidOperationException(
@@ -284,57 +248,6 @@ namespace UniMob.UI.Widgets
                     "ScrollGrid cannot have both ChildAspectRatio and MainAxisExtent set -- pick one way to "
                         + "size cells along the scroll axis (or neither, to measure rows)."
                 );
-        }
-
-        [Atom]
-        ScrollMetrics? IScrollControllerExecutor.Metrics => ScrollableMetrics.Measure(this);
-
-        bool IScrollControllerExecutor.ScrollTo(
-            int index,
-            float duration,
-            ScrollToPosition position,
-            Easing? easing
-        )
-        {
-            return _view?.ScrollTo(index, duration, position, easing) ?? false;
-        }
-
-        void IScrollControllerExecutor.SnapToControllerOffset()
-        {
-            // The controller owns the offset and has already written it; a grid with no mounted view
-            // has no animation or inertia to stop.
-            _view?.SnapToControllerOffset();
-        }
-
-        bool IScrollControllerExecutor.ScrollTo(
-            Key key,
-            float duration,
-            ScrollToPosition position,
-            Easing? easing
-        )
-        {
-            int index;
-
-            if (IsLazy)
-            {
-                if (Widget.KeyToIndexResolver != null)
-                {
-                    var resolved = Widget.KeyToIndexResolver(key);
-                    if (resolved == null)
-                        return false;
-                    index = resolved.Value;
-                }
-                else if (!_virtualized.TryResolveSeenKey(key, out index))
-                {
-                    return false;
-                }
-            }
-            else if (!_childKeyToIndexMap.TryGetValue(key, out index))
-            {
-                return false;
-            }
-
-            return ((IScrollControllerExecutor)this).ScrollTo(index, duration, position, easing);
         }
     }
 }

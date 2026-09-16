@@ -183,7 +183,7 @@ namespace UniMob.UI
             IScrollControllerExecutor current
         )
         {
-            if (replaced is IState replacedState && replacedState.StateLifetime.IsDisposed)
+            if (replaced.Owner.StateLifetime.IsDisposed)
                 return;
 
             UniMobError.Report(
@@ -195,13 +195,13 @@ namespace UniMob.UI
                             + "ScrollController of its own."
                     ),
                     "ScrollController.Attach",
-                    current as IState
+                    current.Owner
                 )
             );
         }
 
         private static string Describe(IScrollControllerExecutor executor) =>
-            executor is State state ? state.ToDiagnosticString() : executor.GetType().Name;
+            executor.Owner is State state ? state.ToDiagnosticString() : executor.GetType().Name;
     }
 
     /// <summary>
@@ -211,6 +211,12 @@ namespace UniMob.UI
     /// </summary>
     internal interface IScrollControllerExecutor
     {
+        /// <summary>
+        ///     The state this executor scrolls. What a report about the attachment names, and what says
+        ///     whether the scrollable behind it is still alive.
+        /// </summary>
+        IState Owner { get; }
+
         /// <summary>
         ///     <b>[Atom]</b> This scrollable's geometry along its scroll axis, or <c>null</c> before
         ///     anything has laid it out.
