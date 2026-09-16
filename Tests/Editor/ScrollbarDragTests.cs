@@ -77,7 +77,7 @@ namespace UniMob.UI.Tests
                 var thumbExtent = render.Thumb!.Value.Extent;
                 var expected = Mathf.Clamp(
                     metrics.PixelOffset
-                        + ScrollbarGeometry.PixelDeltaForThumbDelta(
+                        + RenderScrollbar.ScrollDeltaForThumbDelta(
                             metrics,
                             Track,
                             thumbExtent,

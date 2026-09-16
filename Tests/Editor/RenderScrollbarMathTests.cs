@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace UniMob.UI.Tests
 {
-    // Covers ScrollbarGeometry: the thumb a set of scroll metrics draws on a track, the offset a thumb
-    // drag stands for, and the offset a track tap pages to.
-    public class ScrollbarGeometryTests
+    // Covers the pure thumb math on RenderScrollbar: the thumb a set of scroll metrics draws on a
+    // track, the offset a thumb drag stands for, and the offset a track tap pages to.
+    public class RenderScrollbarMathTests
     {
         private const float Track = 200f;
         private const float Viewport = 100f;
@@ -16,13 +16,18 @@ namespace UniMob.UI.Tests
         private static ScrollMetrics Metrics(float pixelOffset, float contentExtent) =>
             new(pixelOffset, contentExtent, Viewport, Axis.Vertical);
 
-        private static ThumbGeometry? Thumb(
+        private static ThumbPlacement? Thumb(
             ScrollMetrics metrics,
             float trackExtent = Track,
             float minThumbExtent = MinThumb,
             float minOverscrollThumbExtent = MinOverscrollThumb
         ) =>
-            ScrollbarGeometry.Thumb(metrics, trackExtent, minThumbExtent, minOverscrollThumbExtent);
+            RenderScrollbar.PlaceThumb(
+                metrics,
+                trackExtent,
+                minThumbExtent,
+                minOverscrollThumbExtent
+            );
 
         [Test]
         public void ContentThatFitsTheViewport_HasNoThumb()
@@ -43,13 +48,13 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(
                 0f,
-                ScrollbarGeometry.PageTarget(metrics, towardStart: false),
+                RenderScrollbar.PageTarget(metrics, towardStart: false),
                 1e-3f,
                 "paging forward through unscrollable content stays at offset 0"
             );
             Assert.AreEqual(
                 0f,
-                ScrollbarGeometry.PageTarget(metrics, towardStart: true),
+                RenderScrollbar.PageTarget(metrics, towardStart: true),
                 1e-3f,
                 "paging back through unscrollable content stays at offset 0"
             );
@@ -62,7 +67,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(
                 0f,
-                ScrollbarGeometry.PixelDeltaForThumbDelta(metrics, Track, 50f, 25f),
+                RenderScrollbar.ScrollDeltaForThumbDelta(metrics, Track, 50f, 25f),
                 1e-3f,
                 "dragging the thumb of an unscrollable scrollbar moves the content by nothing"
             );
@@ -185,7 +190,7 @@ namespace UniMob.UI.Tests
                     var from = Metrics(offset, contentExtent);
                     var fromThumb = Thumb(from)!.Value;
 
-                    var pixelDelta = ScrollbarGeometry.PixelDeltaForThumbDelta(
+                    var pixelDelta = RenderScrollbar.ScrollDeltaForThumbDelta(
                         from,
                         Track,
                         fromThumb.Extent,
@@ -297,7 +302,7 @@ namespace UniMob.UI.Tests
         {
             Assert.AreEqual(
                 0f,
-                ScrollbarGeometry.PageTarget(
+                RenderScrollbar.PageTarget(
                     Metrics(pixelOffset: 0f, contentExtent: 400f),
                     towardStart: true
                 ),
@@ -306,7 +311,7 @@ namespace UniMob.UI.Tests
             );
             Assert.AreEqual(
                 300f,
-                ScrollbarGeometry.PageTarget(
+                RenderScrollbar.PageTarget(
                     Metrics(pixelOffset: 300f, contentExtent: 400f),
                     towardStart: false
                 ),
@@ -322,13 +327,13 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(
                 50f,
-                ScrollbarGeometry.PageTarget(metrics, towardStart: true),
+                RenderScrollbar.PageTarget(metrics, towardStart: true),
                 1e-3f,
                 $"paging back from 150 moves one viewport of {Viewport}"
             );
             Assert.AreEqual(
                 250f,
-                ScrollbarGeometry.PageTarget(metrics, towardStart: false),
+                RenderScrollbar.PageTarget(metrics, towardStart: false),
                 1e-3f,
                 $"paging forward from 150 moves one viewport of {Viewport}"
             );
@@ -387,7 +392,7 @@ namespace UniMob.UI.Tests
 
                 var metrics = Metrics(offset, contentExtent);
                 var thumbExtent = Thumb(metrics)?.Extent ?? 0f;
-                var pixelDelta = ScrollbarGeometry.PixelDeltaForThumbDelta(
+                var pixelDelta = RenderScrollbar.ScrollDeltaForThumbDelta(
                     metrics,
                     Track,
                     thumbExtent,
@@ -432,7 +437,7 @@ namespace UniMob.UI.Tests
 
             Assert.AreEqual(
                 0f,
-                ScrollbarGeometry.PixelDeltaForThumbDelta(metrics, Track, Track, 25f),
+                RenderScrollbar.ScrollDeltaForThumbDelta(metrics, Track, Track, 25f),
                 1e-3f,
                 "a thumb as long as the track has no travel, so dragging it maps to nothing"
             );

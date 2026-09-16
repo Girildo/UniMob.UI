@@ -220,23 +220,14 @@ namespace UniMob.UI.Widgets
         {
             var render = (RenderScrollbar)RenderObject;
 
-            if (render.Thumb is not { } thumb || Widget.Controller.Metrics is not { } metrics)
+            var thumbDelta =
+                Widget.Axis == Axis.Horizontal ? details.LocalDelta.x : details.LocalDelta.y;
+            var delta = render.ScrollDeltaFor(thumbDelta);
+
+            if (Widget.Controller.Metrics is { } metrics)
             {
-                return;
+                Widget.Controller.JumpTo(metrics.PixelOffset + delta);
             }
-
-            var horizontal = Widget.Axis == Axis.Horizontal;
-            var trackExtent = horizontal ? render.PeekSize().x : render.PeekSize().y;
-            var thumbDelta = horizontal ? details.LocalDelta.x : details.LocalDelta.y;
-
-            var pixelDelta = ScrollbarGeometry.PixelDeltaForThumbDelta(
-                metrics,
-                trackExtent,
-                thumb.Extent,
-                thumbDelta
-            );
-
-            Widget.Controller.JumpTo(metrics.PixelOffset + pixelDelta);
         }
 
         private void HandleDragEnd(DragDetails details)
@@ -248,24 +239,14 @@ namespace UniMob.UI.Widgets
         {
             var render = (RenderScrollbar)RenderObject;
 
-            if (render.Thumb is not { } thumb || Widget.Controller.Metrics is not { } metrics)
-            {
-                return;
-            }
-
             var position =
                 Widget.Axis == Axis.Horizontal ? details.LocalPosition.x : details.LocalPosition.y;
 
-            if (position >= thumb.Offset && position <= thumb.Offset + thumb.Extent)
+            if (render.PageTargetFor(position) is { } target)
             {
-                return;
+                Widget.Controller.JumpTo(target);
+                Show();
             }
-
-            Widget.Controller.JumpTo(
-                ScrollbarGeometry.PageTarget(metrics, towardStart: position < thumb.Offset)
-            );
-
-            Show();
         }
 
         private void Show()

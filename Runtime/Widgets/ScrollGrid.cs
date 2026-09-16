@@ -287,31 +287,7 @@ namespace UniMob.UI.Widgets
         }
 
         [Atom]
-        ScrollMetrics? IScrollControllerExecutor.Metrics
-        {
-            get
-            {
-                var renderObject = RenderObject;
-
-                // Constraints first, and never WatchLayout on a render object nothing has laid out:
-                // the constraints atom is what a reader has to depend on to wake on the first pass,
-                // and WatchLayout reports a never-laid-out read as an error in the Editor.
-                if (renderObject == null || !renderObject.Constraints.HasValue)
-                    return null;
-
-                // WatchLayout, not WatchedSize: TotalContentSize() is a plain method whose row
-                // estimate refines on passes that leave the viewport exactly as big as it was.
-                var viewport = renderObject.WatchLayout();
-                var axis = Axis;
-
-                return new ScrollMetrics(
-                    ScrollController.PixelOffset,
-                    ((IScrollableRenderObject)renderObject).TotalContentSize(),
-                    axis == Axis.Horizontal ? viewport.x : viewport.y,
-                    axis
-                );
-            }
-        }
+        ScrollMetrics? IScrollControllerExecutor.Metrics => ScrollableMetrics.Measure(this);
 
         bool IScrollControllerExecutor.ScrollTo(
             int index,

@@ -243,6 +243,74 @@ namespace UniMob.UI.Tests
             Assert.AreEqual(Vector2.zero, render.ChildSize);
         }
 
+        // -- What the bar answers about the pass it just drew -------------------------------------
+
+        [Test]
+        public void ScrollDeltaFor_MapsAThumbMovementAgainstTheLastPass()
+        {
+            var render = MountBar();
+            Attach(Content, Viewport);
+
+            render.Layout(LayoutConstraints.Tight(Thickness, Track));
+
+            var expected = RenderScrollbar.ScrollDeltaForThumbDelta(
+                _controller.Metrics!.Value,
+                Track,
+                ExpectedThumbExtent,
+                4f
+            );
+
+            Assert.AreEqual(
+                expected,
+                render.ScrollDeltaFor(4f),
+                0.001f,
+                $"4px of thumb travel on a {Track}px track carrying a {ExpectedThumbExtent}px thumb "
+                    + $"stands for {expected}px of scrolling"
+            );
+        }
+
+        [Test]
+        public void PageTargetFor_PagesAwayFromTheThumb_AndNowhereFromUnderIt()
+        {
+            var render = MountBar();
+            Attach(Content, Viewport);
+
+            _controller.PixelOffset = 150f;
+            render.Layout(LayoutConstraints.Tight(Thickness, Track));
+
+            var thumb = render.Thumb!.Value;
+
+            Assert.IsNull(
+                render.PageTargetFor(thumb.Offset + thumb.Extent / 2f),
+                $"the tap landed inside the thumb, which spans "
+                    + $"{thumb.Offset}..{thumb.Offset + thumb.Extent}; paging from under the thumb "
+                    + "would move the list away from the finger that meant to grab it"
+            );
+            Assert.AreEqual(
+                150f + Viewport,
+                render.PageTargetFor(thumb.Offset + thumb.Extent + 1f)!.Value,
+                0.001f,
+                $"a tap past the thumb means 'the next screenful', which is one {Viewport}px viewport "
+                    + "on from 150"
+            );
+            Assert.AreEqual(
+                150f - Viewport,
+                render.PageTargetFor(thumb.Offset - 1f)!.Value,
+                0.001f,
+                $"and a tap before it is one {Viewport}px viewport back from 150"
+            );
+
+            _controller.PixelOffset = 40f;
+            render.Layout(LayoutConstraints.Tight(Thickness, Track));
+
+            Assert.AreEqual(
+                0f,
+                render.PageTargetFor(0f)!.Value,
+                0.001f,
+                "paging back from 40 stops at the start of the content rather than at -60"
+            );
+        }
+
         // -- What scrolling costs the parent -----------------------------------------------------
 
         [Test]

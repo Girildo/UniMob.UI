@@ -141,7 +141,7 @@ namespace UniMob.UI.Tests
                 var metrics = controller.Metrics!.Value;
                 var expected = Mathf.Clamp(
                     metrics.PixelOffset
-                        + ScrollbarGeometry.PixelDeltaForThumbDelta(
+                        + RenderScrollbar.ScrollDeltaForThumbDelta(
                             metrics,
                             Viewport,
                             thumb.rect.height,
