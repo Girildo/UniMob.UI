@@ -84,6 +84,9 @@ they are not covered by the version promise and may change in a minor release.
   between a bar that is always up and one that fades out after `FadeDelay` once the list stops
   (`WhileScrolling`, the default). The thumb is a widget (`Thumb`), so an app styles it with the
   widgets it already has. `IScrollbarState` and `RenderScrollbar` come with it.
+- `IScrollableWidget`, implemented by `ScrollList` and `ScrollGrid`: the controller a caller gave a
+  scrollable, and its axis, read off a widget that is already built. A wrapper that draws something
+  over a scrollable it did not build reads it to follow the same controller along the same axis.
 - `ScrollMetrics` and, on `ScrollController`, `Metrics`, `IsAttached` and `JumpTo(pixelOffset)`.
   `Metrics` is the attached scrollable's offset, content extent and viewport extent along its axis,
   derived reactively from the list's own layout and `null` until something is attached and laid
@@ -169,6 +172,11 @@ Every entry in this section is a breaking change.
 
 ### Fixed
 
+- A `ScrollList` or `ScrollGrid` scrolled down whose content then shrank below the viewport, or
+  under the offset it was scrolled to, showed no items until the next scroll: the controller kept the
+  old offset and the window was built for it. Layout now uses the offset clamped to the content, and
+  the controller takes the clamped offset on the next frame, so growing the content again does not
+  jump back.
 - `ScrollController.NormalizedValue` always read 0, because nothing wrote it. It is now computed
   from `Metrics`: 0 at the top, 1 at the end of the scrollable range, and 0 while there is nothing
   to scroll.

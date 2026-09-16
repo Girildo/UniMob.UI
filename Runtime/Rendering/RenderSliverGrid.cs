@@ -174,7 +174,11 @@ namespace UniMob.UI.Rendering
             _measuredRowExtents.Clear();
 
             MeasureWindow(_state.AllChildren, startIndex: 0, isHorizontal, isVertical);
-            _windowScrollOffset = _state.ScrollPixelOffset;
+            _windowScrollOffset = SliverLayoutMath.OffsetWithinContent(
+                _state.ScrollPixelOffset,
+                TotalContentSize(),
+                isHorizontal ? _viewportSize.x : _viewportSize.y
+            );
         }
 
         /// <summary>
@@ -201,7 +205,11 @@ namespace UniMob.UI.Rendering
             var mainStartPad = MainStartPadding(isHorizontal);
             var cacheExtent = _virtualizationCacheExtent;
             var viewportMain = isHorizontal ? _viewportSize.x : _viewportSize.y;
-            var scrollOffset = _state.ScrollPixelOffset;
+            var scrollOffset = SliverLayoutMath.OffsetWithinContent(
+                _state.ScrollPixelOffset,
+                TotalContentSize(),
+                viewportMain
+            );
 
             var rowStride = (_layout.CellMainAxisExtent ?? _averageRowExtent) + mainSpacing;
 

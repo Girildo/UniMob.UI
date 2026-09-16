@@ -11,7 +11,7 @@ namespace UniMob.UI.Widgets
     // ScrollList's View (ScrollListView / the "Layout/UniMob.ScrollList" prefab) via the shared
     // IScrollableRenderObject seam, and RenderSliverGrid does the geometry. See RenderSliverGrid.cs for the
     // layout model and SliverGridDelegate.cs for the column math.
-    public class ScrollGrid : StatefulWidget
+    public class ScrollGrid : StatefulWidget, IScrollableWidget
     {
         /// <summary>
         ///     Eagerly-built children. Mutually exclusive with <see cref="ItemBuilder" />/<see cref="ItemCount" />.

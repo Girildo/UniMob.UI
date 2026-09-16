@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UniMob.UI.Internal;
+using UniMob.UI.Internal.Views;
 using UniMob.UI.Rendering;
-using ScrollListView = UniMob.UI.Internal.Views.ScrollListView;
-using Vector2 = UnityEngine.Vector2;
 
 namespace UniMob.UI.Widgets
 {
-    public class ScrollList : StatefulWidget
+    public class ScrollList : StatefulWidget, IScrollableWidget
     {
         /// <summary>
         ///     Eagerly-built children. Mutually exclusive with <see cref="ItemBuilder"/>/<see cref="ItemCount"/>.
@@ -126,9 +125,6 @@ namespace UniMob.UI.Widgets
 
         [Atom]
         public ScrollController ScrollController => _binding.Controller;
-
-        [Atom]
-        public Vector2 ViewportSize { get; set; }
 
         // Pixel offset, not NormalizedValue -- see ScrollController.PixelOffset's doc for why RenderSliverList's
         // estimation-based lazy windowing needs an absolute value that doesn't drift when its own estimated
