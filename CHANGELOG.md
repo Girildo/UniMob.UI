@@ -179,6 +179,9 @@ Every entry in this section is a breaking change.
   viewport, and no later layout pass brought them back. The items are now picked through the same
   measured sizes they are placed with, and a layout pass builds further items until the viewport and
   its cache extent are covered.
+- A lazy `ScrollList` or `ScrollGrid` kept showing the old item when a change read only inside
+  `ItemBuilder` replaced or reordered the items in view without moving the window: the view was handed
+  the previous, already disposed `State`, so the row rendered empty until the next scroll.
 - A `VirtualizationCacheExtent` large enough to overflow an `int` when divided by a fixed item extent
   selected a single item instead of the whole list.
 - A `ScrollList` or `ScrollGrid` scrolled down whose content then shrank below the viewport, or

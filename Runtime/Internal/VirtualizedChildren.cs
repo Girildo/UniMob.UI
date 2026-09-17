@@ -67,6 +67,11 @@ namespace UniMob.UI.Internal
         // changes, and skips it otherwise.
         private readonly Atom<IState[]> _builtWindow;
 
+        // Bumped when a rebuild puts a different State behind an index, which the visible indices
+        // cannot show. A counter rather than a read of _builtWindow: a computed atom nobody
+        // observes re-runs its pull, and with it every ItemBuilder, on each read.
+        private readonly MutableAtom<int> _builtStatesVersion = Atom.Value(0);
+
         // A reactive atom holding the INDICES of the visible children (written by SetVisibleChildren).
         private readonly MutableAtom<List<int>> _visibleIndices = Atom.Value(new List<int>());
 
@@ -214,6 +219,10 @@ namespace UniMob.UI.Internal
             // Reading the builder tracks the owning widget, mirroring the original IsLazy read here.
             var lazy = _itemBuilder() != null;
 
+            // A rebuild that replaces or reorders States leaves the visible indices as they were,
+            // so this is what tells the array that the States behind them changed.
+            _ = _builtStatesVersion.Value;
+
             for (var i = 0; i < indices.Count; i++)
             {
                 // _builtStates is a plain field (untracked here) yet safe: it's only mutated in BuildWindow,
@@ -329,11 +338,9 @@ namespace UniMob.UI.Internal
             _unclaimedByKeyScratch.Clear();
             _unclaimedBySlotScratch.Clear();
 
-            _builtStates.Clear();
+            var replacedAStateInPlace = false;
             for (var i = 0; i < widgets.Count; i++)
             {
-                var index = startIndexInclusive + i;
-
                 // Never null: IndexedWidgetBuilder returns a widget, and UpdateChild answers null only
                 // for a null one. An unkeyed claim whose type changed is replaced here, by UpdateChild.
                 var built = StateUtilities.UpdateChild(
@@ -341,6 +348,18 @@ namespace UniMob.UI.Internal
                     _claimedScratch[i],
                     widgets[i]
                 )!;
+                _claimedScratch[i] = built;
+
+                replacedAStateInPlace |=
+                    _builtStates.TryGetValue(startIndexInclusive + i, out var previous)
+                    && !ReferenceEquals(previous, built);
+            }
+
+            _builtStates.Clear();
+            for (var i = 0; i < widgets.Count; i++)
+            {
+                var index = startIndexInclusive + i;
+                var built = _claimedScratch[i]!;
                 _builtStates[index] = built;
 
                 if (built.Key != null)
@@ -348,6 +367,9 @@ namespace UniMob.UI.Internal
             }
 
             _claimedScratch.Clear();
+
+            if (replacedAStateInPlace)
+                _builtStatesVersion.Value++;
         }
 
         private void DeactivateBuiltStates()
