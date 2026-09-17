@@ -24,6 +24,9 @@ namespace UniMob.UI
         float? VirtualizationCacheExtent { get; }
         float Spacing { get; }
 
+        /// <summary>Padding around the list content, in the widget's own x/y space.</summary>
+        RectPadding Padding { get; }
+
         void SetVisibleChildren(List<IndexedLayoutData> visibleChildren);
 
         /// <summary>

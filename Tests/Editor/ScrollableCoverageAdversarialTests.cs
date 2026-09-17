@@ -112,6 +112,7 @@ namespace UniMob.UI.Tests
                         ScrollController = Controller,
                         Axis = Spec.Axis,
                         Spacing = Spec.Spacing,
+                        Padding = Spec.Padding,
                         ItemCount = Spec.ItemCount,
                         ItemExtent = Spec.ItemExtent,
                         VirtualizationCacheExtent = Spec.Cache,
@@ -372,7 +373,7 @@ namespace UniMob.UI.Tests
                     Spacing = spacing,
                     Cache = cache,
                     Columns = 3,
-                    Padding = kind == "Grid" ? RectPadding.FromLTRB(10, 30, 20, 40) : default,
+                    Padding = RectPadding.FromLTRB(10, 30, 20, 40),
                     // Not a multiple of the column count: the last row is partial.
                     ItemCount = kind == "Grid" ? 1201 : 400,
                     ExtentOf = i => extents[i],

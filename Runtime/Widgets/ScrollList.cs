@@ -43,6 +43,13 @@ namespace UniMob.UI.Widgets
 
         public float Spacing { get; init; } = 0;
 
+        /// <summary>
+        ///     Padding around the list content. It is part of the scrollable content rather than a frame
+        ///     around the viewport: the leading inset scrolls away with the first item, and the trailing
+        ///     one is reachable at the end of the scroll range.
+        /// </summary>
+        public RectPadding Padding { get; init; }
+
         public bool UseMask { get; init; } = true;
 
         /// <summary>
@@ -146,6 +153,9 @@ namespace UniMob.UI.Widgets
 
         [Atom]
         public float? VirtualizationCacheExtent => Widget.VirtualizationCacheExtent;
+
+        [Atom]
+        public RectPadding Padding => Widget.Padding;
 
         public override void DidViewMount(IView view)
         {

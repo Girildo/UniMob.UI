@@ -66,6 +66,7 @@ namespace UniMob.UI.Tests
             }
             public float? VirtualizationCacheExtent { get; set; } = 0f;
             public float Spacing { get; set; }
+            public RectPadding Padding { get; set; }
 
             public List<IndexedLayoutData> LastVisibleChildren { get; private set; }
             public (int start, int end)? LastRequestedWindow { get; private set; }
@@ -400,6 +401,163 @@ namespace UniMob.UI.Tests
                 render.CalculateScrollPixelOffset(10, ScrollToPosition.Nearest),
                 0.01f,
                 "item 10 spans [500, 550), which the viewport [450, 550) shows"
+            );
+        }
+
+        // --- Padding. It is part of the scrollable content, not a frame around the viewport: the leading
+        //     inset shifts every item, so it has to be in the content size, the positions, the window
+        //     selection and scroll-to at once, or the ends of the list drift out of the scrollable range. ---
+
+        [Test]
+        public void Eager_Padding_InsetsTheContent_AndGrowsTheContentSize()
+        {
+            var state = new FakeSliverState
+            {
+                AllChildren = new[] { Box(10), Box(20), Box(30) },
+                Spacing = 5,
+                Padding = RectPadding.FromLTRB(4, 7, 6, 9),
+            };
+
+            var render = new RenderSliverList(state);
+            render.Layout(new LayoutConstraints(0, 0, 100, 1000));
+
+            Assert.AreEqual(86f, render.TotalContentSize(), 0.01f); // 10+20+30 + 5*2 + 7 + 9
+
+            var visible = state.LastVisibleChildren;
+            CollectionAssert.AreEqual(
+                new[] { 0, 1, 2 },
+                visible.Select(v => v.ChildIndex).ToArray()
+            );
+            Assert.AreEqual(new Vector2(4, 7), visible[0].Layout.Position);
+            Assert.AreEqual(new Vector2(4, 22), visible[1].Layout.Position); // 7 + 10 + 5
+            Assert.AreEqual(90f, visible[0].Layout.Size.x, 0.01f); // 100 - 4 - 6
+        }
+
+        [Test]
+        public void Eager_Padding_Horizontal_MapsLeftAndRightToTheMainAxis()
+        {
+            var state = new FakeSliverState
+            {
+                Axis = Axis.Horizontal,
+                AllChildren = new[] { HBox(10), HBox(20) },
+                Padding = RectPadding.FromLTRB(4, 7, 6, 9),
+            };
+
+            var render = new RenderSliverList(state);
+            render.Layout(new LayoutConstraints(0, 0, 1000, 100));
+
+            Assert.AreEqual(40f, render.TotalContentSize(), 0.01f); // 10+20 + 4 + 6
+
+            var visible = state.LastVisibleChildren;
+            Assert.AreEqual(new Vector2(4, 7), visible[0].Layout.Position);
+            Assert.AreEqual(new Vector2(14, 7), visible[1].Layout.Position);
+            Assert.AreEqual(84f, visible[0].Layout.Size.y, 0.01f); // 100 - 7 - 9
+        }
+
+        [Test]
+        public void Lazy_Padding_SelectsTheWindowTheInsetItemsActuallyOccupy()
+        {
+            // The window has to be picked in the same space the items are placed in. Reading the offset
+            // as if item 0 started at 0 picks items one full inset too far down the list, and positioning
+            // then places them below the viewport.
+            var state = new FakeSliverState
+            {
+                ItemCount = 100,
+                ItemExtent = 50,
+                ScrollPixelOffset = 120,
+                VirtualizationCacheExtent = 0,
+                Padding = RectPadding.Only(top: 30, bottom: 20),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => Box(50)).ToArray(),
+            };
+
+            var render = new RenderSliverList(state);
+            render.Layout(new LayoutConstraints(0, 0, 100, 200)); // viewport = [120, 320)
+
+            // Items start at 30, so the viewport spans content [90, 290): items 1 through 5.
+            Assert.AreEqual((1, 6), state.LastRequestedWindow);
+            Assert.AreEqual(5050f, render.TotalContentSize(), 0.01f); // 30 + 100*50 + 20
+            Assert.AreEqual(80f, state.LastVisibleChildren[0].Layout.Position.y, 0.01f); // 30 + 1*50
+        }
+
+        [Test]
+        public void Lazy_Padding_LeavesExactlyTheEndInsetAfterTheLastItem()
+        {
+            // Max scroll is TotalContentSize() - viewport, so the last item plus the end inset must end
+            // exactly at the content size: longer and the item is clipped by the view's mask with no way
+            // to scroll to it, shorter and the list ends in a gap.
+            var state = new FakeSliverState
+            {
+                ItemCount = 50,
+                ItemExtent = 50,
+                VirtualizationCacheExtent = 0,
+                Padding = RectPadding.Only(top: 30, bottom: 20),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => Box(50)).ToArray(),
+            };
+
+            var render = new RenderSliverList(state);
+            var viewport = new LayoutConstraints(0, 0, 100, 200);
+
+            render.Layout(viewport);
+            state.ScrollPixelOffset = render.TotalContentSize() - 200f;
+            render.Layout(viewport);
+
+            var last = state.LastVisibleChildren[state.LastVisibleChildren.Count - 1];
+            Assert.AreEqual(
+                49,
+                last.ChildIndex,
+                "the final item must be in the window at the bottom"
+            );
+            Assert.AreEqual(
+                render.TotalContentSize() - 20f,
+                last.Layout.Position.y + last.Layout.Size.y,
+                0.01f,
+                "the final item must end one end-inset before the content the view is sized to"
+            );
+        }
+
+        [Test]
+        public void CalculateScrollPixelOffset_Padding_CountsTheLeadingInset()
+        {
+            var eager = new FakeSliverState
+            {
+                AllChildren = new[] { Box(50), Box(50), Box(50), Box(50), Box(50) },
+                Padding = RectPadding.Only(top: 25),
+            };
+
+            var render = new RenderSliverList(eager);
+            render.Layout(new LayoutConstraints(0, 0, 100, 100)); // viewport main axis = 100
+
+            // Item 2 spans [125, 175): 25 of inset plus two 50px items.
+            Assert.AreEqual(
+                125f,
+                render.CalculateScrollPixelOffset(2, ScrollToPosition.Start),
+                0.01f
+            );
+            Assert.AreEqual(
+                100f,
+                render.CalculateScrollPixelOffset(2, ScrollToPosition.Center),
+                0.01f
+            );
+            Assert.AreEqual(75f, render.CalculateScrollPixelOffset(2, ScrollToPosition.End), 0.01f);
+
+            var lazy = new FakeSliverState
+            {
+                ItemCount = 10,
+                ItemExtent = 50,
+                Padding = RectPadding.Only(top: 25),
+                BuildWindow = (start, end) =>
+                    Enumerable.Range(start, end - start).Select(_ => Box(50)).ToArray(),
+            };
+
+            var lazyRender = new RenderSliverList(lazy);
+            lazyRender.Layout(new LayoutConstraints(0, 0, 100, 100));
+
+            Assert.AreEqual(
+                225f,
+                lazyRender.CalculateScrollPixelOffset(4, ScrollToPosition.Start),
+                0.01f
             );
         }
     }

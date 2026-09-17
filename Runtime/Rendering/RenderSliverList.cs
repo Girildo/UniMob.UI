@@ -49,7 +49,10 @@ namespace UniMob.UI.Rendering
     //  Coordinate space: ScrollController.PixelOffset is absolute pixels (not a 0..1 ratio) because the total-size
     //  estimate shifts almost every pass and an absolute offset doesn't drift under it. Since the View sizes the
     //  content rect to TotalContentSize(), max scroll == TotalContentSize() - viewport, so positioned content
-    //  MUST end exactly there -- which is precisely why pitfall (1) bites.
+    //  MUST end exactly there -- which is precisely why pitfall (1) bites. Padding is part of that content, not a
+    //  frame around the viewport: item 0 starts at the leading inset, so offsets go through
+    //  EstimateLeadingEdgeOffset (which adds it) and EstimateIndexAt (which takes it off) rather than being
+    //  derived from the extents alone.
     //
     //  When editing, keep in mind:
     //    * _averageExtent is mutated mid-pass (during sizing); positioning and TotalContentSize() both read it
@@ -123,6 +126,22 @@ namespace UniMob.UI.Rendering
             return viewportSize;
         }
 
+        // --- Axis-aware padding: the list works in (main, cross) space; map to the widget's x/y padding. ---
+        private float MainStartPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Left : _state.Padding.Top;
+
+        private float MainEndPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Right : _state.Padding.Bottom;
+
+        private float CrossStartPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Top : _state.Padding.Left;
+
+        private float CrossEndPadding(bool isHorizontal) =>
+            isHorizontal ? _state.Padding.Bottom : _state.Padding.Right;
+
+        private float MainAxisPadding(bool isHorizontal) =>
+            MainStartPadding(isHorizontal) + MainEndPadding(isHorizontal);
+
         /// <summary>
         ///     SIZING PASS: measures children to determine the total scrollable content size. In eager mode,
         ///     every child is measured every pass. In lazy mode, only an estimated build window (viewport +
@@ -162,26 +181,30 @@ namespace UniMob.UI.Rendering
             this._virtualizationCacheExtent =
                 _state.VirtualizationCacheExtent ?? ComputeVirtualizationCacheExtent();
 
+            // The cross extent children stretch to: the viewport across, less the padding on that axis.
+            var crossAxisExtent = Mathf.Max(
+                0f,
+                (isHorizontal ? _viewportSize.y : _viewportSize.x)
+                    - CrossStartPadding(isHorizontal)
+                    - CrossEndPadding(isHorizontal)
+            );
+
             if (_state.ItemCount.HasValue)
-                PerformLazySizing(constraints, isHorizontal, isVertical);
+                PerformLazySizing(crossAxisExtent, isHorizontal, isVertical);
             else
-                PerformEagerSizing(constraints, isHorizontal, isVertical);
+                PerformEagerSizing(crossAxisExtent, isHorizontal, isVertical);
 
             return this._viewportSize;
         }
 
-        private void PerformEagerSizing(
-            LayoutConstraints constraints,
-            bool isHorizontal,
-            bool isVertical
-        )
+        private void PerformEagerSizing(float crossAxisExtent, bool isHorizontal, bool isVertical)
         {
             _allChildrenSizes.Clear();
 
             // Give children unconstrained space along the main scrolling axis
-            // but constrain them to the viewport's size on the cross axis. (stretching them horizontally)
+            // but constrain them to the content's size on the cross axis. (stretching them horizontally)
             var childConstraints = SliverLayoutMath.MakeChildConstraints(
-                constraints,
+                crossAxisExtent,
                 isHorizontal,
                 mainAxisExtent: null
             );
@@ -199,11 +222,7 @@ namespace UniMob.UI.Rendering
         ///     The window is selected through <see cref="EstimateLeadingEdgeOffset"/>, the model positioning
         ///     places it with, and corrected until the measured items cover the viewport.
         /// </summary>
-        private void PerformLazySizing(
-            LayoutConstraints constraints,
-            bool isHorizontal,
-            bool isVertical
-        )
+        private void PerformLazySizing(float crossAxisExtent, bool isHorizontal, bool isVertical)
         {
             var itemCount = _state.ItemCount!.Value;
             _lazyWindowSizes.Clear();
@@ -219,7 +238,7 @@ namespace UniMob.UI.Rendering
             var cacheExtent = this._virtualizationCacheExtent;
             var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
             var childConstraints = SliverLayoutMath.MakeChildConstraints(
-                constraints,
+                crossAxisExtent,
                 isHorizontal,
                 mainAxisExtent: _state.ItemExtent
             );
@@ -341,22 +360,25 @@ namespace UniMob.UI.Rendering
 
         private float EagerContentMainAxisSize()
         {
+            if (_allChildrenSizes.Count == 0)
+                return 0;
+
             var isHorizontal = _state.Axis == Axis.Horizontal;
             float totalSize = 0;
             foreach (var childSize in _allChildrenSizes)
             {
                 totalSize += isHorizontal ? childSize.x : childSize.y;
             }
-            if (_allChildrenSizes.Count > 0)
-                totalSize += _state.Spacing * (_allChildrenSizes.Count - 1);
-            return totalSize;
+            totalSize += _state.Spacing * (_allChildrenSizes.Count - 1);
+            return totalSize + MainAxisPadding(isHorizontal);
         }
 
         /// <summary>
         ///     Total main-axis size of the lazy content. Derived from the exact same per-item model as positioning:
         ///     the content ends at the leading edge of the item one past the last, minus the trailing gap that edge
-        ///     would add (the list has itemCount-1 gaps, not itemCount). Sharing <see cref="EstimateLeadingEdgeOffset"/>
-        ///     is what keeps the scrollable range and the positioned content in lockstep.
+        ///     would add (the list has itemCount-1 gaps, not itemCount), plus the end padding. Sharing
+        ///     <see cref="EstimateLeadingEdgeOffset"/> is what keeps the scrollable range and the positioned
+        ///     content in lockstep.
         /// </summary>
         private float EstimateLazyContentMainAxisSize()
         {
@@ -364,7 +386,9 @@ namespace UniMob.UI.Rendering
             if (itemCount <= 0)
                 return 0;
 
-            return EstimateLeadingEdgeOffset(itemCount) - _state.Spacing;
+            return EstimateLeadingEdgeOffset(itemCount)
+                - _state.Spacing
+                + MainEndPadding(_state.Axis == Axis.Horizontal);
         }
 
         /// <summary>
@@ -376,10 +400,14 @@ namespace UniMob.UI.Rendering
         private float EstimateLeadingEdgeOffset(int index)
         {
             var spacing = _state.Spacing;
+            var mainStartPadding = MainStartPadding(_state.Axis == Axis.Horizontal);
 
-            return _state.ItemExtent.HasValue
-                ? index * (_state.ItemExtent.Value + spacing)
-                : _measuredExtents.LeadingEdge(index, _averageExtent, spacing);
+            return mainStartPadding
+                + (
+                    _state.ItemExtent.HasValue
+                        ? index * (_state.ItemExtent.Value + spacing)
+                        : _measuredExtents.LeadingEdge(index, _averageExtent, spacing)
+                );
         }
 
         /// <summary>
@@ -390,12 +418,13 @@ namespace UniMob.UI.Rendering
         private int EstimateIndexAt(float offset, int itemCount)
         {
             var spacing = _state.Spacing;
+            var contentOffset = offset - MainStartPadding(_state.Axis == Axis.Horizontal);
 
             if (!_state.ItemExtent.HasValue)
-                return _measuredExtents.IndexAt(offset, itemCount, _averageExtent, spacing);
+                return _measuredExtents.IndexAt(contentOffset, itemCount, _averageExtent, spacing);
 
             return SliverLayoutMath.SlotAtUniformStride(
-                offset,
+                contentOffset,
                 _state.ItemExtent.Value + spacing,
                 itemCount
             );
@@ -436,7 +465,13 @@ namespace UniMob.UI.Rendering
                     viewportMainAxisSize
                 );
 
-                CullVisibleRun(0, 0f, _allChildrenSizes, scrollOffset, visible);
+                CullVisibleRun(
+                    0,
+                    MainStartPadding(_state.Axis == Axis.Horizontal),
+                    _allChildrenSizes,
+                    scrollOffset,
+                    visible
+                );
             }
 
             ChildrenLayoutBuffer.Clear();
@@ -463,6 +498,7 @@ namespace UniMob.UI.Rendering
         {
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var spacing = _state.Spacing;
+            var crossStartPadding = CrossStartPadding(isHorizontal);
             var viewportMainAxisSize = isHorizontal ? _viewportSize.x : _viewportSize.y;
 
             var viewportStart = scrollOffset - _virtualizationCacheExtent;
@@ -488,8 +524,8 @@ namespace UniMob.UI.Rendering
                             {
                                 Size = childSize,
                                 Position = isHorizontal
-                                    ? new Vector2(mainAxisPos, 0)
-                                    : new Vector2(0, mainAxisPos),
+                                    ? new Vector2(mainAxisPos, crossStartPadding)
+                                    : new Vector2(crossStartPadding, mainAxisPos),
                             },
                         }
                     );
@@ -517,16 +553,24 @@ namespace UniMob.UI.Rendering
             var isHorizontal = _state.Axis == Axis.Horizontal;
             var children = _state.AllChildren;
 
+            if (children.Length == 0)
+                return 0;
+
+            // Children are laid out inside the padding, so they are measured against what it leaves them.
+            var childCrossAxisExtent = Mathf.Max(
+                0f,
+                crossAxisExtent - CrossStartPadding(isHorizontal) - CrossEndPadding(isHorizontal)
+            );
+
             var total = 0f;
             foreach (var child in children)
                 total += isHorizontal
-                    ? child.RenderObject.GetIntrinsicWidth(crossAxisExtent)
-                    : child.RenderObject.GetIntrinsicHeight(crossAxisExtent);
+                    ? child.RenderObject.GetIntrinsicWidth(childCrossAxisExtent)
+                    : child.RenderObject.GetIntrinsicHeight(childCrossAxisExtent);
 
-            if (children.Length > 0)
-                total += _state.Spacing * (children.Length - 1);
+            total += _state.Spacing * (children.Length - 1);
 
-            return total;
+            return total + MainAxisPadding(isHorizontal);
         }
 
         /// <summary>
@@ -552,7 +596,7 @@ namespace UniMob.UI.Rendering
             if (totalScrollableDist <= 0 || index < 0 || index >= _allChildrenSizes.Count)
                 return 0;
 
-            var childOffset = 0f;
+            var childOffset = MainStartPadding(isHorizontal);
             for (var i = 0; i < index; i++)
                 childOffset +=
                     (isHorizontal ? _allChildrenSizes[i].x : _allChildrenSizes[i].y)

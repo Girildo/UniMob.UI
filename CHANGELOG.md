@@ -78,6 +78,10 @@ they are not covered by the version promise and may change in a minor release.
 - `RectPadding.Zero`.
 - `ScrollToPosition.Nearest`, which scrolls the least distance that shows a whole item and leaves a
   list alone whose item is already fully in view.
+- `ScrollList.Padding`, the inset `ScrollGrid` already had. It is part of the scrollable content
+  rather than a frame around the viewport: the leading inset scrolls away with the first item, the
+  trailing one is reachable at the end of the scroll range, and the cross-axis inset narrows the
+  items instead of clipping them.
 - **`Scrollbar`**, a scrollbar bound to a `ScrollController` and placed by the caller: over the list
   in a `ZStack` with a `Positioned`, or beside it in a `Row`. The thumb is draggable, a tap on the
   track pages by one viewport toward the tap (`PageOnTrackTap`), and `ScrollbarVisibility` picks

@@ -12,12 +12,13 @@ namespace UniMob.UI.Rendering
     internal static class SliverLayoutMath
     {
         /// <summary>
-        ///     Builds the constraints for a child of a scrollable sliver: tight on the cross axis (children
-        ///     stretch to fill the viewport across), and on the main axis either tight to
-        ///     <paramref name="mainAxisExtent" /> (a fixed item/cell size) or loose (measured).
+        ///     Builds the constraints for a child of a scrollable sliver: tight to
+        ///     <paramref name="crossAxisExtent" /> on the cross axis (children stretch to fill the content
+        ///     across), and on the main axis either tight to <paramref name="mainAxisExtent" /> (a fixed
+        ///     item/cell size) or loose (measured).
         /// </summary>
         public static LayoutConstraints MakeChildConstraints(
-            LayoutConstraints constraints,
+            float crossAxisExtent,
             bool isHorizontal,
             float? mainAxisExtent
         )
@@ -27,19 +28,9 @@ namespace UniMob.UI.Rendering
 
             return isHorizontal
                 // For a horizontal sliver, height is tight, width is loose (or tight to the extent, if given).
-                ? new LayoutConstraints(
-                    mainAxisMin,
-                    constraints.MaxHeight,
-                    mainAxisMax,
-                    constraints.MaxHeight
-                )
+                ? new LayoutConstraints(mainAxisMin, crossAxisExtent, mainAxisMax, crossAxisExtent)
                 // For a vertical sliver, width is tight, height is loose (or tight to the extent, if given).
-                : new LayoutConstraints(
-                    constraints.MaxWidth,
-                    mainAxisMin,
-                    constraints.MaxWidth,
-                    mainAxisMax
-                );
+                : new LayoutConstraints(crossAxisExtent, mainAxisMin, crossAxisExtent, mainAxisMax);
         }
 
         /// <summary>
