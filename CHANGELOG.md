@@ -182,6 +182,9 @@ Every entry in this section is a breaking change.
 - A lazy `ScrollList` or `ScrollGrid` kept showing the old item when a change read only inside
   `ItemBuilder` replaced or reordered the items in view without moving the window: the view was handed
   the previous, already disposed `State`, so the row rendered empty until the next scroll.
+- One row of a `ScrollList` or `ScrollGrid` whose view could not be rendered took every row after it
+  off screen, for as long as it stayed in view. The row is now reported as a fault against its own
+  state and skipped (`ViewMapperRenderScope.TryRenderItem`), and the rows after it keep their views.
 - A `VirtualizationCacheExtent` large enough to overflow an `int` when divided by a fixed item extent
   selected a single item instead of the whole list.
 - A `ScrollList` or `ScrollGrid` scrolled down whose content then shrank below the viewport, or

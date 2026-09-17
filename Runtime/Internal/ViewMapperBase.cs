@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using UniMob.UI.Diagnostics;
 using UnityEngine.Assertions;
 
 namespace UniMob.UI.Internal
@@ -222,6 +224,26 @@ namespace UniMob.UI.Internal
             public IView RenderItem(IState state)
             {
                 return _mapper.RenderItem(state);
+            }
+
+            /// <summary>
+            ///     <see cref="RenderItem" /> for a caller that renders many children in one pass. A child
+            ///     that cannot be rendered is reported as a fault against it and answers false, so
+            ///     the caller skips it and the children after it keep their views.
+            /// </summary>
+            public bool TryRenderItem(IState state, [NotNullWhen(true)] out IView? view)
+            {
+                try
+                {
+                    view = _mapper.RenderItem(state);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    UniMobError.Report(new UniMobFault(ex, "RenderItem", state));
+                    view = null;
+                    return false;
+                }
             }
 
             public bool Reuse(IState state)

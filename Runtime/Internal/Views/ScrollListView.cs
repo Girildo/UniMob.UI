@@ -245,7 +245,11 @@ namespace UniMob.UI.Internal.Views
                 {
                     var child = children[i];
                     var layoutData = childrenLayout[i];
-                    var childView = render.RenderItem(child);
+
+                    // Not RenderItem: a throw here ends the render scope, which recycles the view
+                    // of every row after this one, and nothing renders them again.
+                    if (!render.TryRenderItem(child, out var childView))
+                        continue;
 
                     var rt = childView.rectTransform;
                     rt.anchorMin = new Vector2(0, 1);
