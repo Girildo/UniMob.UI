@@ -12,8 +12,8 @@ namespace UniMob.UI.Rendering
     //
     //  Read the architecture notes at the top of RenderSliverList.cs first: this render object reuses the
     //  same eager/lazy split, the same measured-extent + EMA estimation, the same "one function is the
-    //  single source of truth for where item N is" discipline, and the same one-settle-frame window
-    //  approximation. The one difference: the UNIT OF VIRTUALIZATION IS THE ROW, not the item.
+    //  single source of truth for where item N is" discipline, and the same window selection through
+    //  that model. The one difference: the UNIT OF VIRTUALIZATION IS THE ROW, not the item.
     //
     //  A SliverGridDelegate turns the viewport's available cross-axis extent into a regular tile layout
     //  (SliverGridLayout): a fixed column count N and a cell cross-extent, so item i is deterministically
@@ -29,7 +29,8 @@ namespace UniMob.UI.Rendering
     //      (_averageRowExtent) for the rest -- the row-level analog of the list's per-item model.
     //
     //  EstimateRowLeadingEdgeOffset(row) is the single source of truth both modes route through, so
-    //  positioning, TotalContentSize(), and scroll-to always agree (the list's pitfall (1), avoided here).
+    //  positioning, TotalContentSize(), and scroll-to always agree, and EstimateRowAt(offset) is its
+    //  inverse, which window selection routes through.
     // ================================================================================================
 
     public class RenderSliverGrid : MultiChildRenderObject, IScrollableRenderObject
@@ -47,7 +48,7 @@ namespace UniMob.UI.Rendering
         // --- Measured-rows mode (delegate returned no fixed main extent) ---
         // Exact main-axis extent of every ROW ever measured, kept even after it leaves the build window --
         // the row-level analog of RenderSliverList._measuredExtents.
-        private readonly Dictionary<int, float> _measuredRowExtents = new();
+        private readonly MeasuredExtents _measuredRowExtents = new();
         private readonly Dictionary<int, float> _rowHeightsThisPass = new();
         private const float DefaultEstimatedExtent = 100f;
         private const float AverageExtentSmoothing = 0.25f;
@@ -173,7 +174,14 @@ namespace UniMob.UI.Rendering
             // lazy mode, which must retain rows across passes (that's the point of _measuredRowExtents).
             _measuredRowExtents.Clear();
 
-            MeasureWindow(_state.AllChildren, startIndex: 0, isHorizontal, isVertical);
+            var rowAverage = MeasureWindow(
+                _state.AllChildren,
+                startIndex: 0,
+                isHorizontal,
+                isVertical
+            );
+            UpdateAverageRowExtent(rowAverage, hadPriorMeasurement: false);
+
             _windowScrollOffset = SliverLayoutMath.OffsetWithinContent(
                 _state.ScrollPixelOffset,
                 TotalContentSize(),
@@ -182,10 +190,9 @@ namespace UniMob.UI.Rendering
         }
 
         /// <summary>
-        ///     Picks the row range covering [scrollOffset - cache, scrollOffset + viewport + cache] via a
-        ///     uniform row-stride guess (fixed cell extent if known, else <see cref="_averageRowExtent" />),
-        ///     converts it to an item index range, then builds and measures exactly that window. Same
-        ///     one-settle-frame approximation as the list.
+        ///     Builds and measures the rows covering [scrollOffset - cache, scrollOffset + viewport + cache].
+        ///     The rows are selected through <see cref="EstimateRowLeadingEdgeOffset" />, the model
+        ///     positioning places them with, and corrected until the measured rows cover the viewport.
         /// </summary>
         private void PerformLazySizing(bool isHorizontal, bool isVertical)
         {
@@ -202,43 +209,79 @@ namespace UniMob.UI.Rendering
             var n = _layout.CrossAxisCount;
             var rowCount = _layout.RowCount(itemCount);
             var mainSpacing = _layout.MainAxisSpacing;
-            var mainStartPad = MainStartPadding(isHorizontal);
             var cacheExtent = _virtualizationCacheExtent;
             var viewportMain = isHorizontal ? _viewportSize.x : _viewportSize.y;
+
             var scrollOffset = SliverLayoutMath.OffsetWithinContent(
                 _state.ScrollPixelOffset,
                 TotalContentSize(),
                 viewportMain
             );
+            var startRow = EstimateRowAt(scrollOffset - cacheExtent, rowCount);
+            var endRow = EstimateRowAt(scrollOffset + viewportMain + cacheExtent, rowCount) + 1;
 
-            var rowStride = (_layout.CellMainAxisExtent ?? _averageRowExtent) + mainSpacing;
+            var hadPriorMeasurement = _measuredRowExtents.Count > 0;
+            var rowAverage = MeasureRows(startRow, endRow, n, itemCount, isHorizontal, isVertical);
+            UpdateAverageRowExtent(rowAverage, hadPriorMeasurement);
 
-            // Offsets are measured from the content origin, which starts after the leading main padding.
-            var startRow = Mathf.Clamp(
-                Mathf.FloorToInt((scrollOffset - cacheExtent - mainStartPad) / rowStride),
-                0,
-                rowCount - 1
-            );
-            var endRow = Mathf.Clamp(
-                Mathf.CeilToInt(
-                    (scrollOffset + viewportMain + cacheExtent - mainStartPad) / rowStride
-                ),
-                startRow + 1,
-                rowCount
-            );
+            // Measuring moves the model the rows were selected through: the rows it holds are now
+            // exact, and the new average shifts every unmeasured row below them.
+            for (var round = 0; round < SliverLayoutMath.MaxWindowCorrections; round++)
+            {
+                scrollOffset = SliverLayoutMath.OffsetWithinContent(
+                    _state.ScrollPixelOffset,
+                    TotalContentSize(),
+                    viewportMain
+                );
+                var coverStart = scrollOffset - cacheExtent;
+                var coverEnd = scrollOffset + viewportMain + cacheExtent;
 
-            var startIndex = startRow * n;
-            var endIndex = Mathf.Min(endRow * n, itemCount);
+                var corrected = SliverLayoutMath.CorrectWindow(
+                    (startRow, endRow),
+                    rowCount,
+                    windowStartEdge: EstimateRowLeadingEdgeOffset(startRow),
+                    windowEndEdge: EstimateRowLeadingEdgeOffset(endRow) - mainSpacing,
+                    viewportStart: scrollOffset,
+                    viewportEnd: scrollOffset + viewportMain,
+                    wanted: (
+                        EstimateRowAt(coverStart, rowCount),
+                        EstimateRowAt(coverEnd, rowCount) + 1
+                    ),
+                    coverEnd,
+                    localStride: (_layout.CellMainAxisExtent ?? rowAverage) + mainSpacing
+                );
 
-            var builtStates = _state.RequestBuildWindow(startIndex, endIndex);
-            MeasureWindow(builtStates, startIndex, isHorizontal, isVertical);
+                if (corrected == (startRow, endRow))
+                    break;
+
+                (startRow, endRow) = corrected;
+                rowAverage = MeasureRows(startRow, endRow, n, itemCount, isHorizontal, isVertical);
+            }
 
             _windowScrollOffset = scrollOffset;
         }
 
-        // Measures a contiguous run of built children (all children in eager mode; the window in lazy mode),
-        // recording each cell's main extent and -- in measured-rows mode -- each row's height and the EMA.
-        private void MeasureWindow(
+        // Builds and measures the cells of rows [startRow, endRow); answers their average row extent.
+        private float MeasureRows(
+            int startRow,
+            int endRow,
+            int crossAxisCount,
+            int itemCount,
+            bool isHorizontal,
+            bool isVertical
+        )
+        {
+            var startIndex = startRow * crossAxisCount;
+            var endIndex = Mathf.Min(endRow * crossAxisCount, itemCount);
+
+            var builtStates = _state.RequestBuildWindow(startIndex, endIndex);
+            return MeasureWindow(builtStates, startIndex, isHorizontal, isVertical);
+        }
+
+        // Measures a contiguous run of built children (all children in eager mode; the window in lazy mode)
+        // into _windowCells, recording each cell's main extent and -- in measured-rows mode -- each row's
+        // height. Answers the average extent of the rows it measured, or 0 when it measured none.
+        private float MeasureWindow(
             IState[] builtStates,
             int startIndex,
             bool isHorizontal,
@@ -250,6 +293,7 @@ namespace UniMob.UI.Rendering
             var childConstraints = MakeCellConstraints(isHorizontal, cellCross, cellMain);
             var measuring = !_layout.IsFixedMainAxis;
 
+            _windowCells.Clear();
             _rowHeightsThisPass.Clear();
 
             for (var i = 0; i < builtStates.Length; i++)
@@ -272,20 +316,26 @@ namespace UniMob.UI.Rendering
             }
 
             if (!measuring || _rowHeightsThisPass.Count == 0)
-                return;
+                return 0f;
 
-            // Commit this pass's exact row heights, then nudge the estimate toward the pass average (EMA) --
-            // the same damping RenderSliverList uses so a small window catching/missing a tall row between
-            // passes doesn't make offsets jump. Skip the damping on the very first real measurement.
-            var hadPriorMeasurement = _measuredRowExtents.Count > 0;
             var sum = 0f;
             foreach (var pair in _rowHeightsThisPass)
             {
-                _measuredRowExtents[pair.Key] = pair.Value;
+                _measuredRowExtents.Set(pair.Key, pair.Value);
                 sum += pair.Value;
             }
 
-            var passAverage = sum / _rowHeightsThisPass.Count;
+            return sum / _rowHeightsThisPass.Count;
+        }
+
+        // Nudges the estimate toward a pass's row average (EMA) -- the same damping RenderSliverList uses
+        // so a small window catching/missing a tall row between passes doesn't make offsets jump. Skips
+        // the damping on the very first real measurement.
+        private void UpdateAverageRowExtent(float passAverage, bool hadPriorMeasurement)
+        {
+            if (_layout.IsFixedMainAxis || _windowCells.Count == 0)
+                return;
+
             _averageRowExtent = hadPriorMeasurement
                 ? Mathf.Lerp(_averageRowExtent, passAverage, AverageExtentSmoothing)
                 : passAverage;
@@ -323,29 +373,40 @@ namespace UniMob.UI.Rendering
             if (_layout.IsFixedMainAxis)
                 return mainStartPad + row * (_layout.CellMainAxisExtent!.Value + mainSpacing);
 
-            var measuredSumBelow = 0f;
-            var measuredCountBelow = 0;
-            foreach (var pair in _measuredRowExtents)
-            {
-                if (pair.Key >= row)
-                    continue;
-                measuredSumBelow += pair.Value;
-                measuredCountBelow++;
-            }
-
             return mainStartPad
-                + measuredSumBelow
-                + _averageRowExtent * (row - measuredCountBelow)
-                + mainSpacing * row;
+                + _measuredRowExtents.LeadingEdge(row, _averageRowExtent, mainSpacing);
+        }
+
+        /// <summary>
+        ///     The inverse of <see cref="EstimateRowLeadingEdgeOffset" />: the last row that starts at or
+        ///     before <paramref name="offset" />. Window selection goes through it, so the rows it picks
+        ///     are the rows positioning places at that offset.
+        /// </summary>
+        private int EstimateRowAt(float offset, int rowCount)
+        {
+            var mainSpacing = _layout.MainAxisSpacing;
+            var contentOffset = offset - MainStartPadding(_state.Axis == Axis.Horizontal);
+
+            if (!_layout.IsFixedMainAxis)
+                return _measuredRowExtents.IndexAt(
+                    contentOffset,
+                    rowCount,
+                    _averageRowExtent,
+                    mainSpacing
+                );
+
+            return SliverLayoutMath.SlotAtUniformStride(
+                contentOffset,
+                _layout.CellMainAxisExtent!.Value + mainSpacing,
+                rowCount
+            );
         }
 
         private float RowMainExtent(int row)
         {
             if (_layout.IsFixedMainAxis)
                 return _layout.CellMainAxisExtent!.Value;
-            return _measuredRowExtents.TryGetValue(row, out var height)
-                ? height
-                : _averageRowExtent;
+            return _measuredRowExtents.TryGet(row, out var height) ? height : _averageRowExtent;
         }
 
         /// <summary>

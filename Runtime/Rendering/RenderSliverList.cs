@@ -27,7 +27,7 @@ namespace UniMob.UI.Rendering
     //  Eager mode (ItemCount == null): every child is measured every pass and positions are exact. Simple.
     //
     //  Lazy mode (ItemCount set): only a window covering [viewport +/- cacheExtent] is built and measured each
-    //  pass; everything outside it is *estimated*. Two ideas carry it -- and both historical bugs lived here:
+    //  pass; everything outside it is *estimated*. Two ideas carry it:
     //
     //    (1) One model for "where is item N". _measuredExtents holds the exact extent of every item ever
     //        measured (kept even after eviction); _averageExtent is an EMA estimate for the never-measured rest.
@@ -38,11 +38,13 @@ namespace UniMob.UI.Rendering
     //        pushes the final item past the scrollable range -> the View's RectMask2D clips it (opposite sign: a
     //        gap). Route every offset through the one function.
     //
-    //    (2) The one-settle-frame approximation. Window *selection* (which indices to build) uses a cheap uniform
-    //        stride guess from _averageExtent. After a big jump (ScrollTo into unbuilt territory, a fast fling) it
-    //        can miss the true viewport on the first pass, then self-corrects next pass as the average refines
-    //        near the new position; the cache buffer absorbs the slop. Accepting that one frame is what keeps
-    //        layout a single synchronous pass instead of an iterative re-entrant one.
+    //    (2) Window selection goes through the same model, in the other direction. EstimateIndexAt(offset) is
+    //        the inverse of EstimateLeadingEdgeOffset(index), so the items picked for an offset are the items
+    //        positioning places at that offset. Measuring the window moves the model (its items become exact,
+    //        the average shifts), so sizing re-checks the measured window against the viewport and corrects it
+    //        (SliverLayoutMath.CorrectWindow) until it is covered. The cache extent is the target of a
+    //        selection, not a guarantee. A selection that guesses positions any other way (a uniform
+    //        offset / average stride) builds a window that positioning then places outside the viewport.
     //
     //  Coordinate space: ScrollController.PixelOffset is absolute pixels (not a 0..1 ratio) because the total-size
     //  estimate shifts almost every pass and an absolute offset doesn't drift under it. Since the View sizes the
@@ -53,7 +55,7 @@ namespace UniMob.UI.Rendering
     //    * _averageExtent is mutated mid-pass (during sizing); positioning and TotalContentSize() both read it
     //      afterwards so they agree within a pass -- don't feed one a pre-update copy and the other a post-update
     //      one.
-    //    * Lazy selection is only an estimate; never assume the built window exactly equals the visible set.
+    //    * The built window covers the viewport plus the cache extent but can exceed it; positioning culls.
     //    * The reactive build/dispose vs ItemBuilder NoWatch rules live in ScrollList.cs -- see the notes there.
     // ================================================================================================
 
@@ -78,7 +80,7 @@ namespace UniMob.UI.Rendering
         // --- Lazy mode (ItemBuilder/ItemCount) -- see the "one model for where is item N" note up top. ---
         // Exact main-axis extent of every item ever measured, kept even after it leaves the build window (cheap,
         // and keeps TotalContentSize()/scroll-to exact for seen items instead of falling back to the average).
-        private readonly Dictionary<int, float> _measuredExtents = new();
+        private readonly MeasuredExtents _measuredExtents = new();
         private const float DefaultEstimatedExtent = 100f; // fallback before anything has ever been measured
 
         // How strongly each pass's window average pulls _averageExtent toward it (0 = never, 1 = snap).
@@ -193,10 +195,9 @@ namespace UniMob.UI.Rendering
         }
 
         /// <summary>
-        ///     Picks the index range covering [scrollOffset - cache, scrollOffset + viewport + cache] via a uniform
-        ///     stride guess (ItemExtent if fixed, else <see cref="_averageExtent"/>), then builds and measures
-        ///     exactly that window. The guess is the one-settle-frame approximation described up top: it can
-        ///     under-cover right after a big jump and self-corrects next pass as the average refines.
+        ///     Builds and measures the items covering [scrollOffset - cache, scrollOffset + viewport + cache].
+        ///     The window is selected through <see cref="EstimateLeadingEdgeOffset"/>, the model positioning
+        ///     places it with, and corrected until the measured items cover the viewport.
         /// </summary>
         private void PerformLazySizing(
             LayoutConstraints constraints,
@@ -214,50 +215,32 @@ namespace UniMob.UI.Rendering
                 return;
             }
 
-            var itemExtent = _state.ItemExtent;
             var spacing = _state.Spacing;
             var cacheExtent = this._virtualizationCacheExtent;
             var viewportMainAxisSize = isHorizontal ? this._viewportSize.x : this._viewportSize.y;
+            var childConstraints = SliverLayoutMath.MakeChildConstraints(
+                constraints,
+                isHorizontal,
+                mainAxisExtent: _state.ItemExtent
+            );
 
-            var stride = (itemExtent ?? _averageExtent) + spacing;
             var scrollOffset = SliverLayoutMath.OffsetWithinContent(
                 _state.ScrollPixelOffset,
                 EstimateLazyContentMainAxisSize(),
                 viewportMainAxisSize
             );
-
-            var startIndex = Mathf.Clamp(
-                Mathf.FloorToInt((scrollOffset - cacheExtent) / stride),
-                0,
-                itemCount - 1
-            );
-            var endIndex = Mathf.Clamp(
-                Mathf.CeilToInt((scrollOffset + viewportMainAxisSize + cacheExtent) / stride),
-                startIndex + 1,
-                itemCount
-            );
-
-            var childConstraints = SliverLayoutMath.MakeChildConstraints(
-                constraints,
-                isHorizontal,
-                mainAxisExtent: itemExtent
-            );
-            var builtStates = _state.RequestBuildWindow(startIndex, endIndex);
+            var startIndex = EstimateIndexAt(scrollOffset - cacheExtent, itemCount);
+            var endIndex =
+                EstimateIndexAt(scrollOffset + viewportMainAxisSize + cacheExtent, itemCount) + 1;
 
             var hadPriorMeasurement = _measuredExtents.Count > 0;
-            var measuredSumThisPass = 0f;
-
-            for (var i = 0; i < builtStates.Length; i++)
-            {
-                var index = startIndex + i;
-                var childSize = LayoutChild(builtStates[i], childConstraints);
-                SliverLayoutMath.ThrowIfUnconstrainedMainAxis(childSize, isHorizontal, isVertical);
-
-                var extent = isHorizontal ? childSize.x : childSize.y;
-                _measuredExtents[index] = extent;
-                _lazyWindowSizes.Add(childSize);
-                measuredSumThisPass += extent;
-            }
+            var measuredSum = MeasureLazyWindow(
+                startIndex,
+                endIndex,
+                childConstraints,
+                isHorizontal,
+                isVertical
+            );
 
             // Nudge the estimate toward this pass's window average rather than snapping to it -- snapping
             // made the estimate swing hard whenever the (small, ~10-15 item) window happened to catch or miss
@@ -265,16 +248,84 @@ namespace UniMob.UI.Rendering
             // An EMA damps that noise while still fully forgetting stale outliers within a few passes, unlike
             // a cumulative average (see the _averageExtent field doc). Skip the damping for the very first
             // real measurement, since there's nothing meaningful to blend the arbitrary default extent with.
-            if (_lazyWindowSizes.Count > 0)
+            var passAverage = measuredSum / _lazyWindowSizes.Count;
+            _averageExtent = hadPriorMeasurement
+                ? Mathf.Lerp(_averageExtent, passAverage, AverageExtentSmoothing)
+                : passAverage;
+
+            // Measuring moves the model the window was selected through: the items it holds are now
+            // exact, and the new average shifts every unmeasured item below it.
+            for (var round = 0; round < SliverLayoutMath.MaxWindowCorrections; round++)
             {
-                var passAverage = measuredSumThisPass / _lazyWindowSizes.Count;
-                _averageExtent = hadPriorMeasurement
-                    ? Mathf.Lerp(_averageExtent, passAverage, AverageExtentSmoothing)
-                    : passAverage;
+                scrollOffset = SliverLayoutMath.OffsetWithinContent(
+                    _state.ScrollPixelOffset,
+                    EstimateLazyContentMainAxisSize(),
+                    viewportMainAxisSize
+                );
+                var coverStart = scrollOffset - cacheExtent;
+                var coverEnd = scrollOffset + viewportMainAxisSize + cacheExtent;
+
+                var corrected = SliverLayoutMath.CorrectWindow(
+                    (startIndex, endIndex),
+                    itemCount,
+                    windowStartEdge: EstimateLeadingEdgeOffset(startIndex),
+                    windowEndEdge: EstimateLeadingEdgeOffset(endIndex) - spacing,
+                    viewportStart: scrollOffset,
+                    viewportEnd: scrollOffset + viewportMainAxisSize,
+                    wanted: (
+                        EstimateIndexAt(coverStart, itemCount),
+                        EstimateIndexAt(coverEnd, itemCount) + 1
+                    ),
+                    coverEnd,
+                    localStride: measuredSum / _lazyWindowSizes.Count + spacing
+                );
+
+                if (corrected == (startIndex, endIndex))
+                    break;
+
+                (startIndex, endIndex) = corrected;
+                measuredSum = MeasureLazyWindow(
+                    startIndex,
+                    endIndex,
+                    childConstraints,
+                    isHorizontal,
+                    isVertical
+                );
             }
 
             _lazyWindowStart = startIndex;
             _lazyWindowScrollOffset = scrollOffset;
+        }
+
+        // Builds [startIndex, endIndex), measures every item in it into _lazyWindowSizes and the extent
+        // model, and answers the sum of their main-axis extents.
+        private float MeasureLazyWindow(
+            int startIndex,
+            int endIndex,
+            LayoutConstraints childConstraints,
+            bool isHorizontal,
+            bool isVertical
+        )
+        {
+            var builtStates = _state.RequestBuildWindow(startIndex, endIndex);
+            var measuresExtents = !_state.ItemExtent.HasValue;
+            var measuredSum = 0f;
+
+            _lazyWindowSizes.Clear();
+            for (var i = 0; i < builtStates.Length; i++)
+            {
+                var childSize = LayoutChild(builtStates[i], childConstraints);
+                SliverLayoutMath.ThrowIfUnconstrainedMainAxis(childSize, isHorizontal, isVertical);
+
+                var extent = isHorizontal ? childSize.x : childSize.y;
+                if (measuresExtents)
+                    _measuredExtents.Set(startIndex + i, extent);
+
+                _lazyWindowSizes.Add(childSize);
+                measuredSum += extent;
+            }
+
+            return measuredSum;
         }
 
         // The scrollable content size the View sizes its content rect to -- the size of the *content* only. The
@@ -326,22 +377,28 @@ namespace UniMob.UI.Rendering
         {
             var spacing = _state.Spacing;
 
-            if (_state.ItemExtent.HasValue)
-                return index * (_state.ItemExtent.Value + spacing);
+            return _state.ItemExtent.HasValue
+                ? index * (_state.ItemExtent.Value + spacing)
+                : _measuredExtents.LeadingEdge(index, _averageExtent, spacing);
+        }
 
-            var measuredSumBelow = 0f;
-            var measuredCountBelow = 0;
-            foreach (var pair in _measuredExtents)
-            {
-                if (pair.Key >= index)
-                    continue;
-                measuredSumBelow += pair.Value;
-                measuredCountBelow++;
-            }
+        /// <summary>
+        ///     The inverse of <see cref="EstimateLeadingEdgeOffset"/>: the last item that starts at or before
+        ///     <paramref name="offset"/>. Window selection goes through it, so the items it picks are the
+        ///     items positioning places at that offset.
+        /// </summary>
+        private int EstimateIndexAt(float offset, int itemCount)
+        {
+            var spacing = _state.Spacing;
 
-            return measuredSumBelow
-                + _averageExtent * (index - measuredCountBelow)
-                + spacing * index;
+            if (!_state.ItemExtent.HasValue)
+                return _measuredExtents.IndexAt(offset, itemCount, _averageExtent, spacing);
+
+            return SliverLayoutMath.SlotAtUniformStride(
+                offset,
+                _state.ItemExtent.Value + spacing,
+                itemCount
+            );
         }
 
         /// <summary>
@@ -411,11 +468,14 @@ namespace UniMob.UI.Rendering
             var viewportStart = scrollOffset - _virtualizationCacheExtent;
             var viewportEnd = scrollOffset + viewportMainAxisSize + _virtualizationCacheExtent;
 
-            var mainAxisPos = firstLeadingEdge;
+            // A double: at a few million pixels a float resolves a quarter pixel, and the error of
+            // every addition in the run would land on its last child.
+            double mainAxisPosition = firstLeadingEdge;
             for (var i = 0; i < sizes.Count; i++)
             {
                 var childSize = sizes[i];
                 var childMainAxisSize = isHorizontal ? childSize.x : childSize.y;
+                var mainAxisPos = (float)mainAxisPosition;
 
                 // Visible if it intersects the viewport (plus buffer) along the scrolling axis.
                 if (mainAxisPos + childMainAxisSize > viewportStart && mainAxisPos < viewportEnd)
@@ -435,7 +495,7 @@ namespace UniMob.UI.Rendering
                     );
                 }
 
-                mainAxisPos += childMainAxisSize + spacing;
+                mainAxisPosition += (double)childMainAxisSize + spacing;
             }
         }
 
@@ -529,7 +589,7 @@ namespace UniMob.UI.Rendering
             var leadingEdge = EstimateLeadingEdgeOffset(index);
             var childSize =
                 _state.ItemExtent.HasValue ? _state.ItemExtent.Value
-                : _measuredExtents.TryGetValue(index, out var exact) ? exact
+                : _measuredExtents.TryGet(index, out var exact) ? exact
                 : _averageExtent;
 
             // An index at or past the laid-out count is one the source already holds and the list has not

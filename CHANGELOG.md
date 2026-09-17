@@ -172,6 +172,15 @@ Every entry in this section is a breaking change.
 
 ### Fixed
 
+- A lazy `ScrollList` or `ScrollGrid` whose items differ in size lost items from the viewport as it
+  was scrolled down, up to showing none at all. The items to build were picked by dividing the
+  offset by the average item size, while the items were placed by their measured sizes, so a run of
+  tall items followed by a run of short ones (or the reverse) put the built items outside the
+  viewport, and no later layout pass brought them back. The items are now picked through the same
+  measured sizes they are placed with, and a layout pass builds further items until the viewport and
+  its cache extent are covered.
+- A `VirtualizationCacheExtent` large enough to overflow an `int` when divided by a fixed item extent
+  selected a single item instead of the whole list.
 - A `ScrollList` or `ScrollGrid` scrolled down whose content then shrank below the viewport, or
   under the offset it was scrolled to, showed no items until the next scroll: the controller kept the
   old offset and the window was built for it. Layout now uses the offset clamped to the content, and

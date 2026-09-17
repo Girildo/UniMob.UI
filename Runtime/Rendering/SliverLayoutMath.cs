@@ -75,6 +75,80 @@ namespace UniMob.UI.Rendering
             float viewportSize
         ) => Mathf.Min(scrollOffset, Mathf.Max(0f, contentSize - viewportSize));
 
+        /// <summary>The most rounds of <see cref="CorrectWindow" /> one sizing pass runs.</summary>
+        public const int MaxWindowCorrections = 64;
+
+        /// <summary>
+        ///     The window of slots (list items, grid rows) to build next, given a built and measured
+        ///     <paramref name="window" />; the same window when it already covers the viewport.
+        ///     A window the model now places away from <paramref name="wanted" /> is replaced by it.
+        ///     One that overlaps it grows on each side that leaves the viewport uncovered, toward
+        ///     the cache range and by at most its own size, so a run of zero-extent slots costs a
+        ///     logarithmic number of rounds and an unbounded cache extent does not overflow.
+        /// </summary>
+        /// <param name="window">The built slots, end exclusive.</param>
+        /// <param name="windowStartEdge">Leading edge of the first built slot.</param>
+        /// <param name="windowEndEdge">Trailing edge of the last built slot.</param>
+        /// <param name="wanted">
+        ///     The slots the current model selects for the viewport plus its cache extent.
+        /// </param>
+        /// <param name="coverEnd">End of the viewport plus its cache extent.</param>
+        /// <param name="localStride">Average extent plus spacing of the slots in the window.</param>
+        public static (int start, int end) CorrectWindow(
+            (int start, int end) window,
+            int slotCount,
+            float windowStartEdge,
+            float windowEndEdge,
+            float viewportStart,
+            float viewportEnd,
+            (int start, int end) wanted,
+            float coverEnd,
+            float localStride
+        )
+        {
+            var coversStart = window.start <= 0 || windowStartEdge <= viewportStart;
+            var coversEnd = window.end >= slotCount || windowEndEdge >= viewportEnd;
+            if (coversStart && coversEnd)
+                return window;
+
+            if (wanted.start >= window.end || wanted.end <= window.start)
+                return wanted;
+
+            var maxGrowth = Math.Max(8, window.end - window.start);
+            var start = window.start;
+            var end = window.end;
+
+            if (!coversStart)
+            {
+                start = Math.Max(
+                    0,
+                    Math.Max(Math.Min(wanted.start, window.start - 1), window.start - maxGrowth)
+                );
+            }
+
+            if (!coversEnd)
+            {
+                // Clamped as a float: the quotient is infinite under an unbounded cache extent, and
+                // over a window of zero-extent slots, where only the cap makes the growth geometric.
+                var missing = Mathf.Clamp(
+                    (coverEnd - windowEndEdge) / Mathf.Max(localStride, 0f),
+                    1f,
+                    maxGrowth
+                );
+                end = Math.Min(slotCount, window.end + Mathf.CeilToInt(missing));
+            }
+
+            return (start, end);
+        }
+
+        /// <summary>
+        ///     The slot in [0, <paramref name="slotCount" />) that <paramref name="offset" /> falls in
+        ///     when every slot is <paramref name="stride" /> long. Clamped before it becomes an int:
+        ///     an unbounded cache extent makes the offset infinite.
+        /// </summary>
+        public static int SlotAtUniformStride(float offset, float stride, int slotCount) =>
+            stride > 0f ? (int)Mathf.Clamp(Mathf.Floor(offset / stride), 0f, slotCount - 1) : 0;
+
         /// <summary>
         ///     Shifts a child's leading-edge offset to the requested spot in the viewport: Start keeps the
         ///     leading edge; Center/End pull it back by the appropriate slice of the leftover viewport space;
